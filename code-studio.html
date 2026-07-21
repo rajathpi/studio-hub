@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Code Studio</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: #1e1f24; color: #e6e6e6; display: flex; flex-direction: column;
+  }
+  header {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    padding: 8px 14px; background: #26272e; border-bottom: 1px solid #3a3b44;
+  }
+  header h1 { font-size: 15px; font-weight: 600; }
+  header h1 span { color: #ff5c8a; }
+  #saveState { font-size: 11px; color: #8a8b94; margin-right: auto; }
+  select, button {
+    font-size: 13px; padding: 6px 12px; border-radius: 6px;
+    border: 1px solid #4a4b55; background: #33343d; color: #e6e6e6; cursor: pointer;
+  }
+  button:hover { background: #41424d; }
+  button.primary { background: #ff5c8a; border-color: #ff5c8a; color: #fff; font-weight: 600; }
+  button.primary:hover { background: #ff7ba0; }
+  button:disabled { opacity: .5; cursor: default; }
+
+  main { flex: 1; display: flex; min-height: 0; }
+
+  /* sidebar */
+  #sidebar { width: 210px; min-width: 210px; background: #22232a; border-right: 1px solid #3a3b44; display: flex; flex-direction: column; }
+  #side-head { display: flex; align-items: center; gap: 4px; padding: 8px; border-bottom: 1px solid #33343d; }
+  #projName { font-size: 12px; font-weight: 600; color: #b9bac2; margin-right: auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .iconbtn { padding: 3px 7px; font-size: 12px; border-radius: 5px; background: transparent; border: none; color: #8a8b94; }
+  .iconbtn:hover { background: #33343d; color: #e6e6e6; }
+  #tree { flex: 1; overflow: auto; padding: 6px 0; font-size: 13px; user-select: none; }
+  .entry { display: flex; align-items: center; gap: 5px; padding: 3px 10px; cursor: pointer; white-space: nowrap; color: #c9cad1; }
+  .entry:hover { background: #2b2c34; }
+  .entry.active { background: #383947; color: #fff; }
+  .entry .chev { width: 12px; font-size: 9px; color: #8a8b94; flex: none; transition: transform .1s; }
+  .entry.open .chev { transform: rotate(90deg); }
+  .entry .fdot { width: 12px; text-align: center; color: #5c5d66; flex: none; font-size: 10px; }
+  .entry .nm { overflow: hidden; text-overflow: ellipsis; }
+  .entry input { font-size: 12px; padding: 2px 5px; border-radius: 4px; border: 1px solid #ff5c8a; background: #1e1f24; color: #fff; width: 100%; outline: none; }
+
+  /* editor column */
+  #center { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+  #tabs { display: flex; overflow-x: auto; background: #22232a; border-bottom: 1px solid #3a3b44; }
+  .tab {
+    display: flex; align-items: center; gap: 7px; padding: 7px 12px; font-size: 12px;
+    color: #9a9ba3; cursor: pointer; border-right: 1px solid #2c2d35; white-space: nowrap;
+  }
+  .tab.active { background: #1e1f24; color: #fff; box-shadow: inset 0 2px 0 #ff5c8a; }
+  .tab .dirty { color: #ff5c8a; font-size: 9px; display: none; }
+  .tab.isDirty .dirty { display: inline; }
+  .tab .x { color: #6f7078; border-radius: 3px; padding: 0 4px; }
+  .tab .x:hover { background: #3a3b46; color: #fff; }
+  #editorWrap { flex: 1; display: flex; min-height: 0; position: relative; }
+  #gutter {
+    width: 46px; background: #1b1c21; color: #565761; text-align: right;
+    padding: 12px 8px 12px 0; font: 13px/1.55 "SF Mono", Menlo, Consolas, monospace;
+    overflow: hidden; user-select: none; border-right: 1px solid #26272e; white-space: pre;
+  }
+  #editor {
+    flex: 1; background: #1e1f24; color: #d8dee9; border: none; outline: none; resize: none;
+    padding: 12px 14px; font: 13px/1.55 "SF Mono", Menlo, Consolas, monospace;
+    white-space: pre; overflow: auto;
+  }
+  #noFile {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    color: #6f7078; font-size: 13px; background: #1e1f24; text-align: center; line-height: 1.9;
+  }
+
+  /* tests panel */
+  #right { width: 340px; min-width: 260px; border-left: 1px solid #3a3b44; background: #202128; display: flex; flex-direction: column; }
+  #testHead { display: flex; align-items: center; gap: 6px; padding: 8px; border-bottom: 1px solid #33343d; }
+  #testHead .cap { font-size: 12px; font-weight: 600; color: #b9bac2; margin-right: auto; }
+  #testHead select { padding: 4px 6px; font-size: 11px; }
+  #compileErr {
+    display: none; margin: 8px; padding: 8px 10px; font: 11px/1.5 Menlo, monospace;
+    background: #5c1f2b; color: #ffb3c0; border-radius: 6px; white-space: pre-wrap;
+    max-height: 30vh; overflow: auto;
+  }
+  #compileErr.show { display: block; }
+  #tests { flex: 1; overflow: auto; padding: 8px; display: flex; flex-direction: column; gap: 10px; }
+  .tc { background: #26272e; border: 1px solid #3a3b44; border-radius: 8px; padding: 8px; }
+  .tc .tcHead { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+  .tc .tcHead .name { font-size: 11px; font-weight: 700; color: #b9bac2; margin-right: auto; }
+  .badge { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px; letter-spacing: .3px; }
+  .badge.AC { background: rgba(63,185,80,.2); color: #3fb950; }
+  .badge.WA { background: rgba(248,81,73,.2); color: #f85149; }
+  .badge.RE { background: rgba(248,81,73,.2); color: #f85149; }
+  .badge.TLE { background: rgba(210,153,34,.22); color: #d29922; }
+  .badge.OK { background: rgba(120,140,180,.2); color: #9db3d8; }
+  .tc .time { font-size: 10px; color: #6f7078; }
+  .tc label { display: block; font-size: 10px; color: #6f7078; margin: 6px 0 2px; text-transform: uppercase; letter-spacing: .4px; }
+  .tc textarea {
+    width: 100%; min-height: 40px; resize: vertical; background: #1b1c21; color: #d8dee9;
+    border: 1px solid #33343d; border-radius: 5px; outline: none; padding: 6px 8px;
+    font: 11.5px/1.5 "SF Mono", Menlo, monospace; white-space: pre;
+  }
+  .tc pre {
+    background: #1b1c21; border: 1px solid #33343d; border-radius: 5px; padding: 6px 8px;
+    font: 11.5px/1.5 "SF Mono", Menlo, monospace; white-space: pre-wrap; word-break: break-all;
+    max-height: 160px; overflow: auto; color: #d8dee9;
+  }
+  .tc pre.err { color: #ffb3c0; }
+  .tc details { margin-top: 4px; }
+  .tc summary { font-size: 10px; color: #6f7078; cursor: pointer; }
+  .tc .del { margin-left: 4px; }
+  footer {
+    display: flex; gap: 14px; flex-wrap: wrap; padding: 6px 14px; font-size: 11px; color: #8a8b94;
+    background: #26272e; border-top: 1px solid #3a3b44;
+  }
+  kbd { background: #33343d; border: 1px solid #4a4b55; border-radius: 4px; padding: 0 5px; font-size: 10px; font-family: inherit; }
+  #ctx { position: fixed; z-index: 99; display: none; min-width: 150px; background: #2b2c34; border: 1px solid #4a4b55; border-radius: 8px; padding: 4px; box-shadow: 0 10px 30px rgba(0,0,0,.45); }
+  #ctx button { display: block; width: 100%; text-align: left; background: none; border: none; padding: 7px 10px; border-radius: 5px; font-size: 12px; }
+  #ctx button:hover { background: #3a3b46; }
+  #ctx button.danger:hover { background: #5c1f2b; color: #ffb3c0; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Code <span>Studio</span></h1>
+  <span id="saveState"></span>
+  <label for="langSel" style="font-size:12px;color:#8a8b94">Language</label>
+  <select id="langSel"></select>
+  <button id="runBtn" class="primary" title="Run all test cases (Cmd+Enter)">&#9654; Run all</button>
+</header>
+<main>
+  <div id="sidebar">
+    <div id="side-head">
+      <span id="projName"></span>
+      <button class="iconbtn" id="newFileBtn" title="New file (Ctrl+N)">＋file</button>
+      <button class="iconbtn" id="newDirBtn" title="New folder">＋dir</button>
+      <button class="iconbtn" id="refreshBtn" title="Refresh">↻</button>
+    </div>
+    <div id="tree"></div>
+  </div>
+  <div id="center">
+    <div id="tabs"></div>
+    <div id="editorWrap">
+      <div id="gutter">1</div>
+      <textarea id="editor" spellcheck="false" autocapitalize="off" autocomplete="off" wrap="off"></textarea>
+      <div id="noFile">No file open.<br>Create one with <kbd>Ctrl+N</kbd> or click a file in the explorer.</div>
+    </div>
+  </div>
+  <div id="right">
+    <div id="testHead">
+      <span class="cap">Test cases</span>
+      <label style="font-size:10px;color:#6f7078">limit</label>
+      <select id="tlSel">
+        <option value="1000">1 s</option>
+        <option value="2000" selected>2 s</option>
+        <option value="5000">5 s</option>
+        <option value="10000">10 s</option>
+      </select>
+      <button class="iconbtn" id="addTestBtn" title="Add test case (Ctrl+T)">＋ test</button>
+    </div>
+    <div id="compileErr"></div>
+    <div id="tests"></div>
+  </div>
+</main>
+<footer>
+  <span><kbd>Cmd+Enter</kbd> run all</span>
+  <span><kbd>Cmd+S</kbd> save</span>
+  <span><kbd>Ctrl+N</kbd> new file</span>
+  <span><kbd>Ctrl+W</kbd> close tab</span>
+  <span><kbd>Ctrl+1&hellip;9</kbd> switch tab</span>
+  <span><kbd>Ctrl+T</kbd> add test</span>
+  <span style="margin-left:auto">auto-saves as you type</span>
+</footer>
+<div id="ctx"></div>
+<script>
+(function () {
+  const TOKEN = '__TOKEN__';
+  const $ = (id) => document.getElementById(id);
+  const treeEl = $('tree'), tabsEl = $('tabs'), editor = $('editor'), gutter = $('gutter');
+  const testsEl = $('tests'), compileErrEl = $('compileErr'), ctxEl = $('ctx');
+
+  async function api(path, body) {
+    const opts = body !== undefined
+      ? { method: 'POST', headers: { 'X-Token': TOKEN, 'Content-Type': 'application/json' }, body: JSON.stringify(body) }
+      : { headers: { 'X-Token': TOKEN } };
+    const r = await fetch(path, opts);
+    const j = await r.json();
+    if (j.error) throw new Error(j.error);
+    return j;
+  }
+
+  // ---------- language handling ----------
+  const EXT = { cpp: '.cpp', c: '.c', python: '.py', node: '.js', java: '.java', go: '.go', rust: '.rs' };
+  const EXT2LANG = { '.cpp': 'cpp', '.cc': 'cpp', '.cxx': 'cpp', '.c': 'c', '.py': 'python', '.js': 'node', '.java': 'java', '.go': 'go', '.rs': 'rust' };
+  const TEMPLATES = {
+    cpp: '#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    ios::sync_with_stdio(false);\n    cin.tie(nullptr);\n    \n    return 0;\n}\n',
+    c: '#include <stdio.h>\n\nint main(void) {\n    \n    return 0;\n}\n',
+    python: 'import sys\ninput = sys.stdin.readline\n\n',
+    node: "const lines = require('fs').readFileSync(0, 'utf8').split('\\n');\n\n",
+    java: 'import java.util.*;\n\npublic class Main {\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        \n    }\n}\n',
+    go: 'package main\n\nimport (\n    "bufio"\n    "fmt"\n    "os"\n)\n\nfunc main() {\n    reader := bufio.NewReader(os.Stdin)\n    writer := bufio.NewWriter(os.Stdout)\n    defer writer.Flush()\n    _ = reader\n    _ = fmt.Sprint\n}\n',
+    rust: 'use std::io::{self, Read, Write};\n\nfn main() {\n    let mut input = String::new();\n    io::stdin().read_to_string(&mut input).unwrap();\n    let stdout = io::stdout();\n    let mut out = stdout.lock();\n    let _ = writeln!(out, "");\n}\n'
+  };
+  function langOf(path) {
+    const dot = path.lastIndexOf('.');
+    return dot >= 0 ? EXT2LANG[path.slice(dot)] : undefined;
+  }
+
+  async function loadLanguages() {
+    const { languages } = await api('/api/languages');
+    const sel = $('langSel');
+    sel.innerHTML = '';
+    for (const l of languages) {
+      const o = document.createElement('option');
+      o.value = l.id;
+      o.textContent = l.name;
+      o.title = l.version;
+      sel.appendChild(o);
+    }
+    const stored = localStorage.getItem('cs-lang');
+    if (stored && languages.some((l) => l.id === stored)) sel.value = stored;
+    sel.addEventListener('change', () => localStorage.setItem('cs-lang', sel.value));
+  }
+
+  // ---------- tabs & editor ----------
+  let tabs = [];        // {path, content, dirty}
+  let active = -1;
+  let saveTimer = null;
+
+  const activeTab = () => (active >= 0 ? tabs[active] : null);
+
+  function renderTabs() {
+    tabsEl.innerHTML = '';
+    tabs.forEach((t, i) => {
+      const el = document.createElement('div');
+      el.className = 'tab' + (i === active ? ' active' : '') + (t.dirty ? ' isDirty' : '');
+      el.innerHTML = '<span class="nm"></span><span class="dirty">●</span><span class="x">×</span>';
+      el.querySelector('.nm').textContent = t.path.split('/').pop();
+      el.title = t.path;
+      el.addEventListener('click', (e) => {
+        if (e.target.classList.contains('x')) closeTab(i);
+        else switchTab(i);
+      });
+      tabsEl.appendChild(el);
+    });
+    $('noFile').style.display = tabs.length ? 'none' : 'flex';
+    localStorage.setItem('cs-tabs', JSON.stringify({ open: tabs.map((t) => t.path), active }));
+  }
+
+  function refreshGutter() {
+    const n = editor.value.split('\n').length;
+    gutter.textContent = Array.from({ length: n }, (_, i) => i + 1).join('\n');
+    gutter.scrollTop = editor.scrollTop;
+  }
+
+  function switchTab(i) {
+    flushSave();
+    active = i;
+    const t = activeTab();
+    editor.value = t ? t.content : '';
+    if (t) {
+      const l = langOf(t.path);
+      if (l && [...$('langSel').options].some((o) => o.value === l)) $('langSel').value = l;
+    }
+    refreshGutter();
+    renderTabs();
+    renderTree();
+    renderTests();
+    editor.focus();
+  }
+
+  async function openFile(path) {
+    const existing = tabs.findIndex((t) => t.path === path);
+    if (existing >= 0) { switchTab(existing); return; }
+    const { content } = await api('/api/file?path=' + encodeURIComponent(path));
+    tabs.push({ path, content, dirty: false });
+    switchTab(tabs.length - 1);
+  }
+
+  function closeTab(i) {
+    flushSave();
+    tabs.splice(i, 1);
+    if (active >= tabs.length) active = tabs.length - 1;
+    switchTab(active);
+  }
+
+  function markDirty() {
+    const t = activeTab();
+    if (!t) return;
+    t.content = editor.value;
+    if (!t.dirty) { t.dirty = true; renderTabs(); }
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(flushSave, 800);
+  }
+
+  function flushSave() {
+    clearTimeout(saveTimer);
+    const dirtyTabs = tabs.filter((t) => t.dirty);
+    for (const t of dirtyTabs) {
+      t.dirty = false;
+      api('/api/file', { path: t.path, content: t.content }).then(() => {
+        const d = new Date(), p = (n) => String(n).padStart(2, '0');
+        $('saveState').textContent = 'Saved ' + p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds());
+      }).catch((e) => { $('saveState').textContent = 'Save failed: ' + e.message; t.dirty = true; });
+    }
+    if (dirtyTabs.length) renderTabs();
+  }
+
+  editor.addEventListener('input', () => { refreshGutter(); markDirty(); });
+  editor.addEventListener('scroll', () => { gutter.scrollTop = editor.scrollTop; });
+  editor.addEventListener('keydown', (e) => {
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      editor.setRangeText('    ', editor.selectionStart, editor.selectionEnd, 'end');
+      refreshGutter(); markDirty();
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      const pos = editor.selectionStart;
+      const before = editor.value.slice(0, pos);
+      const line = before.slice(before.lastIndexOf('\n') + 1);
+      let indent = (line.match(/^\s*/) || [''])[0];
+      if (/[{:]\s*$/.test(line)) indent += '    ';
+      editor.setRangeText('\n' + indent, pos, editor.selectionEnd, 'end');
+      refreshGutter(); markDirty();
+    }
+  });
+
+  window.addEventListener('beforeunload', () => {
+    for (const t of tabs) {
+      if (t.dirty) {
+        fetch('/api/file', {
+          method: 'POST', keepalive: true,
+          headers: { 'X-Token': TOKEN, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ path: t.path, content: t.content })
+        });
+      }
+    }
+  });
+
+  // ---------- explorer ----------
+  let items = [];
+  let expanded = new Set(JSON.parse(localStorage.getItem('cs-expanded') || '[]'));
+  const saveExpanded = () => localStorage.setItem('cs-expanded', JSON.stringify([...expanded]));
+
+  async function loadTree() {
+    const r = await api('/api/tree');
+    $('projName').textContent = r.root;
+    items = r.items;
+    renderTree();
+  }
+
+  function renderTree() {
+    treeEl.innerHTML = '';
+    const activePath = activeTab() ? activeTab().path : null;
+    const byParent = {};
+    for (const it of items) {
+      const parent = it.path.includes('/') ? it.path.slice(0, it.path.lastIndexOf('/')) : '';
+      (byParent[parent] = byParent[parent] || []).push(it);
+    }
+    (function build(parent, depth) {
+      const list = (byParent[parent] || []).sort((a, b) =>
+        a.kind === b.kind ? a.path.localeCompare(b.path) : a.kind === 'dir' ? -1 : 1);
+      for (const it of list) {
+        const row = document.createElement('div');
+        row.className = 'entry' + (it.kind === 'dir' && expanded.has(it.path) ? ' open' : '') + (it.path === activePath ? ' active' : '');
+        row.dataset.path = it.path;
+        row.dataset.kind = it.kind;
+        row.style.paddingLeft = (10 + depth * 14) + 'px';
+        const marker = document.createElement('span');
+        marker.className = it.kind === 'dir' ? 'chev' : 'fdot';
+        marker.textContent = it.kind === 'dir' ? '▶' : '●';
+        const nm = document.createElement('span');
+        nm.className = 'nm';
+        nm.textContent = it.path.split('/').pop();
+        row.appendChild(marker); row.appendChild(nm);
+        treeEl.appendChild(row);
+        if (it.kind === 'dir' && expanded.has(it.path)) build(it.path, depth + 1);
+      }
+    })('', 0);
+  }
+
+  treeEl.addEventListener('click', (e) => {
+    const row = e.target.closest('.entry');
+    if (!row || row.querySelector('input')) return;
+    if (row.dataset.kind === 'dir') {
+      expanded.has(row.dataset.path) ? expanded.delete(row.dataset.path) : expanded.add(row.dataset.path);
+      saveExpanded(); renderTree();
+    } else openFile(row.dataset.path).catch((e2) => alert(e2.message));
+  });
+
+  function inlineInput(row, initial, placeholder, onCommit) {
+    const input = document.createElement('input');
+    input.value = initial; input.placeholder = placeholder;
+    let done = false;
+    const finish = (commit) => {
+      if (done) return; done = true;
+      const val = input.value.trim();
+      Promise.resolve(commit && val ? onCommit(val) : null)
+        .catch((e) => alert(e.message))
+        .finally(loadTree);
+    };
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') finish(true);
+      if (e.key === 'Escape') finish(false);
+      e.stopPropagation();
+    });
+    input.addEventListener('blur', () => finish(true));
+    row.innerHTML = ''; row.appendChild(input); input.focus();
+    if (initial) {
+      const dot = initial.lastIndexOf('.');
+      input.setSelectionRange(initial.lastIndexOf('/') + 1, dot > 0 ? dot : initial.length);
+    }
+  }
+
+  function newEntry(kind, dirPath) {
+    if (dirPath) { expanded.add(dirPath); saveExpanded(); renderTree(); }
+    const row = document.createElement('div');
+    row.className = 'entry';
+    row.style.paddingLeft = (10 + (dirPath ? dirPath.split('/').length : 0) * 14) + 'px';
+    const anchor = dirPath ? treeEl.querySelector('.entry[data-path="' + CSS.escape(dirPath) + '"]') : null;
+    if (anchor) anchor.after(row); else treeEl.prepend(row);
+    const lang = $('langSel').value;
+    inlineInput(row, '', kind === 'dir' ? 'folder name' : 'name' + (EXT[lang] || '.txt'), async (val) => {
+      let name = val.replace(/\//g, '-');
+      if (kind === 'file' && !name.includes('.')) name += EXT[lang] || '.txt';
+      const p = (dirPath ? dirPath + '/' : '') + name;
+      if (kind === 'dir') { await api('/api/mkdir', { path: p }); expanded.add(p); saveExpanded(); }
+      else { await api('/api/file', { path: p, content: TEMPLATES[langOf(p) || lang] || '' }); await loadTree(); await openFile(p); }
+    });
+  }
+
+  function showCtx(x, y, items2) {
+    ctxEl.innerHTML = '';
+    for (const it of items2) {
+      const b = document.createElement('button');
+      b.textContent = it.label;
+      if (it.danger) b.className = 'danger';
+      b.addEventListener('click', () => { hideCtx(); it.fn(); });
+      ctxEl.appendChild(b);
+    }
+    ctxEl.style.display = 'block';
+    ctxEl.style.left = Math.min(x, innerWidth - 170) + 'px';
+    ctxEl.style.top = Math.min(y, innerHeight - items2.length * 34 - 10) + 'px';
+  }
+  const hideCtx = () => { ctxEl.style.display = 'none'; };
+  document.addEventListener('click', hideCtx);
+
+  treeEl.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    const row = e.target.closest('.entry');
+    if (!row) {
+      showCtx(e.clientX, e.clientY, [
+        { label: 'New file', fn: () => newEntry('file', '') },
+        { label: 'New folder', fn: () => newEntry('dir', '') },
+        { label: 'Refresh', fn: loadTree }
+      ]);
+      return;
+    }
+    const p = row.dataset.path, kind = row.dataset.kind;
+    const menu = [];
+    if (kind === 'dir') {
+      menu.push({ label: 'New file', fn: () => newEntry('file', p) });
+      menu.push({ label: 'New folder', fn: () => newEntry('dir', p) });
+    }
+    menu.push({
+      label: 'Rename / move', fn: () => {
+        inlineInput(row, p, '', async (val) => {
+          if (val === p) return;
+          await api('/api/rename', { from: p, to: val });
+          const t = tabs.find((tb) => tb.path === p);
+          if (t) t.path = val;
+          const tests = localStorage.getItem('cs-tests:' + p);
+          if (tests) { localStorage.setItem('cs-tests:' + val, tests); localStorage.removeItem('cs-tests:' + p); }
+          renderTabs();
+        });
+      }
+    });
+    menu.push({
+      label: 'Delete', danger: true, fn: async () => {
+        if (!confirm('Delete "' + p + '"?')) return;
+        await api('/api/delete', { path: p });
+        const ti = tabs.findIndex((tb) => tb.path === p);
+        if (ti >= 0) closeTab(ti);
+        loadTree();
+      }
+    });
+    showCtx(e.clientX, e.clientY, menu);
+  });
+
+  $('newFileBtn').addEventListener('click', () => newEntry('file', ''));
+  $('newDirBtn').addEventListener('click', () => newEntry('dir', ''));
+  $('refreshBtn').addEventListener('click', loadTree);
+
+  // ---------- test cases ----------
+  function testsKey() { return activeTab() ? 'cs-tests:' + activeTab().path : null; }
+  function loadTests() {
+    const k = testsKey();
+    if (!k) return [];
+    try { return JSON.parse(localStorage.getItem(k) || '[]'); } catch (e) { return []; }
+  }
+  function saveTests(ts) {
+    const k = testsKey();
+    if (k) localStorage.setItem(k, JSON.stringify(ts));
+  }
+
+  let lastResults = [];
+
+  function renderTests() {
+    const ts = loadTests();
+    testsEl.innerHTML = '';
+    ts.forEach((t, i) => {
+      const card = document.createElement('div');
+      card.className = 'tc';
+      const res = lastResults[i];
+      let badge = '';
+      if (res) {
+        badge = '<span class="badge ' + res.verdict + '">' + res.verdict + '</span><span class="time">' + res.timeMs + ' ms</span>';
+      }
+      card.innerHTML =
+        '<div class="tcHead"><span class="name">Test ' + (i + 1) + '</span>' + badge +
+        '<button class="iconbtn del" title="Delete test">×</button></div>' +
+        '<label>Input</label><textarea class="in" spellcheck="false"></textarea>' +
+        '<label>Expected output <span style="text-transform:none">(optional &mdash; enables AC/WA)</span></label>' +
+        '<textarea class="exp" spellcheck="false"></textarea>' +
+        (res ? '<label>Output</label><pre class="out"></pre>' : '') +
+        (res && res.stderr ? '<details><summary>stderr</summary><pre class="err"></pre></details>' : '');
+      card.querySelector('.in').value = t.input || '';
+      card.querySelector('.exp').value = t.expected || '';
+      if (res) card.querySelector('.out').textContent = res.stdout || '(empty)';
+      if (res && res.stderr) card.querySelector('.err').textContent = res.stderr;
+      card.querySelector('.in').addEventListener('input', (e) => { ts[i].input = e.target.value; saveTests(ts); });
+      card.querySelector('.exp').addEventListener('input', (e) => { ts[i].expected = e.target.value; saveTests(ts); });
+      card.querySelector('.del').addEventListener('click', () => {
+        ts.splice(i, 1); lastResults.splice(i, 1); saveTests(ts); renderTests();
+      });
+      testsEl.appendChild(card);
+    });
+    if (!ts.length) {
+      testsEl.innerHTML = '<div style="color:#6f7078;font-size:12px;padding:20px;text-align:center;line-height:1.8">No test cases yet.<br>Add one with <kbd>Ctrl+T</kbd> and paste the sample input.</div>';
+    }
+  }
+
+  function addTest() {
+    if (!activeTab()) return;
+    const ts = loadTests();
+    ts.push({ input: '', expected: '' });
+    saveTests(ts);
+    renderTests();
+    const cards = testsEl.querySelectorAll('.tc .in');
+    if (cards.length) cards[cards.length - 1].focus();
+  }
+  $('addTestBtn').addEventListener('click', addTest);
+
+  const norm = (s) => s.replace(/\r/g, '').split('\n').map((l) => l.replace(/\s+$/, '')).join('\n').replace(/\n+$/, '');
+
+  async function runAll() {
+    const t = activeTab();
+    if (!t) return;
+    flushSave();
+    const ts = loadTests();
+    const runBtn = $('runBtn');
+    runBtn.disabled = true;
+    runBtn.textContent = 'Running…';
+    compileErrEl.classList.remove('show');
+    lastResults = [];
+    renderTests();
+    try {
+      const r = await api('/api/run', {
+        lang: $('langSel').value,
+        code: t.content,
+        tests: ts.length ? ts.map((x) => ({ input: x.input || '' })) : [{ input: '' }],
+        timeLimit: parseInt($('tlSel').value, 10)
+      });
+      if (r.compileError) {
+        compileErrEl.textContent = r.compileError;
+        compileErrEl.classList.add('show');
+      } else {
+        lastResults = r.results.map((res, i) => {
+          let verdict = res.verdict;
+          if (verdict === 'OK' && ts[i] && norm(ts[i].expected || '') !== '') {
+            verdict = norm(res.stdout) === norm(ts[i].expected) ? 'AC' : 'WA';
+          }
+          return Object.assign({}, res, { verdict });
+        });
+        renderTests();
+      }
+    } catch (e) {
+      compileErrEl.textContent = 'Run failed: ' + e.message;
+      compileErrEl.classList.add('show');
+    } finally {
+      runBtn.disabled = false;
+      runBtn.innerHTML = '&#9654; Run all';
+    }
+  }
+  $('runBtn').addEventListener('click', runAll);
+
+  // ---------- shortcuts ----------
+  document.addEventListener('keydown', (e) => {
+    const mod = e.metaKey || e.ctrlKey;
+    if (mod && e.key === 'Enter') { e.preventDefault(); runAll(); }
+    else if (mod && e.key === 's') { e.preventDefault(); flushSave(); }
+    else if (e.ctrlKey && !e.metaKey && e.key === 'n') { e.preventDefault(); newEntry('file', ''); }
+    else if (e.ctrlKey && !e.metaKey && e.key === 'w') { e.preventDefault(); if (active >= 0) closeTab(active); }
+    else if (e.ctrlKey && !e.metaKey && e.key === 't') { e.preventDefault(); addTest(); }
+    else if (e.ctrlKey && !e.metaKey && e.key >= '1' && e.key <= '9') {
+      e.preventDefault();
+      const i = parseInt(e.key, 10) - 1;
+      if (i < tabs.length) switchTab(i);
+    }
+  });
+
+  // ---------- startup ----------
+  (async () => {
+    try {
+      await loadLanguages();
+      await loadTree();
+      const saved = JSON.parse(localStorage.getItem('cs-tabs') || '{}');
+      if (saved.open && saved.open.length) {
+        for (const p of saved.open) {
+          try {
+            const { content } = await api('/api/file?path=' + encodeURIComponent(p));
+            tabs.push({ path: p, content, dirty: false });
+          } catch (e) { /* file gone */ }
+        }
+        switchTab(Math.min(saved.active >= 0 ? saved.active : 0, tabs.length - 1));
+      } else {
+        renderTabs(); renderTests();
+      }
+    } catch (e) {
+      document.body.innerHTML = '<div style="padding:40px;font-family:sans-serif;color:#e6e6e6">Could not reach the local runner: ' + e.message + '</div>';
+    }
+  })();
+
+  window.__cs = { openFile, runAll, addTest, loadTests, saveTests, get tabs() { return tabs; }, get active() { return active; } };
+})();
+</script>
+</body>
+</html>

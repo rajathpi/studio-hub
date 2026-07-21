@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Regex Studio</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: #1e1f24; color: #e6e6e6; display: flex; flex-direction: column;
+  }
+  header {
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    padding: 10px 14px; background: #26272e; border-bottom: 1px solid #3a3b44;
+  }
+  header h1 { font-size: 15px; font-weight: 600; }
+  header h1 span { color: #ff5c8a; }
+  #matchCount { font-size: 12px; color: #8a8b94; margin-right: auto; }
+  #matchCount b { color: #3fb950; }
+  .flag { font-size: 12px; color: #b9bac2; display: flex; align-items: center; gap: 4px; cursor: pointer; }
+  .flag code { color: #ff5c8a; font-weight: 700; }
+  button {
+    font-size: 13px; padding: 6px 12px; border-radius: 6px;
+    border: 1px solid #4a4b55; background: #33343d; color: #e6e6e6; cursor: pointer;
+  }
+  button:hover { background: #41424d; }
+
+  #patternRow { display: flex; align-items: center; gap: 0; padding: 10px 14px; background: #22232a; border-bottom: 1px solid #3a3b44; }
+  #patternRow .slash { font: 18px/1 "SF Mono", Menlo, monospace; color: #6f7078; padding: 0 8px; }
+  #pattern {
+    flex: 1; background: #1b1c21; color: #e8d3a8; border: 1px solid #33343d; border-radius: 6px;
+    outline: none; padding: 9px 12px; font: 14px/1.4 "SF Mono", Menlo, Consolas, monospace;
+  }
+  #pattern:focus { border-color: #ff5c8a; }
+  #flagsShown { font: 14px/1 "SF Mono", Menlo, monospace; color: #ff5c8a; padding: 0 8px; min-width: 60px; }
+  #error {
+    display: none; padding: 8px 14px; font: 12px/1.5 Menlo, monospace;
+    background: #5c1f2b; color: #ffb3c0; border-bottom: 1px solid #7a2938; white-space: pre-wrap;
+  }
+  #error.show { display: block; }
+
+  main { flex: 1; display: flex; min-height: 0; }
+  .col { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+  #left { flex: 1.15; border-right: 1px solid #3a3b44; }
+  #right { flex: 1; overflow: auto; }
+  .cap {
+    font-size: 11px; font-weight: 700; letter-spacing: .4px; text-transform: uppercase;
+    color: #8a8b94; padding: 10px 14px 6px; flex: none;
+  }
+
+  /* highlighted test string */
+  #textWrap { position: relative; flex: 1; min-height: 120px; }
+  #backdrop, #text {
+    position: absolute; inset: 0; padding: 10px 14px; overflow: auto;
+    font: 13px/1.6 "SF Mono", Menlo, Consolas, monospace; white-space: pre-wrap; word-wrap: break-word;
+  }
+  #backdrop { color: transparent; pointer-events: none; }
+  #backdrop mark { color: transparent; border-radius: 2px; }
+  #backdrop mark.h0 { background: rgba(255, 92, 138, .34); }
+  #backdrop mark.h1 { background: rgba(88, 166, 255, .32); }
+  #text { background: transparent; color: #d8dee9; border: none; outline: none; resize: none; }
+
+  /* matches */
+  #matches { max-height: 32%; overflow: auto; border-top: 1px solid #33343d; flex: none; padding-bottom: 8px; }
+  .m { padding: 5px 14px; font: 12px/1.5 "SF Mono", Menlo, monospace; border-bottom: 1px solid #26272e; }
+  .m .idx { color: #6f7078; }
+  .m .val { color: #e8d3a8; }
+  .m .g { color: #9db3d8; padding-left: 18px; display: block; }
+  .m .g b { color: #c4a7e7; font-weight: 400; }
+
+  /* explain + cheatsheet + tests */
+  section { border-bottom: 1px solid #33343d; }
+  #explain { padding: 4px 14px 14px; font-size: 12.5px; line-height: 1.65; }
+  #explain ul { list-style: none; padding-left: 18px; }
+  #explain > ul { padding-left: 0; }
+  #explain li::before { content: '·'; color: #ff5c8a; margin-right: 7px; }
+  #explain code { background: #1b1c21; border: 1px solid #33343d; border-radius: 4px; padding: 0 5px; color: #e8d3a8; font: 11.5px "SF Mono", Menlo, monospace; }
+  #explain .muted { color: #8a8b94; }
+
+  #replRow { display: flex; align-items: center; gap: 8px; padding: 4px 14px 12px; }
+  #repl {
+    flex: 1; background: #1b1c21; color: #d8dee9; border: 1px solid #33343d; border-radius: 6px;
+    outline: none; padding: 7px 10px; font: 12.5px "SF Mono", Menlo, monospace;
+  }
+  #replOut {
+    margin: 0 14px 14px; padding: 8px 10px; background: #1b1c21; border: 1px solid #33343d;
+    border-radius: 6px; font: 12px/1.6 "SF Mono", Menlo, monospace; white-space: pre-wrap;
+    max-height: 140px; overflow: auto; color: #a8d5b5;
+  }
+
+  #cases { padding: 4px 14px 12px; }
+  .case { display: flex; gap: 6px; align-items: center; margin-bottom: 6px; }
+  .case input[type=text] {
+    flex: 1; background: #1b1c21; color: #d8dee9; border: 1px solid #33343d; border-radius: 6px;
+    outline: none; padding: 6px 10px; font: 12px "SF Mono", Menlo, monospace;
+  }
+  .case select { background: #33343d; color: #e6e6e6; border: 1px solid #4a4b55; border-radius: 5px; font-size: 11px; padding: 5px 6px; }
+  .badge { font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 4px; min-width: 44px; text-align: center; }
+  .badge.pass { background: rgba(63,185,80,.2); color: #3fb950; }
+  .badge.fail { background: rgba(248,81,73,.2); color: #f85149; }
+  .case .x { padding: 4px 8px; font-size: 11px; }
+
+  details.cheat { margin: 0 14px 14px; }
+  details.cheat summary { cursor: pointer; font-size: 12px; color: #b9bac2; padding: 6px 0; }
+  .cheatGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 22px; font-size: 11.5px; }
+  .cheatGrid h3 { font-size: 10px; text-transform: uppercase; letter-spacing: .4px; color: #8a8b94; margin: 10px 0 4px; }
+  .cheatGrid table { border-collapse: collapse; width: 100%; }
+  .cheatGrid td { padding: 2px 6px 2px 0; color: #9a9ba3; vertical-align: top; }
+  .cheatGrid td:first-child { font-family: "SF Mono", Menlo, monospace; color: #e8d3a8; white-space: nowrap; }
+  footer {
+    display: flex; gap: 14px; padding: 6px 14px; font-size: 11px; color: #8a8b94;
+    background: #26272e; border-top: 1px solid #3a3b44;
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Regex <span>Studio</span></h1>
+  <span id="matchCount"></span>
+  <label class="flag"><input type="checkbox" data-flag="g" checked><code>g</code> global</label>
+  <label class="flag"><input type="checkbox" data-flag="i"><code>i</code> ignore case</label>
+  <label class="flag"><input type="checkbox" data-flag="m"><code>m</code> multiline</label>
+  <label class="flag"><input type="checkbox" data-flag="s"><code>s</code> dotall</label>
+  <label class="flag"><input type="checkbox" data-flag="u"><code>u</code> unicode</label>
+</header>
+<div id="patternRow">
+  <span class="slash">/</span>
+  <input id="pattern" spellcheck="false" autocapitalize="off" autocomplete="off" placeholder="pattern">
+  <span class="slash">/</span>
+  <span id="flagsShown">g</span>
+</div>
+<div id="error"></div>
+<main>
+  <div id="left" class="col">
+    <div class="cap">Test string</div>
+    <div id="textWrap">
+      <div id="backdrop"></div>
+      <textarea id="text" spellcheck="false" autocapitalize="off"></textarea>
+    </div>
+    <div class="cap">Matches</div>
+    <div id="matches"></div>
+  </div>
+  <div id="right" class="col">
+    <section>
+      <div class="cap">Explanation</div>
+      <div id="explain"></div>
+    </section>
+    <section>
+      <div class="cap">Replace</div>
+      <div id="replRow">
+        <input id="repl" spellcheck="false" placeholder="replacement — use $1, $&lt;name&gt;, $&amp;">
+      </div>
+      <pre id="replOut"></pre>
+    </section>
+    <section>
+      <div class="cap">Test cases</div>
+      <div id="cases"></div>
+      <div style="padding:0 14px 14px"><button id="addCase">＋ Add test case</button></div>
+    </section>
+    <details class="cheat">
+      <summary>Cheatsheet</summary>
+      <div class="cheatGrid">
+        <div>
+          <h3>Character classes</h3>
+          <table>
+            <tr><td>.</td><td>any char except newline (any with s)</td></tr>
+            <tr><td>\d &nbsp;\D</td><td>digit / non-digit</td></tr>
+            <tr><td>\w &nbsp;\W</td><td>word char / non-word</td></tr>
+            <tr><td>\s &nbsp;\S</td><td>whitespace / non-whitespace</td></tr>
+            <tr><td>[abc]</td><td>any of a, b, c</td></tr>
+            <tr><td>[^abc]</td><td>none of a, b, c</td></tr>
+            <tr><td>[a-z]</td><td>range a to z</td></tr>
+          </table>
+          <h3>Anchors</h3>
+          <table>
+            <tr><td>^ &nbsp;$</td><td>start / end (line with m)</td></tr>
+            <tr><td>\b &nbsp;\B</td><td>word boundary / non-boundary</td></tr>
+          </table>
+          <h3>Flags</h3>
+          <table>
+            <tr><td>g</td><td>all matches, not just first</td></tr>
+            <tr><td>i</td><td>case-insensitive</td></tr>
+            <tr><td>m</td><td>^ $ match per line</td></tr>
+            <tr><td>s</td><td>. also matches newline</td></tr>
+            <tr><td>u</td><td>unicode mode (\p{...})</td></tr>
+          </table>
+        </div>
+        <div>
+          <h3>Quantifiers</h3>
+          <table>
+            <tr><td>* &nbsp;+ &nbsp;?</td><td>0+, 1+, 0-1 times</td></tr>
+            <tr><td>{3} {2,5} {2,}</td><td>exact / range / at least</td></tr>
+            <tr><td>*? &nbsp;+?</td><td>lazy (as few as possible)</td></tr>
+          </table>
+          <h3>Groups</h3>
+          <table>
+            <tr><td>(abc)</td><td>capture group</td></tr>
+            <tr><td>(?:abc)</td><td>non-capturing group</td></tr>
+            <tr><td>(?&lt;n&gt;abc)</td><td>named group «n»</td></tr>
+            <tr><td>\1 &nbsp;\k&lt;n&gt;</td><td>backreference</td></tr>
+            <tr><td>a|b</td><td>alternation: a or b</td></tr>
+          </table>
+          <h3>Lookaround</h3>
+          <table>
+            <tr><td>(?=x) (?!x)</td><td>followed / not followed by x</td></tr>
+            <tr><td>(?&lt;=x) (?&lt;!x)</td><td>preceded / not preceded by x</td></tr>
+          </table>
+        </div>
+      </div>
+    </details>
+  </div>
+</main>
+<footer>
+  <span>Everything runs locally &mdash; patterns and text never leave this page</span>
+  <span>Runaway patterns are killed after 1.5 s (catastrophic backtracking guard)</span>
+  <span style="margin-left:auto">inputs are remembered</span>
+</footer>
+<script>
+(function () {
+  const $ = (id) => document.getElementById(id);
+  const patternEl = $('pattern'), textEl = $('text'), backdrop = $('backdrop');
+  const errorEl = $('error'), matchesEl = $('matches'), explainEl = $('explain');
+  const replEl = $('repl'), replOut = $('replOut'), casesEl = $('cases');
+  const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+  // ---------- worker with timeout (catastrophic backtracking guard) ----------
+  const workerSrc = 'onmessage=(e)=>{const{pattern,flags,text}=e.data;try{' +
+    'const re=new RegExp(pattern,flags.includes("g")?flags:flags+"g");' +
+    'const spans=[],matches=[];let m,c=0;' +
+    'while((m=re.exec(text))&&c<5000){spans.push([m.index,m.index+m[0].length]);' +
+    'matches.push({index:m.index,text:m[0],groups:m.slice(1),named:m.groups?Object.assign({},m.groups):null});' +
+    'if(m[0]==="")re.lastIndex++;c++;}' +
+    'postMessage({ok:true,spans,matches,truncated:c>=5000});' +
+    '}catch(err){postMessage({ok:false,error:String(err.message||err)});}}';
+  let worker = null, workerTimer = null, jobSeq = 0;
+  function makeWorker() {
+    try { return new Worker(URL.createObjectURL(new Blob([workerSrc], { type: 'text/javascript' }))); }
+    catch (e) { return null; }
+  }
+  worker = makeWorker();
+
+  function runMatch(pattern, flags, text) {
+    return new Promise((resolve) => {
+      const seq = ++jobSeq;
+      if (!worker) {
+        // fallback: main thread (no timeout protection)
+        try {
+          const re = new RegExp(pattern, flags.includes('g') ? flags : flags + 'g');
+          const spans = [], matches = [];
+          let m, c = 0;
+          while ((m = re.exec(text)) && c < 5000) {
+            spans.push([m.index, m.index + m[0].length]);
+            matches.push({ index: m.index, text: m[0], groups: m.slice(1), named: m.groups ? Object.assign({}, m.groups) : null });
+            if (m[0] === '') re.lastIndex++;
+            c++;
+          }
+          resolve({ ok: true, spans, matches, truncated: c >= 5000 });
+        } catch (e) { resolve({ ok: false, error: String(e.message || e) }); }
+        return;
+      }
+      clearTimeout(workerTimer);
+      workerTimer = setTimeout(() => {
+        worker.terminate();
+        worker = makeWorker();
+        if (seq === jobSeq) resolve({ ok: false, error: 'Pattern took longer than 1.5 s — likely catastrophic backtracking. Simplify nested quantifiers like (a+)+.' });
+      }, 1500);
+      worker.onmessage = (e) => {
+        clearTimeout(workerTimer);
+        if (seq === jobSeq) resolve(e.data);
+      };
+      worker.postMessage({ pattern, flags, text });
+    });
+  }
+
+  // ---------- explainer: recursive-descent regex parser ----------
+  function explain(src) {
+    let i = 0, groupNum = 0;
+    const peek = () => src[i];
+    const eof = () => i >= src.length;
+
+    function alternation() {
+      const branches = [sequence()];
+      while (!eof() && peek() === '|') { i++; branches.push(sequence()); }
+      return branches.length === 1 ? branches[0] : { type: 'alt', branches };
+    }
+    function sequence() {
+      const items = [];
+      while (!eof() && peek() !== '|' && peek() !== ')') items.push(quantified());
+      return { type: 'seq', items };
+    }
+    function quantified() {
+      const atom = parseAtom();
+      if (eof()) return atom;
+      const c = peek();
+      let label = null;
+      if (c === '*') { label = 'zero or more times'; i++; }
+      else if (c === '+') { label = 'one or more times'; i++; }
+      else if (c === '?') { label = 'optional (zero or one time)'; i++; }
+      else if (c === '{') {
+        const m = /^\{(\d+)(,(\d*))?\}/.exec(src.slice(i));
+        if (m) {
+          i += m[0].length;
+          if (m[2] === undefined) label = 'exactly ' + m[1] + (m[1] === '1' ? ' time' : ' times');
+          else if (m[3] === '') label = m[1] + ' or more times';
+          else label = 'between ' + m[1] + ' and ' + m[3] + ' times';
+        }
+      }
+      if (label === null) return atom;
+      let lazy = false;
+      if (!eof() && peek() === '?') { lazy = true; i++; }
+      return { type: 'quant', atom, label: label + (lazy ? ' — as few as possible (lazy)' : '') };
+    }
+    function parseAtom() {
+      const c = peek();
+      if (c === '(') return group();
+      if (c === '[') return charClass();
+      if (c === '\\') return escape();
+      if (c === '^') { i++; return { type: 'anchor', label: 'start of the string (or line, with the m flag)' }; }
+      if (c === '$') { i++; return { type: 'anchor', label: 'end of the string (or line, with the m flag)' }; }
+      if (c === '.') { i++; return { type: 'special', label: 'any character' + '' }; }
+      i++;
+      return { type: 'char', ch: c };
+    }
+    function group() {
+      i++; // (
+      let kind = 'capture', name = null;
+      if (peek() === '?') {
+        i++;
+        const c = peek();
+        if (c === ':') { kind = 'noncap'; i++; }
+        else if (c === '=') { kind = 'lookahead'; i++; }
+        else if (c === '!') { kind = 'neglookahead'; i++; }
+        else if (c === '<') {
+          i++;
+          if (peek() === '=') { kind = 'lookbehind'; i++; }
+          else if (peek() === '!') { kind = 'neglookbehind'; i++; }
+          else {
+            kind = 'named';
+            name = '';
+            while (!eof() && peek() !== '>') name += src[i++];
+            i++; // >
+          }
+        }
+      }
+      if (kind === 'capture') groupNum++;
+      const num = groupNum;
+      const inner = alternation();
+      if (peek() === ')') i++;
+      return { type: 'group', kind, name, num: kind === 'capture' ? num : null, inner };
+    }
+    function charClass() {
+      i++; // [
+      let negated = false;
+      if (peek() === '^') { negated = true; i++; }
+      const parts = [];
+      while (!eof() && peek() !== ']') {
+        let item;
+        if (peek() === '\\') { item = escapeLabel(); }
+        else { item = src[i++]; }
+        if (peek() === '-' && src[i + 1] && src[i + 1] !== ']') {
+          i++;
+          let to;
+          if (peek() === '\\') to = escapeLabel(); else to = src[i++];
+          parts.push(item + '–' + to);
+        } else parts.push(item);
+      }
+      i++; // ]
+      return { type: 'class', negated, parts };
+    }
+    function escapeLabel() {
+      i++; // backslash
+      const c = src[i++];
+      const table = { d: 'digit', D: 'non-digit', w: 'word char', W: 'non-word char', s: 'whitespace', S: 'non-whitespace', n: 'newline', t: 'tab', r: 'carriage return' };
+      return table[c] ? '\\' + c + ' (' + table[c] + ')' : c;
+    }
+    function escape() {
+      i++; // backslash
+      const c = src[i++];
+      const simple = {
+        d: 'a digit (0-9)', D: 'any character that is not a digit',
+        w: 'a word character (letter, digit or _)', W: 'a non-word character',
+        s: 'a whitespace character', S: 'a non-whitespace character',
+        n: 'a newline', t: 'a tab', r: 'a carriage return',
+        b: 'a word boundary', B: 'a position that is not a word boundary'
+      };
+      if (simple[c]) return { type: 'special', label: simple[c] };
+      if (/[1-9]/.test(c)) {
+        let num = c;
+        while (!eof() && /\d/.test(peek())) num += src[i++];
+        return { type: 'special', label: 'the same text as capture group #' + num + ' (backreference)' };
+      }
+      if (c === 'k' && peek() === '<') {
+        i++;
+        let name = '';
+        while (!eof() && peek() !== '>') name += src[i++];
+        i++;
+        return { type: 'special', label: 'the same text as group «' + name + '» (backreference)' };
+      }
+      if (c === 'p' || c === 'P') {
+        let prop = '';
+        if (peek() === '{') { i++; while (!eof() && peek() !== '}') prop += src[i++]; i++; }
+        return { type: 'special', label: (c === 'P' ? 'a character without' : 'a character with') + ' unicode property «' + prop + '»' };
+      }
+      if (c === 'u' || c === 'x') {
+        let hex = '';
+        if (peek() === '{') { i++; while (!eof() && peek() !== '}') hex += src[i++]; i++; }
+        else { const n = c === 'u' ? 4 : 2; hex = src.slice(i, i + n); i += n; }
+        return { type: 'special', label: 'the character U+' + hex.toUpperCase() };
+      }
+      return { type: 'char', ch: c };
+    }
+
+    // render tree to nested lists
+    function render(node) {
+      if (node.type === 'seq') {
+        // merge consecutive plain chars into literals
+        const out = [];
+        let lit = '';
+        const flushLit = () => { if (lit) { out.push('<li>the text <code>' + esc(lit) + '</code></li>'); lit = ''; } };
+        for (const it of node.items) {
+          if (it.type === 'char') { lit += it.ch; continue; }
+          flushLit();
+          out.push(render(it));
+        }
+        flushLit();
+        return out.join('');
+      }
+      if (node.type === 'char') return '<li>the character <code>' + esc(node.ch) + '</code></li>';
+      if (node.type === 'special' || node.type === 'anchor') return '<li>' + esc(node.label) + '</li>';
+      if (node.type === 'quant') {
+        const inner = render(node.atom);
+        // single-li atoms fold the quantifier into the same line
+        if (node.atom.type !== 'seq' && node.atom.type !== 'group' && node.atom.type !== 'alt') {
+          return inner.replace(/<\/li>$/, '') + ' <span class="muted">— ' + esc(node.label) + '</span></li>';
+        }
+        return '<li><span class="muted">' + esc(node.label) + ':</span><ul>' + inner + '</ul></li>';
+      }
+      if (node.type === 'class') {
+        const list = node.parts.map((p) => '<code>' + esc(p) + '</code>').join(', ');
+        return '<li>' + (node.negated ? 'any character except: ' : 'any of: ') + list + '</li>';
+      }
+      if (node.type === 'alt') {
+        return '<li><span class="muted">either of:</span><ul>' +
+          node.branches.map((b) => '<li><ul>' + render(b) + '</ul></li>').join('<li class="muted">— or —</li>') + '</ul></li>';
+      }
+      if (node.type === 'group') {
+        const heads = {
+          capture: 'capture group #' + node.num + ':',
+          named: 'capture group «' + (node.name || '') + '»:',
+          noncap: 'group (non-capturing):',
+          lookahead: 'followed by (lookahead):',
+          neglookahead: 'NOT followed by (negative lookahead):',
+          lookbehind: 'preceded by (lookbehind):',
+          neglookbehind: 'NOT preceded by (negative lookbehind):'
+        };
+        return '<li><span class="muted">' + esc(heads[node.kind]) + '</span><ul>' + render(node.inner) + '</ul></li>';
+      }
+      return '';
+    }
+
+    const tree = alternation();
+    if (!eof()) throw new Error('parse stopped at position ' + i);
+    return '<ul>' + render(tree) + '</ul>';
+  }
+
+  // ---------- UI wiring ----------
+  const flagBoxes = [...document.querySelectorAll('input[data-flag]')];
+  const flags = () => flagBoxes.filter((b) => b.checked).map((b) => b.dataset.flag).join('');
+
+  let timer = null;
+  let lastOk = false;
+
+  async function update() {
+    const pattern = patternEl.value;
+    const fl = flags();
+    $('flagsShown').textContent = fl;
+    try {
+      localStorage.setItem('rx-pattern', pattern);
+      localStorage.setItem('rx-flags', fl);
+      localStorage.setItem('rx-text', textEl.value);
+      localStorage.setItem('rx-repl', replEl.value);
+    } catch (e) {}
+    errorEl.classList.remove('show');
+    if (!pattern) {
+      backdrop.innerHTML = esc(textEl.value);
+      matchesEl.innerHTML = '';
+      explainEl.innerHTML = '<span class="muted">Type a pattern above.</span>';
+      $('matchCount').textContent = '';
+      replOut.textContent = '';
+      lastOk = false;
+      renderCases();
+      return;
+    }
+    // validate + explain
+    try {
+      new RegExp(pattern, fl);
+    } catch (e) {
+      errorEl.textContent = String(e.message || e);
+      errorEl.classList.add('show');
+      backdrop.innerHTML = esc(textEl.value);
+      matchesEl.innerHTML = '';
+      $('matchCount').textContent = '';
+      lastOk = false;
+      renderCases();
+      return;
+    }
+    try { explainEl.innerHTML = explain(pattern); }
+    catch (e) { explainEl.innerHTML = '<span class="muted">(no explanation available for this pattern)</span>'; }
+
+    const r = await runMatch(pattern, fl, textEl.value);
+    if (!r.ok) {
+      errorEl.textContent = r.error;
+      errorEl.classList.add('show');
+      backdrop.innerHTML = esc(textEl.value);
+      matchesEl.innerHTML = '';
+      $('matchCount').textContent = '';
+      lastOk = false;
+      renderCases();
+      return;
+    }
+    lastOk = true;
+    let spans = r.spans, matches = r.matches;
+    if (!fl.includes('g')) { spans = spans.slice(0, 1); matches = matches.slice(0, 1); }
+
+    // highlight
+    const text = textEl.value;
+    let html = '', pos = 0;
+    spans.forEach((s, idx) => {
+      html += esc(text.slice(pos, s[0]));
+      html += '<mark class="h' + (idx % 2) + '">' + esc(text.slice(s[0], s[1])) + '</mark>';
+      pos = s[1];
+    });
+    html += esc(text.slice(pos));
+    backdrop.innerHTML = html + '\n';
+
+    // matches list
+    $('matchCount').innerHTML = matches.length
+      ? '<b>' + matches.length + '</b> match' + (matches.length > 1 ? 'es' : '') + (r.truncated ? ' (capped at 5000)' : '')
+      : 'no matches';
+    matchesEl.innerHTML = matches.slice(0, 500).map((m, i2) => {
+      let g = '';
+      m.groups.forEach((v, gi) => {
+        if (v !== undefined) g += '<span class="g">$' + (gi + 1) + ' = <b>' + esc(v) + '</b></span>';
+      });
+      if (m.named) for (const [k, v] of Object.entries(m.named)) {
+        if (v !== undefined) g += '<span class="g">«' + esc(k) + '» = <b>' + esc(v) + '</b></span>';
+      }
+      return '<div class="m"><span class="idx">#' + (i2 + 1) + ' @' + m.index + '</span> <span class="val">' + esc(m.text) + '</span>' + g + '</div>';
+    }).join('');
+
+    // replace preview
+    if (replEl.value !== '') {
+      try {
+        const re = new RegExp(pattern, fl);
+        replOut.textContent = text.replace(re, replEl.value);
+      } catch (e) { replOut.textContent = String(e.message || e); }
+    } else replOut.textContent = '';
+
+    renderCases();
+  }
+
+  function schedule() { clearTimeout(timer); timer = setTimeout(update, 200); }
+
+  // ---------- test cases ----------
+  let cases = [];
+  try { cases = JSON.parse(localStorage.getItem('rx-cases') || '[]'); } catch (e) {}
+
+  function renderCases() {
+    casesEl.innerHTML = '';
+    const pattern = patternEl.value, fl = flags();
+    cases.forEach((c, i2) => {
+      const row = document.createElement('div');
+      row.className = 'case';
+      let badge = '<span class="badge"></span>';
+      if (pattern && lastOk !== null) {
+        try {
+          const re = new RegExp(pattern, fl.replace('g', ''));
+          const hit = re.test(c.text);
+          const pass = c.expect === 'match' ? hit : !hit;
+          badge = '<span class="badge ' + (pass ? 'pass' : 'fail') + '">' + (pass ? 'PASS' : 'FAIL') + '</span>';
+        } catch (e) { /* invalid pattern */ }
+      }
+      row.innerHTML = '<input type="text" spellcheck="false">' +
+        '<select><option value="match">should match</option><option value="nomatch">should not match</option></select>' +
+        badge + '<button class="x">×</button>';
+      row.querySelector('input').value = c.text;
+      row.querySelector('select').value = c.expect;
+      row.querySelector('input').addEventListener('input', (e) => { cases[i2].text = e.target.value; saveCases(); renderCases(); });
+      row.querySelector('select').addEventListener('change', (e) => { cases[i2].expect = e.target.value; saveCases(); renderCases(); });
+      row.querySelector('.x').addEventListener('click', () => { cases.splice(i2, 1); saveCases(); renderCases(); });
+      casesEl.appendChild(row);
+    });
+    if (!cases.length) casesEl.innerHTML = '<div style="color:#6f7078;font-size:12px;padding:4px 0 8px">No test cases — add strings that should (or should not) match.</div>';
+  }
+  const saveCases = () => { try { localStorage.setItem('rx-cases', JSON.stringify(cases)); } catch (e) {} };
+  $('addCase').addEventListener('click', () => { cases.push({ text: '', expect: 'match' }); saveCases(); renderCases(); casesEl.querySelector('.case:last-child input').focus(); });
+
+  // ---------- events & startup ----------
+  patternEl.addEventListener('input', schedule);
+  textEl.addEventListener('input', schedule);
+  replEl.addEventListener('input', schedule);
+  textEl.addEventListener('scroll', () => { backdrop.scrollTop = textEl.scrollTop; backdrop.scrollLeft = textEl.scrollLeft; });
+  flagBoxes.forEach((b) => b.addEventListener('change', update));
+
+  const storedPattern = localStorage.getItem('rx-pattern');
+  patternEl.value = storedPattern !== null ? storedPattern : '(?<year>\\d{4})-(?<month>\\d{2})-(?<day>\\d{2})';
+  textEl.value = localStorage.getItem('rx-text') !== null ? localStorage.getItem('rx-text')
+    : 'Releases:\n  v2.1 shipped on 2025-11-03\n  v2.2 planned for 2026-01-20\n  hotfix on 12-31 (no year!)';
+  replEl.value = localStorage.getItem('rx-repl') || '';
+  const storedFlags = localStorage.getItem('rx-flags');
+  if (storedFlags !== null) flagBoxes.forEach((b) => { b.checked = storedFlags.includes(b.dataset.flag); });
+  if (storedPattern === null && !cases.length) {
+    cases = [{ text: '2026-07-20', expect: 'match' }, { text: '20-07-2026', expect: 'nomatch' }];
+    saveCases();
+  }
+  update();
+
+  window.__rx = { update, explain, get cases() { return cases; } };
+})();
+</script>
+</body>
+</html>
