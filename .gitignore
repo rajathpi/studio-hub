@@ -2,3 +2,7 @@
 node_modules/
 code-workspace/
 .cs-include/
+
+# local dev
+.claude/
+_libs/

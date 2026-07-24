@@ -32,6 +32,22 @@ Live Mermaid diagram editor with 8 hand-tuned themes, high-resolution PNG/SVG/cl
 
 ![Mermaid Studio](docs/mermaid-studio.png)
 
+### ✉ Merge Studio — [`merge-studio.html`](merge-studio.html)
+
+Mail merge without the cloud. Drop a **CSV/XLSX** (or paste cells straight from Excel), write a document template with `{{placeholders}}`, and get **one personalized PDF per row** — or one per person, with `{{#each}}` tables and `{{sum:…}}` totals when several rows belong to the same record. Everything renders locally; salary data, client lists, and HR files never touch a server.
+
+![Merge Studio](docs/merge-studio.png)
+
+The template language covers real documents, not just letters: filters (`{{Salary | currency:EUR}}`, `date:`, `number:`, `blank:`), conditional blocks (`{{#if Status = "Active"}}…{{else}}…{{/if}}`), tables, page breaks, headers/footers with page numbers, a logo, and custom fonts (drop a `.ttf` for full Unicode). A live preview shows each record as you type — switch to the PDF tab for the real rendered output — and a checks panel flags typo'd field names (with did-you-mean), empty values, and filename collisions before you generate.
+
+The whole flow — load the built-in sample, flip through records, edit the template with the preview following along, check the real PDF, download everything as a zip:
+
+![Merge Studio demo](docs/merge-demo.gif)
+
+Output: individual PDFs zipped, one combined PDF, or **`.eml` email drafts** (with the PDF attached) that open ready-to-send in Outlook / Apple Mail — review each one, hit send. Nothing is ever sent for you. Row filters (`Amount > 0 and Status = Active`), per-row include checkboxes, EU/US number-format handling, and project export/import round it out.
+
+![Email drafts demo](docs/merge-email.gif)
+
 ### ▶ Code Studio — [`code-studio.py`](code-studio.py) + [`code-studio.html`](code-studio.html)
 
 A competitive-programming workbench: editor with tabs and per-language templates, a file explorer over a real workspace folder, and a **multi-test-case runner** with AC / WA / TLE / RE verdicts and per-test timing.
