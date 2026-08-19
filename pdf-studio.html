@@ -124,24 +124,51 @@
   #thumbTools { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; align-items: center; }
   #thumbTools .sep { color: var(--muted2); }
   .thumbGrid {
-    display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px;
-    max-height: 420px; overflow: auto; padding: 4px; margin-bottom: 12px;
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 12px;
+    max-height: 560px; overflow: auto; padding: 4px; margin-bottom: 12px;
   }
   .thumb {
-    border: 2px solid var(--border2); border-radius: 8px; padding: 6px; cursor: pointer;
+    border: 2px solid var(--border2); border-radius: 8px; padding: 7px; cursor: pointer;
     text-align: center; background: var(--input-bg); position: relative;
   }
   .thumb:hover { border-color: var(--muted); }
   .thumb.sel { border-color: var(--accent); background: rgba(255,92,138,.08); }
   .thumb canvas { max-width: 100%; display: block; margin: 0 auto 4px; border: 1px solid var(--border2); }
-  .thumb .plbl { font-size: 10.5px; color: var(--muted); }
+  .thumb .plbl { font-size: 11px; color: var(--muted); }
   .thumb .mvbtns { position: absolute; top: 3px; right: 3px; display: flex; gap: 2px; }
   .thumb .mvbtns span {
     background: var(--panel); border: 1px solid var(--border2); border-radius: 4px; font-size: 10px;
     padding: 1px 4px; cursor: pointer; color: var(--text2);
   }
   .thumb .mvbtns span:hover { color: var(--accent); border-color: var(--accent); }
+  .thumb .zoomBtn {
+    position: absolute; top: 3px; left: 3px; background: var(--panel); border: 1px solid var(--border2);
+    border-radius: 4px; font-size: 12px; line-height: 1; padding: 3px 5px; cursor: pointer;
+    color: var(--text2); opacity: 0; transition: opacity .1s;
+  }
+  .thumb:hover .zoomBtn { opacity: 1; }
+  .thumb .zoomBtn:hover { color: var(--accent); border-color: var(--accent); }
   #thumbLoading { font-size: 12.5px; color: var(--muted); padding: 20px; text-align: center; }
+
+  /* ---- lightbox: full-size page preview ---- */
+  .lightboxOverlay {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,.82); z-index: 100;
+    align-items: center; justify-content: center; flex-direction: column;
+  }
+  .lightboxOverlay.show { display: flex; }
+  .lightboxInner { position: relative; max-width: 92vw; max-height: 86vh; display: flex; align-items: center; gap: 14px; }
+  #lightboxCanvas { max-width: 78vw; max-height: 80vh; background: #fff; box-shadow: 0 8px 40px rgba(0,0,0,.5); }
+  .lbClose {
+    position: absolute; top: -42px; right: 0; background: none; border: none; color: #fff;
+    font-size: 30px; line-height: 1; cursor: pointer; padding: 4px 8px;
+  }
+  .lbClose:hover { color: var(--accent); }
+  .lbNav {
+    background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.3); color: #fff;
+    font-size: 24px; padding: 14px 16px; border-radius: 8px; cursor: pointer; line-height: 1;
+  }
+  .lbNav:hover { background: rgba(255,255,255,.2); }
+  .lbLabel { position: absolute; bottom: -30px; left: 50%; transform: translateX(-50%); color: #ccc; font-size: 12.5px; white-space: nowrap; }
 
   #result { display: none; margin-top: 12px; padding: 10px 12px; border-radius: 8px;
     background: rgba(63,185,80,.08); border: 1px solid rgba(63,185,80,.35);
@@ -243,7 +270,7 @@
         <ul>
           <li>Add files by dropping them on the page or using <b>+ Add files</b>. Everything happens in your browser — nothing is uploaded anywhere.</li>
           <li>Click an operation on the right. Only operations that make sense for your current files are enabled (e.g. Merge needs 2+ PDFs).</li>
-          <li>Most page-based operations show a thumbnail grid &mdash; click pages to select them, or type a range like <code>1-3,5,7-9</code>.</li>
+          <li>Most page-based operations show a thumbnail grid &mdash; click pages to select them, or type a range like <code>1-3,5,7-9</code>. Hover a thumbnail and click &#128269; to see that page full-size before deciding &mdash; use the arrow keys to flip through the rest without closing it.</li>
           <li>Results download automatically. Operations that produce several files bundle them into one .zip.</li>
         </ul>
       </div>
@@ -556,6 +583,73 @@ function parseRanges(txt, maxPages) {
   return Array.from(res).sort((a, b) => a - b);
 }
 
+/* ================= lightbox: click any thumbnail to see the full page, arrow-key through the rest ================= */
+let lightboxCtx = null; // { pdf, order, index }
+function ensureLightbox() {
+  if ($('lightboxOverlay')) return;
+  const div = document.createElement('div');
+  div.id = 'lightboxOverlay';
+  div.className = 'lightboxOverlay';
+  div.innerHTML = '<div class="lightboxInner">' +
+    '<button class="lbClose" id="lbClose" title="Close (Esc)">&times;</button>' +
+    '<button class="lbNav" id="lbPrev" title="Previous page (&larr;)">&#8249;</button>' +
+    '<canvas id="lightboxCanvas"></canvas>' +
+    '<button class="lbNav" id="lbNext" title="Next page (&rarr;)">&#8250;</button>' +
+    '<div class="lbLabel" id="lbLabel"></div></div>';
+  document.body.appendChild(div);
+  $('lbClose').addEventListener('click', closeLightbox);
+  div.addEventListener('click', e => { if (e.target === div) closeLightbox(); });
+  $('lbPrev').addEventListener('click', () => navLightbox(-1));
+  $('lbNext').addEventListener('click', () => navLightbox(1));
+  document.addEventListener('keydown', e => {
+    if (!div.classList.contains('show')) return;
+    if (e.key === 'Escape') closeLightbox();
+    if (e.key === 'ArrowLeft') navLightbox(-1);
+    if (e.key === 'ArrowRight') navLightbox(1);
+  });
+}
+function closeLightbox() {
+  const o = $('lightboxOverlay'); if (o) o.classList.remove('show');
+  lightboxCtx = null;
+}
+// pdf.js refuses a second render() on the same <canvas> before the first one finishes, and cancelling
+// the in-flight task doesn't release it fast enough for back-to-back next-clicks or held-down arrow keys.
+// Rather than race cancellation timing, serialize through one loop: only one call is ever "the renderer";
+// everyone else just updates lightboxCtx.index and returns, and the active renderer keeps re-checking the
+// index after each frame, catching up to wherever the user ended up instead of rendering every step.
+let lightboxRendering = false;
+async function renderLightboxPage() {
+  if (lightboxRendering) return;
+  lightboxRendering = true;
+  let lastRendered = -1;
+  while (lightboxCtx && lightboxCtx.index !== lastRendered) {
+    const { pdf, order, index } = lightboxCtx;
+    const idx = order[index];
+    const page = await pdf.getPage(idx + 1);
+    const viewport = page.getViewport({ scale: 1.7 });
+    const canvas = $('lightboxCanvas');
+    canvas.width = viewport.width; canvas.height = viewport.height;
+    await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+    lastRendered = index;
+    if (lightboxCtx && lightboxCtx.index === index) {
+      $('lbLabel').textContent = 'Page ' + (idx + 1) + ' — ' + (index + 1) + ' of ' + order.length;
+    }
+  }
+  lightboxRendering = false;
+}
+function navLightbox(dir) {
+  if (!lightboxCtx) return;
+  const n = lightboxCtx.order.length;
+  lightboxCtx.index = (lightboxCtx.index + dir + n) % n;
+  renderLightboxPage();
+}
+function openLightbox(pdf, order, startIdx) {
+  ensureLightbox();
+  lightboxCtx = { pdf, order: order.slice(), index: Math.max(0, order.indexOf(startIdx)) };
+  $('lightboxOverlay').classList.add('show');
+  renderLightboxPage();
+}
+
 async function renderThumbPicker(container, pdfBytes, opts) {
   opts = opts || {};
   // A single generation counter on the container guards every render pass — the initial load AND every
@@ -574,7 +668,7 @@ async function renderThumbPicker(container, pdfBytes, opts) {
   };
   async function renderCanvas(idx) {
     const page = await pdf.getPage(idx + 1);
-    const viewport = page.getViewport({ scale: 0.32 });
+    const viewport = page.getViewport({ scale: 0.5 });
     const canvas = document.createElement('canvas');
     canvas.width = viewport.width; canvas.height = viewport.height;
     await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
@@ -592,6 +686,11 @@ async function renderThumbPicker(container, pdfBytes, opts) {
       card.appendChild(canvas);
       const lbl = document.createElement('div'); lbl.className = 'plbl'; lbl.textContent = 'Page ' + (idx + 1);
       card.appendChild(lbl);
+      const zoomBtn = document.createElement('span');
+      zoomBtn.className = 'zoomBtn'; zoomBtn.title = 'View full size';
+      zoomBtn.innerHTML = '&#128269;';
+      zoomBtn.addEventListener('click', e => { e.stopPropagation(); openLightbox(pdf, picker.order, idx); });
+      card.appendChild(zoomBtn);
       if (opts.reorderable) {
         const mv = document.createElement('div'); mv.className = 'mvbtns';
         mv.innerHTML = '<span data-dir="-1">&#9650;</span><span data-dir="1">&#9660;</span>';
