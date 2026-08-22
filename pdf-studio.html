@@ -673,7 +673,7 @@ function openPanel(id) {
   const op = OPS.find(o => o.id === id);
   if (!op || !op.enabled()) return;
   state.activeOp = id;
-  $('panelTitle').textContent = op.title;
+  $('panelTitle').innerHTML = op.title; // titles carry entities such as &rarr;
   $('panelBody').innerHTML = '';
   $('result').classList.remove('show');
   $('panel').classList.add('show');

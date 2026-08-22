@@ -1,6 +1,10 @@
 # Studio Hub
 
-**A suite of single-file developer tools that run entirely in your browser** — no install, no accounts, no server, and nothing ever leaves your machine. Clone the repo (or download the files), open `studio-hub.html`, and pick a tool.
+**A suite of single-file developer tools that run entirely in your browser** — no install, no accounts, no server, and nothing ever leaves your machine.
+
+### → [Open Studio Hub](https://rajathpi.github.io/studio-hub/)
+
+Every browser-only tool runs straight from that link — no clone, no build step. Or download the files and open `index.html` from disk; they behave identically, including offline.
 
 ![Studio Hub](docs/hub.png)
 
@@ -48,6 +52,40 @@ Output: individual PDFs zipped, one combined PDF, or **`.eml` email drafts** (wi
 
 ![Email drafts demo](docs/merge-email.gif)
 
+### 📄 PDF Studio — [`pdf-studio.html`](pdf-studio.html)
+
+Fifteen PDF operations behind one file manager: merge, split, remove, extract, reorder, rotate, page numbers, watermark, metadata, images ↔ PDF, and an Office bridge for Word, PowerPoint and Excel. Drop in a mix of PDFs, images and Office files and every operation that applies to them lights up.
+
+![PDF Studio](docs/pdf-studio.png)
+
+**Pages are edited visually, not by typing ranges.** Merge, reorder, remove, extract, rotate and split all share one thumbnail grid: drag a page to move it — across files, not just within one — click to select, rotate individual pages or a whole selection, and drop pages you don't want. Removed pages stay greyed out rather than vanishing, so you can put them back before saving. Nothing is written until you hit save.
+
+![Page organiser](docs/pdf-studio-organizer.gif)
+
+The same grid is what every page operation opens onto — here it is mid-edit, with one page turned a quarter-turn, one flipped upside down, one dropped, and one selected:
+
+![The page grid, mid-edit](docs/pdf-studio-organizer.png)
+
+Split builds on it too: give it ranges (`1-3, 5, 8-10`, shown as removable chips), a fixed chunk size, one file per page, or a visual pick — and get either separate PDFs in a zip or one merged document.
+
+**Stamping shows you the result before you commit.** Page numbers offer six positions, four formats (`1`, `i`, `Page 1`, `1 of 10`), a start-at offset, skip-the-cover, colour and weight — rendered live onto page one as you change them.
+
+![Page numbers](docs/pdf-studio-page-numbers.png)
+
+Watermarks come as a single stamp, a diagonal run, or a tiled grid, with size, opacity, rotation and colour on live sliders.
+
+![Watermark](docs/pdf-studio-watermark.gif)
+
+**The Office bridge writes real PDFs.** Word documents are laid out with their own page size, margins, styles, tables and images and then written directly to a PDF — no print dialog, no "save as PDF" detour. PowerPoint decks are rebuilt at the deck's real slide size with their text and embedded pictures. Excel renders each sheet you tick as a paginated table with repeated headers.
+
+![Word to PDF](docs/pdf-studio-word.png)
+
+Going the other way, **PDF → Word** produces a genuine `.docx`: heading levels are inferred from font sizes, bold runs and font families are carried over, and each PDF page becomes a page break. **PDF → images** renders JPG, PNG or WebP at DPI presets from screen (150) to archival (600), for all pages, the first page, a custom range, or a visual selection.
+
+### 🤖 Mascot Studio — [`mascot-studio.html`](mascot-studio.html)
+
+A small scratchpad for posing and exporting an SVG mascot — handy for a quick illustration when you don't want to open a design tool.
+
 ### ▶ Code Studio — [`code-studio.py`](code-studio.py) + [`code-studio.html`](code-studio.html)
 
 A competitive-programming workbench: editor with tabs and per-language templates, a file explorer over a real workspace folder, and a **multi-test-case runner** with AC / WA / TLE / RE verdicts and per-test timing.
@@ -64,19 +102,24 @@ python3 code-studio.py ~/path/to/your/cp-folder    # use an existing folder as w
 
 ## Getting started
 
+The quickest path is the hosted hub — [rajathpi.github.io/studio-hub](https://rajathpi.github.io/studio-hub/) — which serves the same files straight from `main`.
+
+To run them locally instead:
+
 ```bash
 git clone https://github.com/rajathpi/studio-hub.git
 cd studio-hub
-open studio-hub.html        # or just double-click it
+open index.html        # or just double-click it
 ```
 
-Each tool remembers its inputs between sessions (localStorage). Tools open from the hub in their own tabs.
+Each tool remembers its inputs between sessions (localStorage). Every tool except Code Studio is pure browser code, so once a page has loaded it keeps working with the network off.
 
 ### Browser notes
 
 - Everything works in any modern browser.
 - Mermaid Studio's **Open folder…** (real files on disk) uses the File System Access API: Chrome, Edge, and Arc have it enabled; **Brave** ships it disabled — enable `brave://flags/#file-system-access-api` and relaunch. Safari/Firefox fall back to an in-browser project.
-- Code Studio requires Python 3 (preinstalled on macOS and most Linux distros) for its local runner.
+- PDF Studio loads its PDF, Office and rasterising libraries from a CDN on first open, so that one needs a connection the first time (the page is cached afterwards). Every other browser tool is fully self-contained.
+- Code Studio requires Python 3 (preinstalled on macOS and most Linux distros) for its local runner. It is the one tool the hosted hub can't run, since it needs a compiler on your machine.
 
 ## License
 
