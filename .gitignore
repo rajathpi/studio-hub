@@ -6,3 +6,6 @@ code-workspace/
 # local dev
 .claude/
 _libs/
+
+# local test fixtures
+.testfiles/
