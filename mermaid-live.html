@@ -36,7 +36,7 @@
 
   /* ---- sidebar ---- */
   #sidebar {
-    width: 240px; min-width: 240px; background: #22232a;
+    width: 240px; min-width: 160px; flex: none; background: #22232a;
     border-right: 1px solid #3a3b44; display: flex; flex-direction: column;
   }
   #sidebar.hidden { display: none; }
@@ -78,15 +78,32 @@
   #empty p { font-size: 12px; color: #8a8b94; line-height: 1.5; }
   #empty button { width: 100%; }
 
+  /* ---- drag splitters ---- */
+  .splitter {
+    flex: none; width: 6px; cursor: col-resize; position: relative;
+    background: #26272e; border-right: 1px solid #3a3b44;
+    transition: background .12s;
+  }
+  .splitter:hover, .splitter.dragging, .splitter:focus-visible {
+    background: #ff5c8a; outline: none;
+  }
+  /* Grab area wider than the visible seam, or the 6px is hard to hit. */
+  .splitter::after {
+    content: ''; position: absolute; top: 0; bottom: 0; left: -3px; right: -3px;
+  }
+  #sidebar.hidden + .splitter { display: none; }
+  /* Held on <body> so the cursor survives leaving the handle mid-drag. */
+  body.resizing { cursor: col-resize; user-select: none; }
+
   /* ---- editor + preview ---- */
   #code {
-    width: 36%; min-width: 220px; resize: horizontal;
+    width: 36%; min-width: 220px;
     background: #1e1f24; color: #d8dee9;
     border: none; border-right: 1px solid #3a3b44; outline: none;
     padding: 14px; font: 13px/1.6 "SF Mono", Menlo, Consolas, monospace;
     white-space: pre; overflow: auto;
   }
-  #right { flex: 1; display: flex; flex-direction: column; min-width: 0; background: #ffffff; }
+  #right { flex: 1; display: flex; flex-direction: column; min-width: 0; background: #ffffff; position: relative; }
   #error {
     display: none; padding: 8px 14px; font: 12px/1.5 Menlo, monospace;
     background: #5c1f2b; color: #ffb3c0; border-bottom: 1px solid #7a2938;
@@ -94,10 +111,46 @@
   }
   #error.show { display: block; }
   #preview {
-    flex: 1; overflow: auto; padding: 20px;
-    display: flex; align-items: flex-start; justify-content: center;
+    flex: 1; position: relative; overflow: hidden;
+    cursor: grab; touch-action: none;
   }
-  #preview svg { max-width: 100%; height: auto; }
+  #preview.panning { cursor: grabbing; }
+  /* Only ever translated. Scaling here would promote a compositor layer that
+     rasterises once and stretches, which softens the diagram's text. */
+  #canvas { position: absolute; top: 0; left: 0; }
+  #canvas svg { display: block; max-width: none; }
+
+  /* ---- floating diagram controls ---- */
+  .overlaybar {
+    position: absolute; bottom: 16px; z-index: 5;
+    display: flex; align-items: center; gap: 2px; padding: 5px;
+    background: rgba(24,25,31,.92); border: 1px solid rgba(255,255,255,.08);
+    border-radius: 14px; box-shadow: 0 6px 22px rgba(0,0,0,.35);
+  }
+  #zoombar { right: 16px; top: 16px; bottom: auto; }
+  #gridbar { left: 16px; }
+  .overlaybar button {
+    display: grid; place-items: center; width: 32px; height: 32px; padding: 0;
+    border: none; background: transparent; color: #e9eaee; border-radius: 10px;
+  }
+  .overlaybar button:hover { background: rgba(255,255,255,.13); }
+  .overlaybar button.active { background: #ff5c8a; color: #fff; }
+  .overlaybar button svg { display: block; }
+  #zoomLevel {
+    width: auto; min-width: 44px; padding: 0 7px;
+    font-size: 11px; color: #9ca3af; font-variant-numeric: tabular-nums;
+  }
+  #zoomLevel:hover { color: #e9eaee; }
+  /* Ten of the twelve themes have a light canvas, so the controls invert. */
+  .overlaybar.light {
+    background: rgba(255,255,255,.93); border-color: rgba(0,0,0,.10);
+    box-shadow: 0 6px 22px rgba(0,0,0,.12);
+  }
+  .overlaybar.light button { color: #3f3f46; }
+  .overlaybar.light button:hover { background: rgba(0,0,0,.07); }
+  .overlaybar.light button.active { background: #ff5c8a; color: #fff; }
+  .overlaybar.light #zoomLevel { color: #71717a; }
+  .overlaybar.light #zoomLevel:hover { color: #18181b; }
   footer {
     display: flex; gap: 14px; padding: 6px 14px; font-size: 11px; color: #8a8b94;
     background: #26272e; border-top: 1px solid #3a3b44;
@@ -163,16 +216,40 @@
       <button id="browserProjBtn">Use in-browser project</button>
     </div>
   </div>
+  <div class="splitter" id="splitSide" tabindex="0" role="separator" aria-orientation="vertical" aria-label="Resize file explorer" title="Drag to resize · double-click to reset"></div>
   <textarea id="code" spellcheck="false" autocapitalize="off" autocomplete="off"></textarea>
+  <div class="splitter" id="splitCode" tabindex="0" role="separator" aria-orientation="vertical" aria-label="Resize editor and diagram" title="Drag to resize · double-click to reset"></div>
   <div id="right">
     <div id="error"></div>
-    <div id="preview"></div>
+    <div id="preview"><div id="canvas"></div></div>
+    <div id="gridbar" class="overlaybar">
+      <button id="gridBtn" title="Toggle grid">
+        <svg viewBox="0 0 18 18" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M7 2v14M11 2v14M2 7h14M2 11h14"/></svg>
+      </button>
+    </div>
+    <div id="zoombar" class="overlaybar">
+      <button id="zoomLevel" title="Click for actual size (100%)">100%</button>
+      <button id="fullBtn" title="Fullscreen diagram">
+        <svg viewBox="0 0 18 18" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 2H2v4.5M11.5 2H16v4.5M16 11.5V16h-4.5M2 11.5V16h4.5"/></svg>
+      </button>
+      <button id="zoomOut" title="Zoom out (Cmd+-)">
+        <svg viewBox="0 0 18 18" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="7.8" cy="7.8" r="5.3"/><path d="M11.7 11.7 16 16M5.5 7.8h4.6"/></svg>
+      </button>
+      <button id="zoomIn" title="Zoom in (Cmd+=)">
+        <svg viewBox="0 0 18 18" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="7.8" cy="7.8" r="5.3"/><path d="M11.7 11.7 16 16M5.5 7.8h4.6M7.8 5.5v4.6"/></svg>
+      </button>
+      <button id="zoomFit" title="Reset to fit the whole diagram (Cmd+0, or double-click the diagram)">
+        <svg viewBox="0 0 18 18" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14 14 4M10.5 3.5H14V7M7.5 14.5H4V11"/></svg>
+      </button>
+    </div>
   </div>
 </main>
 <footer>
   <span>Renders live as you type</span>
   <span>Cmd+S saves the open file (or exports PNG)</span>
   <span>Cmd+B toggles files</span>
+  <span>Drag a seam to resize, double-click it to reset</span>
+  <span>Scroll to zoom, drag to pan, double-click to fit</span>
   <span id="status"></span>
 </footer>
 <div id="ctx"></div>
@@ -3769,6 +3846,7 @@ globalThis["mermaid"] = globalThis.__esbuild_esm_mermaid_nm["mermaid"].default;
 (function () {
   const codeEl = document.getElementById('code');
   const preview = document.getElementById('preview');
+  const canvasEl = document.getElementById('canvas');
   const errorEl = document.getElementById('error');
   const themeEl = document.getElementById('theme');
   const rightEl = document.getElementById('right');
@@ -3962,11 +4040,12 @@ globalThis["mermaid"] = globalThis.__esbuild_esm_mermaid_nm["mermaid"].default;
   async function render() {
     const code = codeEl.value.trim();
     if (!currentPath) localStorage.setItem('mermaid-live-code', codeEl.value);
-    if (!code) { preview.innerHTML = ''; errorEl.classList.remove('show'); return; }
+    if (!code) { canvasEl.innerHTML = ''; errorEl.classList.remove('show'); return; }
     const id = 'mm-' + (++counter);
     try {
       const { svg } = await mermaid.render(id, code);
-      preview.innerHTML = svg;
+      canvasEl.innerHTML = svg;
+      applyZoom();
       errorEl.classList.remove('show');
     } catch (e) {
       // mermaid leaves a stray element behind on parse errors; clean it up
@@ -3993,7 +4072,9 @@ globalThis["mermaid"] = globalThis.__esbuild_esm_mermaid_nm["mermaid"].default;
       e.preventDefault();
       const s = codeEl.selectionStart, epos = codeEl.selectionEnd;
       codeEl.setRangeText('    ', s, epos, 'end');
+      // setRangeText fires no input event, so the autosave path needs poking.
       scheduleRender();
+      scheduleSave();
     }
   });
 
@@ -4021,6 +4102,9 @@ globalThis["mermaid"] = globalThis.__esbuild_esm_mermaid_nm["mermaid"].default;
     clone.setAttribute('width', w);
     clone.setAttribute('height', h);
     clone.style.maxWidth = 'none';
+    // Drop the on-screen zoom sizing so an export is always at natural size.
+    clone.style.width = '';
+    clone.style.height = '';
     clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
     return { text: new XMLSerializer().serializeToString(clone), w, h };
   }
@@ -4579,10 +4663,260 @@ globalThis["mermaid"] = globalThis.__esbuild_esm_mermaid_nm["mermaid"].default;
     if (perm === 'granted') await attachBackend(RealFS(handle), true);
   });
 
+  // ---- diagram zoom + pan ----
+  // The diagram sits on a transform-scaled canvas rather than in a scrolling
+  // box, so it can be dragged past the edges of the pane the way a map can.
+  const zoomLevelEl = document.getElementById('zoomLevel');
+  const ZOOM_MIN = 0.05, ZOOM_MAX = 8, FIT_PAD = 24;
+  let scale = 1, tx = 0, ty = 0, natW = 0, natH = 0, hasView = false;
+
+  // viewBox is the diagram's own coordinate space, so a scale factor keeps its
+  // meaning no matter how wide the pane is.
+  function naturalSize(svg) {
+    const vb = svg.viewBox && svg.viewBox.baseVal;
+    if (vb && vb.width) return { w: vb.width, h: vb.height };
+    svg.style.width = '';
+    svg.style.height = '';
+    const r = svg.getBoundingClientRect();
+    return { w: r.width, h: r.height };
+  }
+
+  // Zoom resizes the SVG so the browser re-renders the vector at that size,
+  // which stays sharp at any magnification. The canvas only translates.
+  function applyView() {
+    const svg = canvasEl.querySelector('svg');
+    if (svg && natW) {
+      svg.style.width = (natW * scale) + 'px';
+      svg.style.height = (natH * scale) + 'px';
+    }
+    canvasEl.style.transform = 'translate(' + tx + 'px, ' + ty + 'px)';
+    zoomLevelEl.textContent = Math.round(scale * 100) + '%';
+    paintGrid();
+  }
+
+  function layoutDiagram() {
+    const svg = canvasEl.querySelector('svg');
+    if (!svg) { natW = natH = 0; zoomLevelEl.textContent = '--'; return null; }
+    const nat = naturalSize(svg);
+    natW = nat.w;
+    natH = nat.h;
+    svg.style.maxWidth = 'none';
+    return svg;
+  }
+
+  function fitView() {
+    if (!layoutDiagram() || !natW || !natH) return;
+    const availW = preview.clientWidth - FIT_PAD * 2;
+    const availH = preview.clientHeight - FIT_PAD * 2;
+    // The first render can land before the pane has a measurable size.
+    if (availW <= 0 || availH <= 0) { setTimeout(fitView, 50); return; }
+    // Shrink to fit, but never magnify past 100% on a fit.
+    scale = Math.min(availW / natW, availH / natH, 1);
+    tx = (preview.clientWidth - natW * scale) / 2;
+    ty = (preview.clientHeight - natH * scale) / 2;
+    hasView = true;
+    applyView();
+  }
+
+  // Called after every render: keep the view the user set, fit the first one.
+  function applyZoom() {
+    if (!hasView) fitView();
+    else { layoutDiagram(); applyView(); }
+  }
+
+  // Zooms about a point in the pane, so whatever is under the cursor stays put.
+  function zoomTo(next, clientX, clientY) {
+    const k = Math.min(Math.max(next, ZOOM_MIN), ZOOM_MAX);
+    const r = preview.getBoundingClientRect();
+    const px = clientX == null ? r.width / 2 : clientX - r.left;
+    const py = clientY == null ? r.height / 2 : clientY - r.top;
+    tx = px - (px - tx) * (k / scale);
+    ty = py - (py - ty) * (k / scale);
+    scale = k;
+    hasView = true;
+    applyView();
+  }
+
+  function stepZoom(dir, x, y) { zoomTo(scale * (dir > 0 ? 1.25 : 0.8), x, y); }
+  function resetZoom() {
+    if (!layoutDiagram()) return;
+    scale = 1;
+    tx = (preview.clientWidth - natW) / 2;
+    ty = FIT_PAD;
+    hasView = true;
+    applyView();
+  }
+
+  // Dot grid: a reference the diagram visibly moves against while panning.
+  const GRID_STEP = 30;
+  const gridBtn = document.getElementById('gridBtn');
+  const bars = document.querySelectorAll('.overlaybar');
+  let gridOn = localStorage.getItem('mermaid-live-grid') !== '0';
+
+  function canvasIsLight() {
+    const hex = /^#([0-9a-f]{6})$/i.exec(currentTheme().canvas || '');
+    if (!hex) return true;
+    const n = parseInt(hex[1], 16);
+    return ((((n >> 16) & 255) * 0.299 + ((n >> 8) & 255) * 0.587 + (n & 255) * 0.114) / 255) > 0.5;
+  }
+
+  function paintGrid() {
+    const light = canvasIsLight();
+    bars.forEach((b) => b.classList.toggle('light', light));
+    gridBtn.classList.toggle('active', gridOn);
+    if (!gridOn) { preview.style.backgroundImage = 'none'; return; }
+    const step = Math.min(Math.max(GRID_STEP * scale, 14), 120);
+    const ink = light ? 'rgba(0,0,0,.13)' : 'rgba(255,255,255,.13)';
+    preview.style.backgroundImage = 'radial-gradient(circle, ' + ink + ' 1.4px, transparent 1.4px)';
+    preview.style.backgroundSize = step + 'px ' + step + 'px';
+    preview.style.backgroundPosition = tx + 'px ' + ty + 'px';
+  }
+
+  gridBtn.addEventListener('click', () => {
+    gridOn = !gridOn;
+    localStorage.setItem('mermaid-live-grid', gridOn ? '1' : '0');
+    paintGrid();
+  });
+
+  const fullBtn = document.getElementById('fullBtn');
+  fullBtn.addEventListener('click', () => {
+    if (document.fullscreenElement) document.exitFullscreen();
+    else if (rightEl.requestFullscreen) rightEl.requestFullscreen().catch(() => {});
+  });
+  document.addEventListener('fullscreenchange', () => {
+    fullBtn.classList.toggle('active', !!document.fullscreenElement);
+    // The pane size just changed completely, so re-frame the diagram.
+    setTimeout(fitView, 80);
+  });
+
+  document.getElementById('zoomIn').addEventListener('click', () => stepZoom(1));
+  document.getElementById('zoomOut').addEventListener('click', () => stepZoom(-1));
+  document.getElementById('zoomFit').addEventListener('click', fitView);
+  zoomLevelEl.addEventListener('click', resetZoom);
+
+  // Plain scroll zooms, like mermaid.live. A trackpad pinch arrives as
+  // ctrl+wheel with smaller deltas, so it gets a steeper factor.
+  preview.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const factor = Math.pow(0.999, e.deltaY * (e.ctrlKey ? 3 : 1));
+    zoomTo(scale * factor, e.clientX, e.clientY);
+  }, { passive: false });
+
+  preview.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0 || (e.target.closest && e.target.closest('.overlaybar'))) return;
+    e.preventDefault();
+    const sx = e.clientX, sy = e.clientY, ox = tx, oy = ty;
+    preview.setPointerCapture(e.pointerId);
+    preview.classList.add('panning');
+    const move = (ev) => {
+      tx = ox + (ev.clientX - sx);
+      ty = oy + (ev.clientY - sy);
+      applyView();
+    };
+    const stop = () => {
+      preview.removeEventListener('pointermove', move);
+      preview.removeEventListener('pointerup', stop);
+      preview.removeEventListener('pointercancel', stop);
+      preview.classList.remove('panning');
+    };
+    preview.addEventListener('pointermove', move);
+    preview.addEventListener('pointerup', stop);
+    preview.addEventListener('pointercancel', stop);
+  });
+
+  preview.addEventListener('dblclick', (e) => {
+    if (e.target.closest && e.target.closest('.overlaybar')) return;
+    fitView();
+  });
+
+  // ---- pane splitters ----
+  const mainEl = document.querySelector('main');
+  const splitSide = document.getElementById('splitSide');
+  const splitCode = document.getElementById('splitCode');
+  const CODE_DEFAULT = '36%', SIDE_DEFAULT = 240;
+  const MIN_CODE = 220, MIN_RIGHT = 260, MIN_SIDE = 160, MAX_SIDE = 520;
+
+  // Editor width is kept as a percentage so the split survives a window resize;
+  // the sidebar stays in px because a file tree should not scale with the window.
+  function setCodeWidth(px) {
+    const total = mainEl.clientWidth;
+    if (!total) return;
+    const taken = sidebarEl.offsetWidth + splitSide.offsetWidth + splitCode.offsetWidth;
+    const max = Math.max(MIN_CODE, total - taken - MIN_RIGHT);
+    const w = Math.min(Math.max(px, MIN_CODE), max);
+    codeEl.style.width = (w / total * 100).toFixed(3) + '%';
+  }
+  function setSideWidth(px) {
+    sidebarEl.style.width = Math.min(Math.max(px, MIN_SIDE), MAX_SIDE) + 'px';
+  }
+  function saveWidths() {
+    localStorage.setItem('mermaid-live-codew', codeEl.style.width || CODE_DEFAULT);
+    if (!sidebarEl.classList.contains('hidden')) {
+      localStorage.setItem('mermaid-live-sidew', String(sidebarEl.offsetWidth));
+    }
+  }
+
+  function dragHandle(handle, begin) {
+    handle.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0) return;
+      e.preventDefault();
+      const startX = e.clientX;
+      const step = begin();
+      handle.setPointerCapture(e.pointerId);
+      handle.classList.add('dragging');
+      document.body.classList.add('resizing');
+      const move = (ev) => step(ev.clientX - startX);
+      const stop = () => {
+        handle.removeEventListener('pointermove', move);
+        handle.removeEventListener('pointerup', stop);
+        handle.removeEventListener('pointercancel', stop);
+        handle.classList.remove('dragging');
+        document.body.classList.remove('resizing');
+        saveWidths();
+      };
+      handle.addEventListener('pointermove', move);
+      handle.addEventListener('pointerup', stop);
+      handle.addEventListener('pointercancel', stop);
+    });
+  }
+
+  dragHandle(splitCode, () => {
+    const start = codeEl.offsetWidth;
+    return (dx) => setCodeWidth(start + dx);
+  });
+  dragHandle(splitSide, () => {
+    const start = sidebarEl.offsetWidth;
+    return (dx) => { setSideWidth(start + dx); setCodeWidth(codeEl.offsetWidth); };
+  });
+
+  const nudge = [
+    [splitCode, (d) => setCodeWidth(codeEl.offsetWidth + d)],
+    [splitSide, (d) => { setSideWidth(sidebarEl.offsetWidth + d); setCodeWidth(codeEl.offsetWidth); }],
+  ];
+  nudge.forEach(([handle, apply]) => {
+    handle.addEventListener('keydown', (e) => {
+      const d = e.key === 'ArrowLeft' ? -24 : e.key === 'ArrowRight' ? 24 : 0;
+      if (!d) return;
+      e.preventDefault();
+      apply(d);
+      saveWidths();
+    });
+  });
+
+  splitCode.addEventListener('dblclick', () => { codeEl.style.width = CODE_DEFAULT; saveWidths(); });
+  splitSide.addEventListener('dblclick', () => {
+    setSideWidth(SIDE_DEFAULT); setCodeWidth(codeEl.offsetWidth); saveWidths();
+  });
+  window.addEventListener('resize', () => setCodeWidth(codeEl.offsetWidth));
+
+  codeEl.style.width = localStorage.getItem('mermaid-live-codew') || CODE_DEFAULT;
+  setSideWidth(parseInt(localStorage.getItem('mermaid-live-sidew'), 10) || SIDE_DEFAULT);
+
   // ---- sidebar toggle ----
   function setSidebar(visible) {
     sidebarEl.classList.toggle('hidden', !visible);
     localStorage.setItem('mermaid-live-sidebar', visible ? '1' : '0');
+    setCodeWidth(codeEl.offsetWidth);
   }
   document.getElementById('filesBtn').addEventListener('click', () => setSidebar(sidebarEl.classList.contains('hidden')));
   setSidebar(localStorage.getItem('mermaid-live-sidebar') !== '0');
@@ -4598,6 +4932,9 @@ globalThis["mermaid"] = globalThis.__esbuild_esm_mermaid_nm["mermaid"].default;
       e.preventDefault();
       setSidebar(sidebarEl.classList.contains('hidden'));
     }
+    if ((e.metaKey || e.ctrlKey) && (e.key === '=' || e.key === '+')) { e.preventDefault(); stepZoom(1); }
+    if ((e.metaKey || e.ctrlKey) && e.key === '-') { e.preventDefault(); stepZoom(-1); }
+    if ((e.metaKey || e.ctrlKey) && e.key === '0') { e.preventDefault(); fitView(); }
   });
   window.addEventListener('beforeunload', () => {
     if (backend && currentPath && dirty) { backend.write(currentPath, codeEl.value); }

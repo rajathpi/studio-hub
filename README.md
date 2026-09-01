@@ -32,7 +32,7 @@ Live match highlighting, numbered and named capture groups, a replace preview, a
 
 ### ⌁ Mermaid Studio — [`mermaid-live.html`](mermaid-live.html)
 
-Live Mermaid diagram editor with 8 hand-tuned themes, high-resolution PNG/SVG/clipboard export, and a file explorer that saves real `.mmd` files to a folder on disk. Also maintained standalone at [rajathpi/mermaid-studio](https://github.com/rajathpi/mermaid-studio).
+Live Mermaid diagram editor with 8 hand-tuned themes, high-resolution PNG/SVG/clipboard export, and a file explorer that saves real `.mmd` files to a folder on disk. The diagram sits on a pan-and-zoom canvas: scroll to zoom around the pointer, drag to move, double-click (or **Fit**) to frame the whole thing, and go fullscreen for presenting. Zoom re-renders the vector, so it stays sharp at any magnification and exports are unaffected. Editor and preview are split by draggable seams, so you can give either side the room it needs. Also maintained standalone at [rajathpi/mermaid-studio](https://github.com/rajathpi/mermaid-studio).
 
 ![Mermaid Studio](docs/mermaid-studio.png)
 
