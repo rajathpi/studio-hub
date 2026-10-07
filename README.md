@@ -84,7 +84,9 @@ Going the other way, **PDF → Word** produces a genuine `.docx`: heading levels
 
 ### 🤖 Mascot Studio — [`mascot-studio.html`](mascot-studio.html)
 
-A small scratchpad for posing and exporting an SVG mascot — handy for a quick illustration when you don't want to open a design tool.
+A gallery of seven hand-drawn SVG characters (Blob, Cat, Ghost, Robot, Owl, Tororo and Doc buddy) whose eyes follow your cursor and blink on their own. It's the parts bin the other tools borrow their mascots from. Hit **Release the ghost** for a Pac-Man run across the bottom of the page, and look in the corner for Tororo, the animated Live2D white cat.
+
+![Mascot Studio](docs/mascot-studio.png)
 
 ### ▶ Code Studio — [`code-studio.py`](code-studio.py) + [`code-studio.html`](code-studio.html)
 
@@ -118,7 +120,7 @@ Each tool remembers its inputs between sessions (localStorage). Every tool excep
 
 - Everything works in any modern browser.
 - Mermaid Studio's **Open folder…** (real files on disk) uses the File System Access API: Chrome, Edge, and Arc have it enabled; **Brave** ships it disabled — enable `brave://flags/#file-system-access-api` and relaunch. Safari/Firefox fall back to an in-browser project.
-- PDF Studio loads its PDF, Office and rasterising libraries from a CDN on first open, so that one needs a connection the first time (the page is cached afterwards). Every other browser tool is fully self-contained.
+- PDF Studio loads its PDF, Office and rasterising libraries from a CDN on first open, so that one needs a connection the first time (the page is cached afterwards). Mascot Studio fetches the animated Tororo from jsDelivr, so offline the corner cat is simply missing and the rest of the page works. Every other browser tool is fully self-contained.
 - Code Studio requires Python 3 (preinstalled on macOS and most Linux distros) for its local runner. It is the one tool the hosted hub can't run, since it needs a compiler on your machine.
 
 ## License
