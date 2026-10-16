@@ -196,6 +196,16 @@
         <option value="2.1653">Phone 9:19.5</option>
         <option value="desk">Desk &middot; multi-monitor</option>
       </select>
+      <div id="compBox" hidden>
+        <label class="field" for="comp">Composition</label>
+        <select id="comp" style="width:100%">
+          <option value="auto">Auto</option>
+          <option value="whole">Whole: all of it in view</option>
+          <option value="fill">Fill: grow to cover the sheet</option>
+          <option value="repeat">Repeat: one per screen</option>
+        </select>
+        <div id="focusBox"><label class="field" for="focus">Centre <b id="focusOut"></b></label><input type="range" id="focus" min="0" max="100" step="1" value="50"></div>
+      </div>
       <div class="row actions" id="imgActions">
         <button id="dlSvg">SVG</button>
         <button id="dlPng">PNG</button>
@@ -338,6 +348,25 @@
     }
     return poly;
   });
+  // Marching squares over a sampled scalar field: one SVG path (of segments) per level.
+  function contours(fn, W, H, res, levels) {
+    const cs = W / res, nx = res + 1, ny = Math.ceil(H / cs) + 1, F = new Float32Array(nx * ny);
+    for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) F[j * nx + i] = fn(i * cs, j * cs);
+    return levels.map((t) => {
+      let d = "";
+      const seg = (a, b) => { d += `M${f(a[0])} ${f(a[1])}L${f(b[0])} ${f(b[1])}`; };
+      for (let j = 0; j < ny - 1; j++) for (let i = 0; i < nx - 1; i++) {
+        const a = F[j * nx + i], b = F[j * nx + i + 1], c = F[(j + 1) * nx + i + 1], e = F[(j + 1) * nx + i];
+        if ((a > t) === (b > t) && (b > t) === (c > t) && (c > t) === (e > t)) continue;
+        const x = i * cs, y = j * cs, E = [];
+        const edge = (v0, v1, x0, y0, x1, y1) => { if ((v0 > t) !== (v1 > t)) { const u = (t - v0) / (v1 - v0); E.push([x0 + (x1 - x0) * u, y0 + (y1 - y0) * u]); } };
+        edge(a, b, x, y, x + cs, y); edge(b, c, x + cs, y, x + cs, y + cs); edge(c, e, x + cs, y + cs, x, y + cs); edge(e, a, x, y + cs, x, y);
+        if (E.length === 2) seg(E[0], E[1]);
+        else if (E.length === 4) { if (((a + b + c + e) / 4 > t) === (a > t)) { seg(E[0], E[1]); seg(E[2], E[3]); } else { seg(E[0], E[3]); seg(E[1], E[2]); } }
+      }
+      return d;
+    });
+  }
   const hilbertXY = (n, d) => {
     let x = 0, y = 0, t = d;
     for (let s = 1; s < n; s *= 2) {
@@ -1059,12 +1088,248 @@
         return `<g stroke-width="${p.stroke}" stroke-linejoin="round">${out.join("")}</g>`;
       },
     },
+    {
+      id: "chladni", name: "Chladni Plate", tags: ["physics", "dots", "op-art"],
+      blurb: "Sand on a vibrating metal plate gathers wherever the plate stays still. These are those resting lines for a square plate ringing in mode (n, m), tiled across as many plates as you like.",
+      params: [P("n", "Mode n", 1, 14, 1, 7), P("m", "Mode m", 1, 14, 1, 3), P("plates", "Plates (short side)", 1, 6, 1, 1), P("grains", "Sand grains", 2000, 60000, 1000, 26000), P("tight", "Line sharpness", 0.01, 0.25, 0.005, 0.06), P("dot", "Grain size", 0.4, 3, 0.1, 1.2), T("lines", "Draw lines instead", false)],
+      draw(p, { W, H, r }) {
+        const L = Math.min(W, H) / p.plates, n = p.n, m = p.m === p.n ? p.m + 1 : p.m;
+        const F = (x, y) => { const u = x / L * Math.PI, v = y / L * Math.PI; return Math.cos(n * u) * Math.cos(m * v) - Math.cos(m * u) * Math.cos(n * v); };
+        if (p.lines) return `<path d="${contours(F, W, H, Math.round(Math.min(400, 120 * W / L)), [0])[0]}" stroke-width="1.4" stroke-linecap="round"/>`;
+        let d = "", k = f(p.dot);
+        for (let i = 0, tries = 0; i < p.grains && tries < p.grains * 80; tries++) {
+          const x = r() * W, y = r() * H;
+          if (Math.abs(F(x, y)) < p.tight * 2) { d += `M${f(x)} ${f(y)}h${k}v${k}h-${k}z`; i++; }
+        }
+        return `<path d="${d}" fill="currentColor" stroke="none"/>`;
+      },
+    },
+    {
+      id: "fieldlines", name: "Electric Field Lines", tags: ["physics", "lines", "curves"],
+      blurb: "Positive and negative charges strung across the sheet. Every line leaves a positive charge and follows the electric field until it lands on a negative one, the way iron filings would show it.",
+      params: [P("charges", "Charges", 2, 12, 1, 6), P("lines", "Lines per charge", 4, 60, 1, 26), P("spread", "Vertical scatter", 0, 0.8, 0.01, 0.4), P("stroke", "Line width", 0.3, 4, 0.1, 1), T("dots", "Show charges", true)],
+      draw(p, { W, H, r, bg }) {
+        const Q = Array.from({ length: p.charges }, (_, i) => ({ x: (i + 0.5) / p.charges * W + (r() - 0.5) * W / p.charges * 0.5, y: H / 2 + (r() - 0.5) * H * p.spread, q: (i % 2 ? -1 : 1) * (0.7 + r() * 0.6) }));
+        const E = (x, y) => {
+          let ex = 0, ey = 0;
+          for (const c of Q) { const dx = x - c.x, dy = y - c.y, d2 = dx * dx + dy * dy + 1e-6, s = c.q / (d2 * Math.sqrt(d2)); ex += dx * s; ey += dy * s; }
+          return [ex, ey];
+        };
+        const step = Math.max(W, H) / 450, out = [];
+        for (const c of Q) {
+          if (c.q < 0) continue;
+          for (let k = 0; k < p.lines; k++) {
+            const a = (k + 0.5) / p.lines * TAU;
+            let x = c.x + Math.cos(a) * step * 3, y = c.y + Math.sin(a) * step * 3;
+            const line = [[x, y]];
+            for (let s = 0; s < 1600; s++) {
+              const [ex, ey] = E(x, y), mag = Math.hypot(ex, ey);
+              if (!mag) break;
+              x += ex / mag * step; y += ey / mag * step; line.push([x, y]);
+              if (x < -W * 0.2 || x > W * 1.2 || y < -H * 0.6 || y > H * 1.6) break;
+              if (Q.some((o) => o.q < 0 && Math.hypot(x - o.x, y - o.y) < step * 2)) break;
+            }
+            out.push(`<polyline points="${pts(line)}"/>`);
+          }
+        }
+        const dots = p.dots ? Q.map((c) => c.q > 0 ? `<circle cx="${f(c.x)}" cy="${f(c.y)}" r="5" fill="currentColor" stroke="none"/>` : `<circle cx="${f(c.x)}" cy="${f(c.y)}" r="4.5" fill="${bg}" stroke-width="1.6"/>`).join("") : "";
+        return `<g stroke-width="${p.stroke}" stroke-linejoin="round">${out.join("")}</g>${dots}`;
+      },
+    },
+    {
+      id: "interference", name: "Wave Interference", tags: ["physics", "waves", "op-art"],
+      blurb: "Ripples spreading from a few point sources, like stones dropped in a pond or light through slits. Where crest meets crest the lines crowd together; where crest meets trough the water goes calm.",
+      params: [P("sources", "Sources", 1, 6, 1, 3), P("wl", "Wavelength", 8, 120, 1, 64), P("levels", "Contour lines", 2, 14, 1, 4), P("res", "Detail", 80, 300, 10, 220), P("stroke", "Line width", 0.3, 3, 0.1, 1)],
+      draw(p, { W, H, r }) {
+        const S = Array.from({ length: p.sources }, (_, i) => [(i + 0.5) / p.sources * W + (r() - 0.5) * W / p.sources * 0.4, H * (0.25 + r() * 0.5)]), k = TAU / p.wl;
+        const A = (x, y) => { let s = 0; for (const [sx, sy] of S) s += Math.sin(k * Math.hypot(x - sx, y - sy)); return s / S.length; };
+        const lv = Array.from({ length: p.levels }, (_, i) => -0.8 + 1.6 * (i + 0.5) / p.levels);
+        return contours(A, W, H, p.res, lv).map((d) => `<path d="${d}" stroke-width="${p.stroke}" stroke-linecap="round"/>`).join("");
+      },
+    },
+    {
+      id: "orbits", name: "Orbit Trails", tags: ["physics", "curves"],
+      blurb: "Test particles flung around a few heavy stars under Newtonian gravity. Some settle into rosettes, some get slingshot from star to star, and the trails keep every path.",
+      params: [P("stars", "Stars", 1, 5, 1, 3), P("bodies", "Particles", 5, 200, 1, 46), P("steps", "Steps", 200, 4000, 50, 1500), P("speed", "Launch speed", 0.5, 1.6, 0.01, 1), P("stroke", "Line width", 0.2, 2, 0.05, 0.5), T("dots", "Show stars", true)],
+      draw(p, { W, H, r }) {
+        const M = Array.from({ length: p.stars }, (_, i) => ({ x: (i + 0.5) / p.stars * W, y: H / 2 + (r() - 0.5) * H * 0.2, m: 0.6 + r() * 0.8 }));
+        const R0 = Math.min(H * 0.42, W / p.stars * 0.42), v0 = R0 / 70, G = v0 * v0 * R0, out = [];
+        for (let b = 0; b < p.bodies; b++) {
+          const s = M[(r() * M.length) | 0], R = R0 * (0.25 + r() * 0.9), a = r() * TAU, dir = r() < 0.5 ? 1 : -1;
+          let x = s.x + R * Math.cos(a), y = s.y + R * Math.sin(a);
+          const v = Math.sqrt(G * s.m / R) * p.speed * (0.85 + r() * 0.3);
+          let vx = -Math.sin(a) * v * dir, vy = Math.cos(a) * v * dir;
+          const line = [[x, y]];
+          for (let t = 0; t < p.steps; t++) {
+            let ax = 0, ay = 0, crash = false;
+            for (const o of M) { const dx = o.x - x, dy = o.y - y, d2 = dx * dx + dy * dy; if (d2 < 9) { crash = true; break; } const sc = G * o.m / (d2 * Math.sqrt(d2 + 25)); ax += dx * sc; ay += dy * sc; }
+            if (crash) break;
+            vx += ax; vy += ay; x += vx; y += vy;
+            if (t % 2 === 0) line.push([x, y]);
+            if (x < -W * 0.5 || x > W * 1.5 || y < -H * 1.5 || y > H * 2.5) break;
+          }
+          if (line.length > 3) out.push(`<polyline points="${pts(line)}"/>`);
+        }
+        const stars = p.dots ? M.map((s) => `<circle cx="${f(s.x)}" cy="${f(s.y)}" r="${f(3 + 3 * s.m)}" fill="currentColor" stroke="none"/>`).join("") : "";
+        return `<g stroke-width="${p.stroke}" stroke-linejoin="round" stroke-opacity=".8">${out.join("")}</g>${stars}`;
+      },
+    },
+    {
+      id: "pendulum", name: "Double Pendulum", tags: ["physics", "curves"],
+      blurb: "A pendulum hanging from a pendulum, the textbook example of chaos. Several start a hair apart, and within seconds the paths their tips trace fan out completely.",
+      params: [P("count", "Pendulums", 1, 16, 1, 6), P("angle", "Start angle", 30, 179, 1, 140), P("spread", "Start difference (°)", 0.001, 2, 0.001, 0.05), P("time", "Duration", 5, 60, 1, 24), P("ratio", "Arm ratio", 0.3, 1.5, 0.01, 1), P("stroke", "Line width", 0.2, 2, 0.05, 0.55)],
+      draw(p, { W, H }) {
+        const g = 9.81, l1 = 1, l2 = p.ratio, dt = 0.004, R = Math.min(W, H) * 0.46 / (l1 + l2), cx = W / 2, cy = H / 2, out = [];
+        const acc = (t1, t2, w1, w2) => {
+          const d = t1 - t2, den = 3 - Math.cos(2 * d);
+          return [(-g * 3 * Math.sin(t1) - g * Math.sin(t1 - 2 * t2) - 2 * Math.sin(d) * (w2 * w2 * l2 + w1 * w1 * l1 * Math.cos(d))) / (l1 * den),
+                  (2 * Math.sin(d) * (w1 * w1 * l1 * 2 + g * 2 * Math.cos(t1) + w2 * w2 * l2 * Math.cos(d))) / (l2 * den)];
+        };
+        for (let c = 0; c < p.count; c++) {
+          let s = [(p.angle + c * p.spread) * Math.PI / 180, (p.angle + c * p.spread) * Math.PI / 180, 0, 0];
+          const der = (q) => { const [a1, a2] = acc(q[0], q[1], q[2], q[3]); return [q[2], q[3], a1, a2]; };
+          const line = [];
+          for (let i = 0, N = Math.round(p.time / dt); i < N; i++) {
+            const k1 = der(s), k2 = der(s.map((v, j) => v + k1[j] * dt / 2)), k3 = der(s.map((v, j) => v + k2[j] * dt / 2)), k4 = der(s.map((v, j) => v + k3[j] * dt));
+            s = s.map((v, j) => v + dt / 6 * (k1[j] + 2 * k2[j] + 2 * k3[j] + k4[j]));
+            if (i % 3 === 0) line.push([cx + R * (l1 * Math.sin(s[0]) + l2 * Math.sin(s[1])), cy + R * (l1 * Math.cos(s[0]) + l2 * Math.cos(s[1]))]);
+          }
+          out.push(`<polyline points="${pts(line)}" stroke-opacity="${(0.45 + 0.55 * (1 - c / Math.max(1, p.count))).toFixed(2)}"/>`);
+        }
+        return `<g stroke-width="${p.stroke}" stroke-linejoin="round">${out.join("")}</g>`;
+      },
+    },
+    {
+      id: "lorenz", name: "Lorenz Attractor", tags: ["math", "physics", "curves"],
+      blurb: "Three equations for air rising and falling in a heated layer. The point never repeats and never settles, looping between two wings: the butterfly that gave chaos theory its name.",
+      params: [P("steps", "Length", 2000, 60000, 1000, 26000), P("rho", "Rho", 14, 60, 0.5, 28), P("turn", "View angle", 0, 360, 1, 0), P("stroke", "Line width", 0.2, 2, 0.05, 0.45)],
+      draw(p, { W, H }) {
+        const sg = 10, b = 8 / 3, dt = 0.005, a = p.turn * Math.PI / 180, P0 = [];
+        let x = 0.1, y = 0, z = 0;
+        const der = (x, y, z) => [sg * (y - x), x * (p.rho - z) - y, x * y - b * z];
+        for (let i = 0; i < p.steps + 300; i++) {
+          const k1 = der(x, y, z), k2 = der(x + k1[0] * dt / 2, y + k1[1] * dt / 2, z + k1[2] * dt / 2), k3 = der(x + k2[0] * dt / 2, y + k2[1] * dt / 2, z + k2[2] * dt / 2), k4 = der(x + k3[0] * dt, y + k3[1] * dt, z + k3[2] * dt);
+          x += dt / 6 * (k1[0] + 2 * k2[0] + 2 * k3[0] + k4[0]); y += dt / 6 * (k1[1] + 2 * k2[1] + 2 * k3[1] + k4[1]); z += dt / 6 * (k1[2] + 2 * k2[2] + 2 * k3[2] + k4[2]);
+          if (i > 300) P0.push([x * Math.cos(a) - y * Math.sin(a), -z]);
+        }
+        return `<polyline points="${pts(fitPts(P0, W, H, 0.05))}" stroke-width="${p.stroke}" stroke-linejoin="round"/>`;
+      },
+    },
+    {
+      id: "clifford", name: "Clifford Attractor", tags: ["math", "dots"],
+      blurb: "Two lines of trigonometry fed back into themselves tens of thousands of times. The points never repeat, yet they pile up into silky ribbons that change completely with every slider.",
+      params: [P("a", "a", -3, 3, 0.01, -1.4), P("b", "b", -3, 3, 0.01, 1.6), P("c", "c", -3, 3, 0.01, 1), P("d", "d", -3, 3, 0.01, 0.7), P("points", "Points", 5000, 120000, 1000, 60000), P("dot", "Dot size", 0.3, 2, 0.05, 0.7)],
+      draw(p, { W, H }) {
+        let x = 0.1, y = 0.1;
+        const P0 = [];
+        for (let i = 0; i < p.points + 50; i++) {
+          const nx = Math.sin(p.a * y) + p.c * Math.cos(p.a * x), ny = Math.sin(p.b * x) + p.d * Math.cos(p.b * y);
+          x = nx; y = ny;
+          if (i > 50) P0.push([x, y]);
+        }
+        let d = "";
+        for (const [px, py] of fitPts(P0, W, H, 0.05)) d += `M${f(px)} ${f(py)}h0`;
+        return `<path d="${d}" stroke-width="${p.dot}" stroke-linecap="round" stroke-opacity=".55"/>`;
+      },
+    },
+    {
+      id: "timestable", name: "Times-Table Circle", tags: ["math", "curves", "geometric"],
+      blurb: "Put n points round a circle and join each point i to point i × k. Times two draws a cardioid, times three a nephroid, and every multiplier in between a flower of its own.",
+      params: [P("n", "Points", 20, 900, 1, 360), P("k", "Multiplier", 2, 100, 0.1, 2), P("stroke", "Line width", 0.2, 2, 0.05, 0.45), T("ring", "Draw the circle", true)],
+      draw(p, { W, H }) {
+        const R = Math.min(W, H) * 0.46, cx = W / 2, cy = H / 2, at = (i) => { const a = i / p.n * TAU - Math.PI / 2; return [cx + R * Math.cos(a), cy + R * Math.sin(a)]; };
+        let d = "";
+        for (let i = 0; i < p.n; i++) { const [x1, y1] = at(i), [x2, y2] = at(i * p.k); d += `M${f(x1)} ${f(y1)}L${f(x2)} ${f(y2)}`; }
+        return `<path d="${d}" stroke-width="${p.stroke}" stroke-opacity=".85"/>` + (p.ring ? `<path d="${circ(cx, cy, R)}" stroke-width="${p.stroke * 2}"/>` : "");
+      },
+    },
+    {
+      id: "apollonian", name: "Apollonian Gasket", tags: ["math", "fractal", "geometric"],
+      blurb: "Three circles touching inside a fourth, and every gap between them filled with the biggest circle that fits, forever. Descartes worked out the sizes; the rest is recursion.",
+      params: [P("depth", "Depth", 1, 9, 1, 6), P("min", "Smallest circle", 0.2, 8, 0.1, 1), P("stroke", "Line width", 0.2, 3, 0.05, 0.8), T("fill", "Shade by depth", false)],
+      draw(p, { W, H }) {
+        const R = Math.min(W, H) * 0.47, cx = W / 2, cy = H / 2, ri = 1 / (1 + 2 / Math.sqrt(3));
+        const C = (k, x, y) => ({ k, x, y });
+        const outer = C(-1, 0, 0), inn = [0, 1, 2].map((i) => { const a = -Math.PI / 2 + i * TAU / 3; return C(1 / ri, (1 - ri) * Math.cos(a), (1 - ri) * Math.sin(a)); });
+        // Descartes via Vieta: the two circles tangent to a, b, c sum to 2(a + b + c), in curvature and in curvature × centre.
+        const flip = (a, b, c, d) => { const k = 2 * (a.k + b.k + c.k) - d.k; return C(k, (2 * (a.k * a.x + b.k * b.x + c.k * c.x) - d.k * d.x) / k, (2 * (a.k * a.y + b.k * b.y + c.k * c.y) - d.k * d.y) / k); };
+        const all = [[outer, 0], ...inn.map((c) => [c, 0])];
+        const rec = (a, b, c, d, dep) => {
+          if (dep > p.depth) return;
+          const n = flip(a, b, c, d);
+          if (!(n.k > 0) || R / n.k < p.min) return;
+          all.push([n, dep]); rec(a, b, n, c, dep + 1); rec(a, c, n, b, dep + 1); rec(b, c, n, a, dep + 1);
+        };
+        const [A, B, D] = inn;
+        rec(A, B, D, outer, 1); rec(outer, A, B, D, 1); rec(outer, B, D, A, 1); rec(outer, A, D, B, 1);
+        return all.map(([c, dep]) => `<path d="${circ(cx + R * c.x, cy + R * c.y, R / Math.abs(c.k))}"${p.fill && dep ? ` fill="currentColor" fill-opacity="${(0.08 + 0.1 * (dep % 6)).toFixed(2)}"` : ""} stroke-width="${p.stroke}"/>`).join("");
+      },
+    },
+    {
+      id: "julia", name: "Julia Contours", tags: ["math", "fractal", "lines"],
+      blurb: "How fast each point of the complex plane runs away under z → z² + c, drawn as contour lines, like a survey map of the fractal's coastline. Nudge c and the coast reshapes itself.",
+      params: [P("cr", "c (real)", -1.2, 0.5, 0.001, -0.8), P("ci", "c (imaginary)", -1, 1, 0.001, 0.156), P("zoom", "Zoom", 0.5, 4, 0.05, 1.1), P("levels", "Contours", 4, 40, 1, 18), P("res", "Detail", 80, 320, 10, 230), P("stroke", "Line width", 0.2, 2, 0.05, 0.7)],
+      draw(p, { W, H }) {
+        const s = 3.4 / p.zoom / Math.sqrt(W * H), IT = 120;
+        const F = (x, y) => {
+          let zx = (x - W / 2) * s, zy = (y - H / 2) * s, i = 0;
+          for (; i < IT && zx * zx + zy * zy < 16; i++) { const t = zx * zx - zy * zy + p.cr; zy = 2 * zx * zy + p.ci; zx = t; }
+          return i >= IT ? IT : i + 1 - Math.log2(Math.log(Math.hypot(zx, zy)));
+        };
+        const lv = Array.from({ length: p.levels }, (_, i) => 1.2 * Math.pow(60, i / (p.levels - 1)));
+        return contours(F, W, H, p.res, lv).map((d) => `<path d="${d}" stroke-width="${p.stroke}" stroke-linecap="round"/>`).join("");
+      },
+    },
+    {
+      id: "guilloche", name: "Guilloché Rosette", tags: ["curves", "geometric"],
+      blurb: "The engine-turned line work on banknotes and watch dials: a circle rippled by two waves at once, copied and phase-shifted dozens of times until the lines weave into one rosette.",
+      params: [P("lobes", "Lobes", 3, 60, 1, 12), P("wobble", "Inner waves", 1, 30, 1, 5), P("copies", "Lines", 6, 120, 1, 30), P("depth", "Depth", 0.05, 0.4, 0.01, 0.24), P("hole", "Hole", 0.05, 0.7, 0.01, 0.3), P("stroke", "Line width", 0.2, 1.6, 0.05, 0.4)],
+      draw(p, { W, H }) {
+        const R = Math.min(W, H) * 0.47, cx = W / 2, cy = H / 2, N = 1500, base = Math.min(1 - p.depth, (1 + p.hole) / 2), out = [];
+        for (let c = 0; c < p.copies; c++) {
+          const ph = c / p.copies * TAU;
+          const line = Array.from({ length: N + 1 }, (_, i) => {
+            const t = i / N * TAU, rr = R * (base + p.depth * Math.sin(p.lobes * t + ph) * (0.6 + 0.4 * Math.sin(p.wobble * t)));
+            return [cx + rr * Math.cos(t), cy + rr * Math.sin(t)];
+          });
+          out.push(`<polyline points="${pts(line)}"/>`);
+        }
+        return `<g stroke-width="${p.stroke}" stroke-linejoin="round">${out.join("")}</g>`;
+      },
+    },
+    {
+      id: "ridgelines", name: "Mountain Ridgelines", tags: ["nature", "noise"],
+      blurb: "Layer after layer of mountain ridges fading into haze, made for wide desks: the range simply carries on across every screen, with an optional sun hanging over it.",
+      params: [P("layers", "Layers", 3, 16, 1, 8), P("height", "Peak height", 0.1, 0.8, 0.01, 0.34), P("rough", "Roughness", 1, 6, 1, 4), P("scale", "Zoom", 0.5, 8, 0.1, 2.6), P("sunx", "Sun position", 0, 1, 0.01, 0.68), T("sun", "Sun", true), T("lines", "Outlines only", false)],
+      draw(p, { W, H, n, fg, bg }) {
+        const out = [];
+        if (p.sun) out.push(`<path d="${circ(W * p.sunx, H * 0.3, Math.min(W, H) * 0.08)}" fill="${mix(bg, fg, 0.22)}" stroke="none"/>`);
+        for (let L = 0; L < p.layers; L++) {
+          const t = (L + 1) / p.layers, base = H * (0.42 + 0.55 * t), amp = H * p.height * (1.25 - 0.6 * t), line = [];
+          for (let x = 0, dx = W / 500; x <= W + dx / 2; x += dx) {
+            let v = 0, a = 1, fr = p.scale / W * (1 + L * 0.12), norm = 0;
+            for (let o = 0; o < p.rough; o++) { v += a * (1 - Math.abs(n(x * fr + L * 37.1 + o * 11.3, L * 3.3 + o * 5.1))); norm += a; a *= 0.5; fr *= 2.1; }
+            line.push([x, base - amp * (v / norm)]);
+          }
+          out.push(p.lines ? `<polyline points="${pts(line)}" stroke-width="1.2"/>`
+            : `<polygon points="${pts([...line, [W, H], [0, H]])}" fill="${mix(bg, fg, 0.12 + 0.88 * t)}" stroke="none"/>`);
+        }
+        return out.join("");
+      },
+    },
   ];
 
   const TAGS = { truchet: ["tiles", "curves"], maze: ["tiles", "lines"], flow: ["lines", "noise"], cubes: ["tiles", "3D", "op-art"], halftone: ["dots", "3D"],
     lissajous: ["curves"], polygons: ["geometric"], rings: ["noise", "curves"], hexweave: ["tiles", "curves"], packing: ["dots", "geometric"],
     moire: ["op-art", "curves"], spiro: ["curves"], wavedots: ["dots", "waves", "op-art"] };
   for (const pat of PATTERNS) pat.tags = pat.tags || TAGS[pat.id] || [];
+  // "radial" motifs radiate outward and look best grown to cover a wide sheet; "object" motifs are
+  // closed shapes that look best repeated, one per screen; "bottom" ones stand on the ground.
+  const CENTERED = { sunburst: "radial", rings: "radial", arcs: "radial", polygons: "radial", hilbert: "radial",
+    phyllotaxis: "object", halftone: "object", lissajous: "object", spiro: "object", rose: "object", supershape: "object", harmonograph: "object", koch: "object",
+    dragon: "object", pendulum: "object", lorenz: "object", clifford: "object", timestable: "object", apollonian: "object", guilloche: "object",
+    tree: "bottom", fern: "bottom" };
+  for (const pat of PATTERNS) pat.centered = CENTERED[pat.id] || false;
 
   const PALETTES = [
     ["Ink", "#141414", "#f3efe6"], ["Paper", "#f3efe6", "#141414"], ["Studio", "#ff5c8a", "#1e1f24"],
@@ -1080,9 +1345,54 @@
   let colors = store.colors || { fg: PALETTES[0][1], bg: PALETTES[0][2] };
   let current = null, params = {}, seed = 1, aspect = 1;
 
+  // Patterns drawn around a centre (a sun, a flower, one curve) are composed for a square.
+  // On wide or multi-screen sheets, Fill grows the motif around a chosen centre until it
+  // covers the sheet, and Repeat gives each screen (or each square of a wide sheet) its own
+  // copy, each from its own seed. Auto picks Whole for squarish formats, Fill otherwise.
+  let comp = store.comp || "auto", focus = null;
+  const modeFor = (pat, W, H) => {
+    if (!pat.centered) return "whole";
+    if (comp !== "auto") return comp;
+    if (!(deskMode || W / H > 1.6 || H / W > 1.6)) return "whole";
+    return pat.centered === "radial" ? "fill" : "repeat";
+  };
+  function composed(pat, prm, sd, W, H, screens, fg = colors.fg, bg = colors.bg) {
+    const ctx = (w, h, k = 0) => ({ W: w, H: h, r: rng(sd + k * 7919), n: noise2(sd + k), fg, bg });
+    const mode = modeFor(pat, W, H), ground = pat.centered === "bottom";
+    if (mode === "whole") return pat.draw(prm, ctx(W, H));
+    if (mode === "fill") {
+      const cx = focusX(W, screens), cy = ground ? H : H / 2;
+      if (ground) { const S = H; return `<g transform="translate(${f(cx - S / 2)} 0)">${pat.draw(prm, ctx(S, S))}</g>`; }
+      // A motif reaches ~0.46 of its square, so the square must be big enough for that to reach the farthest corner.
+      const far = Math.max(...[[0, 0], [W, 0], [0, H], [W, H]].map(([x, y]) => Math.hypot(x - cx, y - cy)));
+      const S = far / 0.45;
+      return `<g transform="translate(${f(cx - S / 2)} ${f(cy - S / 2)})">${pat.draw(prm, ctx(S, S))}</g>`;
+    }
+    let boxes = screens && screens.length ? screens.map(([x, y, w, h]) => ({ x, y, w, h })) : null;
+    if (!boxes) {
+      const nx = Math.max(1, Math.round(W / H)), ny = Math.max(1, Math.round(H / W));
+      boxes = [];
+      for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) boxes.push({ x: i * W / nx, y: j * H / ny, w: W / nx, h: H / ny });
+    }
+    return boxes.map((b, k) => {
+      const S = Math.min(b.w, b.h), x = b.x + (b.w - S) / 2, y = ground ? b.y + b.h - S : b.y + (b.h - S) / 2;
+      return `<g transform="translate(${f(x)} ${f(y)})">${pat.draw(prm, ctx(S, S, k))}</g>`;
+    }).join("");
+  }
+  // Where Fill centres the motif: the slider if moved, else the middle; on a desk, the middle
+  // of the screen nearest the desk's centre, so the motif never sits on a bezel.
+  function focusX(W, screens) {
+    if (focus != null) return focus * W;
+    if (screens && screens.length) {
+      const mid = screens.reduce((best, s) => { const c = s[0] + s[2] / 2; return Math.abs(c - W / 2) < Math.abs(best - W / 2) ? c : best; }, Infinity);
+      return mid;
+    }
+    return W / 2;
+  }
+
   function render(pat, prm, sd, asp, fg = colors.fg, bg = colors.bg) {
     const W = 1000, H = Math.round(1000 * asp);
-    const body = pat.draw(prm, { W, H, r: rng(sd), n: noise2(sd), fg, bg });
+    const body = composed(pat, prm, sd, W, H, null, fg, bg);
     return sheet(body, W, H, `viewBox="0 0 ${W} ${H}" width="${W}" height="${H}"`, fg, bg);
   }
   const sheet = (body, W, H, attrs, fg = colors.fg, bg = colors.bg) =>
@@ -1165,7 +1475,7 @@
   function open(id) {
     const pat = PATTERNS.find((x) => x.id === id);
     if (!pat) { current = null; document.body.classList.remove("editing"); return; }
-    current = pat; params = defaults(pat); seed = (Math.random() * 1e6) | 0;
+    current = pat; params = defaults(pat); seed = (Math.random() * 1e6) | 0; focus = null;
     $("edName").textContent = pat.name; $("edBlurb").textContent = pat.blurb;
     $("seed").value = seed;
     const box = $("controls"); box.innerHTML = "";
@@ -1192,7 +1502,23 @@
     drawEditor();
   }
   let raf = 0;
+  function syncComp() {
+    const box = $("compBox");
+    box.hidden = !current || !current.centered;
+    if (box.hidden) return;
+    $("comp").value = comp;
+    const W = 1000, H = deskMode ? geom().H : Math.round(1000 * aspect), mode = modeFor(current, W, H);
+    $("comp").options[0].textContent = `Auto (${({ fill: "Fill", whole: "Whole", repeat: "Repeat" })[mode]})`;
+    $("comp").options[3].textContent = deskMode ? "Repeat: one per screen" : "Repeat: a row of copies";
+    $("focusBox").hidden = mode !== "fill";
+    const fx = focus != null ? focus : focusX(W, deskMode ? geom().ms.map((s) => s.u) : null) / W;
+    $("focus").value = Math.round(fx * 100); $("focusOut").textContent = focus == null ? "auto" : Math.round(focus * 100) + "%";
+  }
+  $("comp").onchange = (e) => { comp = e.target.value; store.comp = comp; persist(); drawEditor(); };
+  $("focus").oninput = (e) => { focus = +e.target.value / 100; drawEditor(); };
+  $("focus").ondblclick = () => { focus = null; drawEditor(); };
   function drawEditor() {
+    syncComp();
     cancelAnimationFrame(raf);
     raf = requestAnimationFrame(() => {
       if (!deskMode) { $("canvasWrap").innerHTML = render(current, params, seed, aspect); return; }
@@ -1316,7 +1642,7 @@
     const vw = Math.max(...ms.map((s) => s.wx + s.m.w)), vh = Math.max(...ms.map((s) => s.wy + s.m.h));
     return { ms, order, k, H, x0, y0, cmW: x1 - x0, cmH: y1 - y0, vw, vh, win };
   }
-  const deskBody = (g) => current.draw(params, { W: 1000, H: g.H, r: rng(seed), n: noise2(seed), fg: colors.fg, bg: colors.bg });
+  const deskBody = (g) => composed(current, params, seed, 1000, g.H, g.ms.map((s) => s.u));
   const u3 = (n) => +n.toFixed(3);
   // One screen's slice. preserveAspectRatio="none" lets a panel whose pixels are
   // not square (a non-native mode) still map its cm onto its pixels exactly.
