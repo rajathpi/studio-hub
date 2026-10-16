@@ -14,8 +14,8 @@ import sys
 
 HERE = pathlib.Path(__file__).resolve().parent
 ROOT = HERE.parent
-PAGES = ["index.html", "diff-studio.html", "regex-studio.html", "merge-studio.html", "mascot-studio.html",
-         "blob-studio.html", "pattern-studio.html", "code-studio.html", "mermaid-live.html", "pdf-studio.html"]
+PAGES = ["index.html", "diff-studio.html", "regex-studio.html", "merge-studio.html",
+         "blob-studio.html", "pattern-studio.html", "code-studio.html", "mermaid-live.html", "pdf-studio.html", "markdown-studio.html"]
 
 # The tool pages share one dark palette; each colour becomes a token whose dark
 # value is that same colour (see kit.html), so dark mode looks exactly as before.
@@ -34,7 +34,7 @@ TOKENS = {
 HEX2TOK = {h: t for t, hs in TOKENS.items() for h in hs}
 SYS_FONT = '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
 # Pages whose top <header> is a toolbar: the slider docks at its end instead of floating over it.
-DOCK = {"diff-studio.html", "regex-studio.html", "merge-studio.html", "mermaid-live.html", "pdf-studio.html", "code-studio.html"}
+DOCK = {"markdown-studio.html", "diff-studio.html", "regex-studio.html", "merge-studio.html", "mermaid-live.html", "pdf-studio.html", "code-studio.html"}
 SLOT = '<span data-hub-theme-slot></span>'
 
 KIT_RE = re.compile(r"<!-- studio-hub theme kit v\d.*?<!-- /studio-hub theme kit -->\n?", re.S)

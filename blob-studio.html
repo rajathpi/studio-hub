@@ -122,7 +122,7 @@
   <main>
     <section class="panel" id="stage">
       <div id="hero" aria-live="polite"></div>
-      <input id="nameIn" value="rajath" spellcheck="false" autocomplete="off" aria-label="Name to generate from">
+      <input id="nameIn" value="studio-hub" spellcheck="false" autocomplete="off" aria-label="Name to generate from">
       <div class="row">
         <button id="dlSvg">Download SVG</button>
         <button id="dlPng">Download PNG</button>
@@ -229,7 +229,7 @@ return{_layout:Zt,_marks:Vt,_parts:Dt,_posed:Nt,fadeHex:It,lerpPose:Kt,poseTrans
   const MOODS = ["idle", "happy", "sad", "mad", "surprised", "wink", "sleepy", "smug",
                  "unsure", "scared", "love", "shy", "sick", "thinking"];
 
-  const state = { name: "rajath", mood: "idle", shape: "", bg: "", hue: null, tone: null, animate: true, follow: true };
+  const state = { name: "studio-hub", mood: "idle", shape: "", bg: "", hue: null, tone: null, animate: true, follow: true };
 
   for (const [name] of SHAPES) $("shapeSel").add(new Option(name[0].toUpperCase() + name.slice(1), name));
   for (const m of MOODS) {
