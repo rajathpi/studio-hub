@@ -47,7 +47,16 @@
   }
   .card:hover { transform: translateY(-3px); border-color: #ff5c8a; background: #26272e; }
   .card svg { display: block; width: 100%; height: auto; aspect-ratio: 1; }
-  .card div { padding: 10px 12px 12px; }
+  .card[hidden] { display: none; }
+  .card .thumb { aspect-ratio: 1; }
+  .card .meta { padding: 10px 12px 12px; }
+  #filters { justify-content: center; margin-bottom: 20px; max-width: 1000px; }
+  body.editing #filters { display: none; }
+  #q { font: inherit; font-size: 13px; padding: 7px 12px; border-radius: 8px; border: 1px solid #4a4b55; background: #1e1f24; color: #e6e6e6; width: 220px; }
+  #q:focus { outline: none; border-color: #ff5c8a; }
+  .chip { padding: 5px 11px; border-radius: 999px; font-size: 12px; }
+  .chip.on { border-color: #ff5c8a; background: #3d2a33; }
+  #count { font-size: 12px; color: #8a8b94; width: 100%; text-align: center; }
   .card h2 { font-size: 14px; font-weight: 600; }
   .card p { font-size: 11px; color: #8a8b94; margin-top: 3px; }
 
@@ -78,6 +87,13 @@
 
   <div class="row" id="palettes"></div>
 
+  <div class="row" id="filters">
+    <input id="q" type="search" placeholder="Search patterns" aria-label="Search patterns">
+    <button id="surprise" title="Open a random pattern with random settings">Surprise me</button>
+    <span id="chips" class="row"></span>
+    <span id="count"></span>
+  </div>
+
   <div id="gallery"></div>
 
   <div id="editor">
@@ -107,7 +123,10 @@
         <button id="dlPng">PNG</button>
         <button id="cpSvg">Copy</button>
       </div>
-      <button id="reset" style="width:100%;margin-top:8px">Reset sliders</button>
+      <div class="row" style="margin-top:8px">
+        <button id="randomize" style="flex:1" title="Random settings (S)">Randomise</button>
+        <button id="reset" style="flex:1">Reset</button>
+      </div>
       <div id="toast"></div>
     </aside>
   </div>
@@ -155,6 +174,64 @@
   };
   const P = (k, label, min, max, step, v) => ({ k, label, min, max, step, v });
   const T = (k, label, v) => ({ k, label, toggle: true, v });
+  const circ = (x, y, rad) => `M${f(x - rad)} ${f(y)}a${f(rad)} ${f(rad)} 0 1 0 ${f(rad * 2)} 0a${f(rad)} ${f(rad)} 0 1 0 ${f(-rad * 2)} 0`;
+  const mix = (a, b, t) => {
+    const rgb = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)), A = rgb(a), B = rgb(b);
+    return "#" + A.map((v, i) => Math.round(v + (B[i] - v) * t).toString(16).padStart(2, "0")).join("");
+  };
+  const rotPt = ([x, y], a) => [x * Math.cos(a) - y * Math.sin(a), x * Math.sin(a) + y * Math.cos(a)];
+  const fitPts = (P, W, H, margin = 0.06) => {
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (const [x, y] of P) { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); }
+    const k = Math.min(W * (1 - 2 * margin) / (x1 - x0 || 1), H * (1 - 2 * margin) / (y1 - y0 || 1));
+    const ox = (W - (x1 - x0) * k) / 2 - x0 * k, oy = (H - (y1 - y0) * k) / 2 - y0 * k;
+    return P.map(([x, y]) => [ox + x * k, oy + y * k]);
+  };
+  // Keep the side of the line n.x <= c (Sutherland-Hodgman, one plane).
+  const clipHalf = (poly, nx, ny, c) => {
+    const out = [];
+    for (let i = 0; i < poly.length; i++) {
+      const a = poly[i], b = poly[(i + 1) % poly.length], da = nx * a[0] + ny * a[1] - c, db = nx * b[0] + ny * b[1] - c;
+      if (da <= 0) out.push(a);
+      if ((da <= 0) !== (db <= 0)) { const t = da / (da - db); out.push([a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]); }
+    }
+    return out;
+  };
+  const centroid = (poly) => {
+    let a = 0, cx = 0, cy = 0;
+    for (let i = 0; i < poly.length; i++) {
+      const [x0, y0] = poly[i], [x1, y1] = poly[(i + 1) % poly.length], cr = x0 * y1 - x1 * y0;
+      a += cr; cx += (x0 + x1) * cr; cy += (y0 + y1) * cr;
+    }
+    return a ? [cx / (3 * a), cy / (3 * a)] : poly[0];
+  };
+  // Each cell starts as the sheet and is cut by the bisector to every nearer seed.
+  const voronoi = (seeds, W, H, gap = 0) => seeds.map((p, i) => {
+    const g = gap / 2;
+    let poly = [[g, g], [W - g, g], [W - g, H - g], [g, H - g]];
+    const others = [];
+    for (let j = 0; j < seeds.length; j++) if (j !== i) others.push([seeds[j], (seeds[j][0] - p[0]) ** 2 + (seeds[j][1] - p[1]) ** 2]);
+    others.sort((a, b) => a[1] - b[1]);
+    for (const [q, d2] of others) {
+      let reach = 0;
+      for (const v of poly) reach = Math.max(reach, (v[0] - p[0]) ** 2 + (v[1] - p[1]) ** 2);
+      if (d2 / 4 > reach) break;
+      const d = Math.sqrt(d2); if (!d) continue;
+      const nx = (q[0] - p[0]) / d, ny = (q[1] - p[1]) / d;
+      poly = clipHalf(poly, nx, ny, nx * (p[0] + q[0]) / 2 + ny * (p[1] + q[1]) / 2 - g);
+      if (poly.length < 3) break;
+    }
+    return poly;
+  });
+  const hilbertXY = (n, d) => {
+    let x = 0, y = 0, t = d;
+    for (let s = 1; s < n; s *= 2) {
+      const rx = 1 & (t / 2), ry = 1 & (t ^ rx);
+      if (ry === 0) { if (rx === 1) { x = s - 1 - x; y = s - 1 - y; } [x, y] = [y, x]; }
+      x += s * rx; y += s * ry; t = Math.floor(t / 4);
+    }
+    return [x, y];
+  };
 
   // Every pattern draws into a W x H box (W is always 1000) and returns SVG
   // elements. The wrapping <g> defaults to fill:none, stroke:fg.
@@ -364,7 +441,515 @@
         return `<path d="${d}" fill="currentColor" stroke="none"/>`;
       },
     },
+    {
+      id: "voronoi", name: "Voronoi Cells", tags: ["cells", "geometric"],
+      blurb: "Every point of the sheet belongs to its nearest seed. A few rounds of relaxation pull the seeds to their cell centres until the cells settle into a calm, organic honeycomb.",
+      params: [P("cells", "Cells", 5, 600, 5, 160), P("relax", "Relaxation", 0, 8, 1, 2), P("gap", "Gap", 0, 24, 0.5, 6), P("stroke", "Line width", 0, 6, 0.25, 0), T("filled", "Shaded fills", true)],
+      draw(p, { W, H, r }) {
+        let seeds = Array.from({ length: p.cells }, () => [r() * W, r() * H]), cells;
+        for (let k = 0; k <= p.relax; k++) {
+          cells = voronoi(seeds, W, H, k === p.relax ? p.gap : 0);
+          if (k < p.relax) seeds = cells.map((c, i) => (c.length > 2 ? centroid(c) : seeds[i]));
+        }
+        return `<g stroke-width="${p.stroke}" stroke-linejoin="round">` + cells.filter((c) => c.length > 2).map((c) =>
+          p.filled ? `<polygon points="${pts(c)}" fill="currentColor" fill-opacity="${(0.12 + r() * 0.88).toFixed(2)}"/>` : `<polygon points="${pts(c)}"/>`).join("") + `</g>`;
+      },
+    },
+    {
+      id: "mesh", name: "Low-Poly Terrain", tags: ["cells", "noise", "3D"],
+      blurb: "A jittered grid split into triangles, each shaded by a soft noise field so the sheet reads like faceted terrain catching the light.",
+      params: [P("cols", "Columns", 3, 50, 1, 16), P("jitter", "Jitter", 0, 1, 0.01, 0.75), P("shade", "Shading", 0, 1, 0.01, 0.85), P("scale", "Light zoom", 0.3, 5, 0.1, 1.4), P("edge", "Edge width", 0, 4, 0.1, 0.6)],
+      draw(p, { W, H, r, n, bg }) {
+        const s = W / p.cols, rows = Math.max(1, Math.round(H / s)), sy = H / rows, V = [];
+        for (let j = 0; j <= rows; j++) { V[j] = []; for (let i = 0; i <= p.cols; i++) {
+          let x = i * s, y = j * sy;
+          if (i > 0 && i < p.cols) x += (r() - 0.5) * s * p.jitter;
+          if (j > 0 && j < rows) y += (r() - 0.5) * sy * p.jitter;
+          V[j][i] = [x, y];
+        } }
+        const out = [], tri = (a, b, c) => {
+          const cx = (a[0] + b[0] + c[0]) / 3, cy = (a[1] + b[1] + c[1]) / 3;
+          const o = Math.min(1, Math.max(0.04, (1 - p.shade) + p.shade * (0.5 + 0.5 * n(cx / W * p.scale * 2, cy / W * p.scale * 2)) + (r() - 0.5) * 0.12));
+          out.push(`<polygon points="${pts([a, b, c])}" fill-opacity="${o.toFixed(2)}"/>`);
+        };
+        for (let j = 0; j < rows; j++) for (let i = 0; i < p.cols; i++) {
+          const a = V[j][i], b = V[j][i + 1], c = V[j + 1][i + 1], d = V[j + 1][i];
+          if (r() < 0.5) { tri(a, b, c); tri(a, c, d); } else { tri(a, b, d); tri(b, c, d); }
+        }
+        return `<g fill="currentColor" stroke="${bg}" stroke-width="${p.edge}" stroke-linejoin="round">${out.join("")}</g>`;
+      },
+    },
+    {
+      id: "phyllotaxis", name: "Sunflower Spiral", tags: ["dots", "nature"],
+      blurb: "Seeds placed one golden angle apart, the way a sunflower packs its head. Nudge the angle a hair off 137.5° and the spiral arms snap into spokes.",
+      params: [P("count", "Seeds", 50, 4000, 10, 900), P("angle", "Angle", 136, 139, 0.01, 137.51), P("size", "Dot size", 0.5, 16, 0.1, 9), T("grow", "Grow outward", true)],
+      draw(p, { W, H }) {
+        const R = Math.min(W, H) * 0.46, c = R / Math.sqrt(p.count), ga = p.angle * Math.PI / 180;
+        let d = "";
+        for (let i = 1; i <= p.count; i++) {
+          const a = i * ga, rr = c * Math.sqrt(i);
+          d += circ(W / 2 + rr * Math.cos(a), H / 2 + rr * Math.sin(a), p.size * (p.grow ? 0.2 + 0.8 * i / p.count : 1));
+        }
+        return `<path d="${d}" fill="currentColor" stroke="none"/>`;
+      },
+    },
+    {
+      id: "topo", name: "Topographic Map", tags: ["lines", "noise", "nature"],
+      blurb: "Contour lines traced through a layered noise landscape with marching squares, every fifth line drawn heavier like a survey map.",
+      params: [P("res", "Detail", 30, 220, 5, 140), P("levels", "Contours", 3, 70, 1, 26), P("scale", "Zoom", 0.3, 6, 0.1, 1.5), P("oct", "Roughness", 1, 5, 1, 3), P("stroke", "Line width", 0.3, 4, 0.1, 1), T("bold", "Index contours", true)],
+      draw(p, { W, H, n }) {
+        const cs = W / p.res, nx = p.res + 1, ny = Math.ceil(H / cs) + 1, F = new Float32Array(nx * ny);
+        let lo = Infinity, hi = -Infinity;
+        for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
+          let v = 0, amp = 1, fr = p.scale / W;
+          for (let o = 0; o < p.oct; o++) { v += amp * n(i * cs * fr + o * 13.1, j * cs * fr + o * 7.7); amp *= 0.5; fr *= 2.1; }
+          F[j * nx + i] = v; lo = Math.min(lo, v); hi = Math.max(hi, v);
+        }
+        const out = [];
+        for (let L = 1; L <= p.levels; L++) {
+          const t = lo + (hi - lo) * L / (p.levels + 1);
+          let d = "";
+          const seg = (a, b) => { d += `M${f(a[0])} ${f(a[1])}L${f(b[0])} ${f(b[1])}`; };
+          for (let j = 0; j < ny - 1; j++) for (let i = 0; i < nx - 1; i++) {
+            const a = F[j * nx + i], b = F[j * nx + i + 1], c = F[(j + 1) * nx + i + 1], e = F[(j + 1) * nx + i];
+            if ((a > t) === (b > t) && (b > t) === (c > t) && (c > t) === (e > t)) continue;
+            const x = i * cs, y = j * cs, E = [];
+            const edge = (v0, v1, x0, y0, x1, y1) => { if ((v0 > t) !== (v1 > t)) { const u = (t - v0) / (v1 - v0); E.push([x0 + (x1 - x0) * u, y0 + (y1 - y0) * u]); } };
+            edge(a, b, x, y, x + cs, y); edge(b, c, x + cs, y, x + cs, y + cs); edge(c, e, x + cs, y + cs, x, y + cs); edge(e, a, x, y + cs, x, y);
+            if (E.length === 2) seg(E[0], E[1]);
+            else if (E.length === 4) { if (((a + b + c + e) / 4 > t) === (a > t)) { seg(E[0], E[1]); seg(E[2], E[3]); } else { seg(E[0], E[3]); seg(E[1], E[2]); } }
+          }
+          out.push(`<path d="${d}" stroke-width="${f(p.bold && L % 5 === 0 ? p.stroke * 2.4 : p.stroke)}"/>`);
+        }
+        return `<g stroke-linecap="round">${out.join("")}</g>`;
+      },
+    },
+    {
+      id: "rose", name: "Rose Curves", tags: ["curves"],
+      blurb: "The polar curve r = cos(kθ) with k as a fraction. Change numerator and denominator to open whole families of petals, then stack rotated copies into a rosette.",
+      params: [P("n", "Petal numerator", 1, 12, 1, 7), P("d", "Petal denominator", 1, 12, 1, 3), P("copies", "Copies", 1, 24, 1, 8), P("spin", "Spin per copy", 0, 45, 0.5, 3), P("shrink", "Shrink per copy", 0, 0.1, 0.005, 0.06), P("stroke", "Line width", 0.3, 5, 0.1, 1.1)],
+      draw(p, { W, H }) {
+        const g = (a, b) => (b ? g(b, a % b) : a), k = g(p.n, p.d), nn = p.n / k, dd = p.d / k;
+        const span = ((nn * dd) % 2 ? Math.PI : TAU) * dd, N = Math.min(14000, 900 * dd), R = Math.min(W, H) * 0.46, out = [];
+        for (let c = 0; c < p.copies; c++) {
+          const s = R * (1 - c * p.shrink), rot = c * p.spin * Math.PI / 180;
+          const line = Array.from({ length: N + 1 }, (_, i) => { const t = (i / N) * span, rr = Math.cos(nn / dd * t) * s; return [W / 2 + rr * Math.cos(t + rot), H / 2 + rr * Math.sin(t + rot)]; });
+          out.push(`<polyline points="${pts(line)}"/>`);
+        }
+        return `<g stroke-width="${p.stroke}" stroke-linejoin="round">${out.join("")}</g>`;
+      },
+    },
+    {
+      id: "wavelines", name: "Wave Lines", tags: ["lines", "waves", "noise"],
+      blurb: "Horizontal lines bent by a blend of a clean sine and drifting noise. Low mix gives rolling dunes; high mix gives wind across water.",
+      params: [P("lines", "Lines", 5, 220, 1, 70), P("amp", "Amplitude", 0, 160, 1, 34), P("freq", "Frequency", 0.3, 10, 0.1, 2.2), P("mix", "Noise mix", 0, 1, 0.01, 0.55), P("drift", "Drift per line", 0, 1, 0.01, 0.14), P("stroke", "Line width", 0.3, 5, 0.1, 1.3)],
+      draw(p, { W, H, n }) {
+        const out = [], gap = H / (p.lines + 1);
+        for (let i = 1; i <= p.lines; i++) {
+          const line = [];
+          for (let x = -4; x <= W + 4; x += 4) {
+            const u = x / W * p.freq;
+            line.push([x, i * gap + p.amp * ((1 - p.mix) * Math.sin(u * TAU + i * p.drift * 2) + p.mix * 1.6 * n(u * 1.5, i * p.drift * 0.5))]);
+          }
+          out.push(`<polyline points="${pts(line)}"/>`);
+        }
+        return `<g stroke-width="${p.stroke}" stroke-linejoin="round">${out.join("")}</g>`;
+      },
+    },
+    {
+      id: "hilbert", name: "Hilbert Curve", tags: ["lines", "fractal"],
+      blurb: "One unbroken line that visits every cell of a square grid without crossing itself. Each order folds the previous curve into four smaller copies.",
+      params: [P("order", "Order", 1, 8, 1, 5), P("stroke", "Line width", 0.3, 16, 0.1, 5), T("round", "Rounded", true)],
+      draw(p, { W, H }) {
+        const N = 1 << p.order, S = Math.min(W, H) * 0.9, c = S / N, ox = (W - S) / 2 + c / 2, oy = (H - S) / 2 + c / 2;
+        const line = Array.from({ length: N * N }, (_, d) => { const [x, y] = hilbertXY(N, d); return [ox + x * c, oy + y * c]; });
+        return `<polyline points="${pts(line)}" stroke-width="${p.stroke}" stroke-linejoin="${p.round ? "round" : "miter"}" stroke-linecap="${p.round ? "round" : "square"}"/>`;
+      },
+    },
+    {
+      id: "split", name: "Recursive Split", tags: ["geometric", "tiles"],
+      blurb: "Cut the sheet in two, then cut each half again, a little off-centre every time. Stop early here and there and fill a few rooms solid.",
+      params: [P("depth", "Depth", 1, 14, 1, 8), P("min", "Smallest side", 8, 250, 1, 36), P("stop", "Early stop", 0, 0.6, 0.01, 0.14), P("fill", "Filled share", 0, 1, 0.01, 0.24), P("gap", "Gap", 0, 30, 0.5, 10), P("stroke", "Line width", 0, 8, 0.25, 2)],
+      draw(p, { W, H, r }) {
+        const out = [];
+        const go = (x, y, w, h, d) => {
+          const canV = w >= p.min * 2, canH = h >= p.min * 2;
+          if (d === 0 || (!canV && !canH) || (d < p.depth && r() < p.stop)) {
+            const rw = w - p.gap, rh = h - p.gap;
+            if (rw > 0 && rh > 0) out.push(`<rect x="${f(x + p.gap / 2)}" y="${f(y + p.gap / 2)}" width="${f(rw)}" height="${f(rh)}"${r() < p.fill ? ' fill="currentColor"' : ""}/>`);
+            return;
+          }
+          const t = 0.3 + r() * 0.4;
+          if (canV && (!canH || (w > h ? r() < 0.8 : r() < 0.2))) { go(x, y, w * t, h, d - 1); go(x + w * t, y, w * (1 - t), h, d - 1); }
+          else { go(x, y, w, h * t, d - 1); go(x, y + h * t, w, h * (1 - t), d - 1); }
+        };
+        go(p.gap / 2, p.gap / 2, W - p.gap, H - p.gap, p.depth);
+        return `<g stroke-width="${p.stroke}">${out.join("")}</g>`;
+      },
+    },
+    {
+      id: "tree", name: "Fractal Tree", tags: ["fractal", "nature"],
+      blurb: "A trunk that forks into two shorter branches, which fork again, and again. A little randomness and wind turn the diagram into something alive.",
+      params: [P("depth", "Depth", 2, 13, 1, 11), P("angle", "Branch angle", 3, 70, 1, 22), P("ratio", "Length ratio", 0.5, 0.86, 0.01, 0.74), P("rand", "Randomness", 0, 1, 0.01, 0.4), P("trunk", "Trunk width", 1, 40, 0.5, 16), P("lean", "Wind", -40, 40, 1, 8)],
+      draw(p, { W, H, r }) {
+        const byD = Array.from({ length: p.depth }, () => ""), spread = p.angle * Math.PI / 180, wind = p.lean * Math.PI / 180 / p.depth;
+        const go = (x, y, a, len, d) => {
+          if (d >= p.depth) return;
+          const x2 = x + Math.cos(a) * len, y2 = y + Math.sin(a) * len;
+          byD[d] += `M${f(x)} ${f(y)}L${f(x2)} ${f(y2)}`;
+          for (const s of [-1, 1]) go(x2, y2, a + s * spread * (1 + (r() * 2 - 1) * p.rand * 0.6) + wind, len * p.ratio * (1 + (r() * 2 - 1) * p.rand * 0.25), d + 1);
+        };
+        go(W / 2, H * 0.97, -Math.PI / 2, Math.min(H * 0.3, H * 0.86 * (1 - p.ratio)), 0);
+        return byD.map((d, i) => `<path d="${d}" stroke-width="${f(Math.max(0.4, p.trunk * Math.pow(0.68, i)))}" stroke-linecap="round"/>`).join("");
+      },
+    },
+    {
+      id: "sunburst", name: "Sunburst", tags: ["lines", "noise"],
+      blurb: "Hundreds of rays fanned around a centre, each cut to a length read from a ring of noise, so the edge flickers like a corona.",
+      params: [P("rays", "Rays", 12, 900, 4, 320), P("inner", "Hole", 0, 0.45, 0.01, 0.1), P("vary", "Length variety", 0, 1, 0.01, 0.55), P("freq", "Lumpiness", 0.3, 10, 0.1, 2.4), P("stroke", "Line width", 0.3, 6, 0.1, 1.3)],
+      draw(p, { W, H, n }) {
+        const R = Math.min(W, H) * 0.47, r0 = R * p.inner;
+        let d = "";
+        for (let i = 0; i < p.rays; i++) {
+          const a = i / p.rays * TAU, len = R * (1 - p.vary * (0.5 + 0.5 * n(Math.cos(a) * p.freq + 3, Math.sin(a) * p.freq + 3)));
+          if (len > r0) d += `M${f(W / 2 + Math.cos(a) * r0)} ${f(H / 2 + Math.sin(a) * r0)}L${f(W / 2 + Math.cos(a) * len)} ${f(H / 2 + Math.sin(a) * len)}`;
+        }
+        return `<path d="${d}" stroke-width="${p.stroke}" stroke-linecap="round"/>`;
+      },
+    },
+    {
+      id: "spiral", name: "Vinyl Spiral", tags: ["lines", "curves", "noise"],
+      blurb: "A single Archimedean spiral wound tight like a record groove, its radius nudged by noise so the grooves bunch and breathe.",
+      params: [P("turns", "Turns", 3, 120, 1, 38), P("wobble", "Wobble", 0, 40, 0.5, 15), P("freq", "Lumpiness", 0.2, 8, 0.1, 2.2), P("stroke", "Line width", 0.3, 6, 0.1, 2)],
+      draw(p, { W, H, n }) {
+        const R = Math.min(W, H) * 0.45, total = p.turns * TAU, line = [];
+        for (let th = 0; th <= total;) {
+          const r0 = R * th / total, rr = r0 + p.wobble * Math.min(1, r0 / 40) * n(Math.cos(th) * p.freq + 5, Math.sin(th) * p.freq + r0 / R * 3);
+          line.push([W / 2 + rr * Math.cos(th), H / 2 + rr * Math.sin(th)]);
+          th += 4 / Math.max(r0, 4);
+        }
+        return `<polyline points="${pts(line)}" stroke-width="${p.stroke}" stroke-linejoin="round"/>`;
+      },
+    },
+    {
+      id: "weave", name: "Basket Weave", tags: ["tiles", "geometric"],
+      blurb: "Two sets of ribbons passing over and under each other on a checkerboard rhythm, in two tones of your ink.",
+      params: [P("cols", "Ribbons across", 2, 40, 1, 10), P("width", "Ribbon width", 0.2, 0.98, 0.01, 0.74), P("edge", "Edge width", 0, 6, 0.25, 2)],
+      draw(p, { W, H, fg, bg }) {
+        const s = W / p.cols, rows = Math.ceil(H / s), w = s * p.width, g = (s - w) / 2, alt = mix(fg, bg, 0.45), out = [];
+        for (let j = 0; j < rows; j++) for (let i = 0; i < p.cols; i++) {
+          const x = i * s, y = j * s;
+          const hR = `<rect x="${f(x)}" y="${f(y + g)}" width="${f(s)}" height="${f(w)}" fill="${fg}"/>`;
+          const vR = `<rect x="${f(x + g)}" y="${f(y)}" width="${f(w)}" height="${f(s)}" fill="${alt}"/>`;
+          out.push(...((i + j) % 2 ? [vR, hR] : [hR, vR]));
+        }
+        return `<g stroke="${bg}" stroke-width="${p.edge}">${out.join("")}</g>`;
+      },
+    },
+    {
+      id: "chevron", name: "Chevron Bands", tags: ["lines", "geometric", "op-art"],
+      blurb: "Zig-zag lines stacked into bands. Fill every other band for a bold textile, or keep them open and push the height for an op-art shimmer.",
+      params: [P("rows", "Rows", 3, 90, 1, 22), P("zigs", "Zigs across", 1, 40, 1, 7), P("height", "Zig height", 0, 3, 0.05, 1.1), P("stroke", "Line width", 0.3, 10, 0.1, 2), T("filled", "Alternate fills", true)],
+      draw(p, { W, H }) {
+        const gap = H / p.rows, zw = W / p.zigs, amp = gap * p.height;
+        const lineAt = (i) => Array.from({ length: p.zigs * 2 + 1 }, (_, k) => [k * zw / 2, i * gap + (k % 2 ? amp / 2 : -amp / 2)]);
+        const out = [], m = Math.ceil(p.height) + 1;
+        for (let i = -m; i <= p.rows + m; i++) {
+          if (p.filled) { if (i % 2) out.push(`<polygon points="${pts([...lineAt(i), ...lineAt(i + 1).reverse()])}" fill="currentColor" stroke="none"/>`); }
+          else out.push(`<polyline points="${pts(lineAt(i))}"/>`);
+        }
+        return `<g stroke-width="${p.stroke}" stroke-linejoin="miter">${out.join("")}</g>`;
+      },
+    },
+    {
+      id: "checker", name: "Warped Checkerboard", tags: ["op-art", "tiles"],
+      blurb: "A plain checkerboard pulled through sine waves and an optional swirl. The squares never change, only the space they sit in.",
+      params: [P("cells", "Cells across", 3, 40, 1, 12), P("amp", "Warp", 0, 140, 1, 42), P("freq", "Waves", 0.2, 6, 0.1, 1.4), P("twist", "Swirl", 0, 3, 0.05, 0.6)],
+      draw(p, { W, H }) {
+        const s = W / p.cells, rows = Math.ceil(H / s), R = Math.min(W, H) * 0.6;
+        const warp = (x, y) => {
+          let X = x + p.amp * Math.sin(y / H * p.freq * TAU), Y = y + p.amp * Math.sin(x / W * p.freq * TAU);
+          if (p.twist) {
+            const dx = X - W / 2, dy = Y - H / 2, a = p.twist * Math.max(0, 1 - Math.hypot(dx, dy) / R) ** 2;
+            [X, Y] = [W / 2 + dx * Math.cos(a) - dy * Math.sin(a), H / 2 + dx * Math.sin(a) + dy * Math.cos(a)];
+          }
+          return [X, Y];
+        };
+        const side = (x0, y0, x1, y1) => Array.from({ length: 6 }, (_, k) => warp(x0 + (x1 - x0) * k / 6, y0 + (y1 - y0) * k / 6));
+        const m = Math.ceil(p.amp / s) + 1, out = [];
+        for (let j = -m; j < rows + m; j++) for (let i = -m; i < p.cells + m; i++) {
+          if ((((i + j) % 2) + 2) % 2) continue;
+          const x = i * s, y = j * s;
+          out.push(`<polygon points="${pts([...side(x, y, x + s, y), ...side(x + s, y, x + s, y + s), ...side(x + s, y + s, x, y + s), ...side(x, y + s, x, y)])}"/>`);
+        }
+        return `<g fill="currentColor" stroke="none">${out.join("")}</g>`;
+      },
+    },
+    {
+      id: "supershape", name: "Supershape Bloom", tags: ["curves", "nature"],
+      blurb: "Gielis' superformula: four numbers that can draw a star, a flower, a shell or a squircle. Stack shrinking, twisting copies and it blooms.",
+      params: [P("m", "Symmetry", 0, 24, 1, 6), P("n1", "Pinch", 0.1, 12, 0.05, 0.35), P("n2", "Bulge A", 0.1, 12, 0.05, 1.7), P("n3", "Bulge B", 0.1, 12, 0.05, 1.7), P("copies", "Copies", 1, 40, 1, 18), P("twist", "Twist per copy", 0, 20, 0.5, 2.5), P("stroke", "Line width", 0.3, 5, 0.1, 1.1)],
+      draw(p, { W, H }) {
+        const N = 720, raw = [];
+        let mx = 0;
+        for (let i = 0; i < N; i++) {
+          const phi = i / N * TAU;
+          let rr = (Math.abs(Math.cos(p.m * phi / 4)) ** p.n2 + Math.abs(Math.sin(p.m * phi / 4)) ** p.n3) ** (-1 / p.n1);
+          if (!isFinite(rr)) rr = 0;
+          raw.push(rr); mx = Math.max(mx, rr);
+        }
+        const R = Math.min(W, H) * 0.46 / (mx || 1), out = [];
+        for (let c = 0; c < p.copies; c++) {
+          const s = R * (1 - c / p.copies * 0.94), rot = c * p.twist * Math.PI / 180;
+          out.push(`<polygon points="${pts(raw.map((rr, i) => { const a = i / N * TAU + rot; return [W / 2 + rr * s * Math.cos(a), H / 2 + rr * s * Math.sin(a)]; }))}"/>`);
+        }
+        return `<g stroke-width="${p.stroke}" stroke-linejoin="round">${out.join("")}</g>`;
+      },
+    },
+    {
+      id: "circuit", name: "Circuit Traces", tags: ["lines", "tiles"],
+      blurb: "Walkers crawl a grid in 45° steps, never stepping on a cell already used, and end in solder pads. A circuit board from nowhere.",
+      params: [P("grid", "Grid", 10, 80, 1, 34), P("walkers", "Traces", 5, 400, 5, 110), P("steps", "Max length", 2, 80, 1, 24), P("turn", "Turn chance", 0, 1, 0.01, 0.28), P("stroke", "Line width", 0.5, 8, 0.25, 3), T("pads", "Pads", true)],
+      draw(p, { W, H, r, bg }) {
+        const s = W / p.grid, cols = p.grid, rows = Math.max(1, Math.floor(H / s)), oy = (H - rows * s) / 2, used = new Uint8Array(cols * rows);
+        const D = [[1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1], [0, -1], [1, -1]], lines = [], pads = [];
+        const at = (x, y) => [x * s + s / 2, oy + y * s + s / 2];
+        for (let w = 0; w < p.walkers; w++) {
+          let x = (r() * cols) | 0, y = (r() * rows) | 0, dir = (r() * 8) | 0;
+          if (used[y * cols + x]) continue;
+          used[y * cols + x] = 1;
+          const line = [at(x, y)];
+          for (let st = 0; st < p.steps; st++) {
+            if (r() < p.turn) dir = (dir + (r() < 0.5 ? 1 : 7)) % 8;
+            const nx = x + D[dir][0], ny = y + D[dir][1];
+            if (nx < 0 || ny < 0 || nx >= cols || ny >= rows || used[ny * cols + nx]) break;
+            used[ny * cols + nx] = 1; x = nx; y = ny; line.push(at(x, y));
+          }
+          if (line.length < 2) continue;
+          lines.push(`<polyline points="${pts(line)}"/>`);
+          if (p.pads) for (const q of [line[0], line[line.length - 1]]) pads.push(circ(q[0], q[1], p.stroke * 1.7));
+        }
+        return `<g stroke-width="${p.stroke}" stroke-linejoin="round" stroke-linecap="round">${lines.join("")}</g>` +
+          (pads.length ? `<path d="${pads.join("")}" fill="${bg}" stroke-width="${p.stroke * 0.9}"/>` : "");
+      },
+    },
+    {
+      id: "arcs", name: "Arc Rings", tags: ["curves", "geometric"],
+      blurb: "Concentric rings cut into random arcs of random weight. Somewhere between a radar sweep, a Swiss poster and a slice of tree.",
+      params: [P("rings", "Rings", 3, 70, 1, 20), P("cuts", "Cuts per ring", 1, 16, 1, 4), P("keep", "Arc coverage", 0.1, 1, 0.01, 0.7), P("weight", "Max weight", 0.1, 1, 0.01, 0.8), P("hole", "Hole", 0, 0.5, 0.01, 0.08), T("butt", "Square ends", true)],
+      draw(p, { W, H, r }) {
+        const R = Math.min(W, H) * 0.47, r0 = R * p.hole, gap = (R - r0) / p.rings, out = [];
+        for (let i = 0; i < p.rings; i++) {
+          const rad = r0 + gap * (i + 0.5), k = 2 + ((r() * p.cuts) | 0);
+          const A = Array.from({ length: k }, () => r() * TAU).sort((a, b) => a - b);
+          for (let c = 0; c < k; c++) {
+            if (r() > p.keep) continue;
+            const a0 = A[c], a1 = c + 1 < k ? A[c + 1] : A[0] + TAU;
+            out.push(`<path d="M${f(W / 2 + rad * Math.cos(a0))} ${f(H / 2 + rad * Math.sin(a0))}A${f(rad)} ${f(rad)} 0 ${a1 - a0 > Math.PI ? 1 : 0} 1 ${f(W / 2 + rad * Math.cos(a1))} ${f(H / 2 + rad * Math.sin(a1))}" stroke-width="${f(gap * p.weight * (0.25 + 0.75 * r()))}"/>`);
+          }
+        }
+        return `<g stroke-linecap="${p.butt ? "butt" : "round"}">${out.join("")}</g>`;
+      },
+    },
+    {
+      id: "linemoire", name: "Line Moiré", tags: ["op-art", "lines"],
+      blurb: "Two gratings of straight lines laid over each other at a slight angle, or with one gently bent. The big soft bands you see are drawn by neither.",
+      params: [P("spacing", "Line spacing", 3, 30, 0.5, 11), P("angle", "Angle", 0, 30, 0.1, 4), P("bend", "Bend", 0, 80, 1, 24), P("stroke", "Line width", 0.3, 8, 0.1, 4.5), T("third", "Third grating", false)],
+      draw(p, { W, H }) {
+        const D = Math.hypot(W, H) / 2 + 20;
+        const set = (deg, bend) => {
+          const a = deg * Math.PI / 180, dx = Math.cos(a), dy = Math.sin(a);
+          let d = "";
+          for (let o = -D; o <= D; o += p.spacing) {
+            const line = [];
+            for (let t = -D; t <= D + 1; t += bend ? 12 : 2 * D) { const b = bend * Math.sin(t / D * Math.PI * 1.5); line.push(`${f(W / 2 + dx * t - dy * (o + b))} ${f(H / 2 + dy * t + dx * (o + b))}`); }
+            d += "M" + line.join("L");
+          }
+          return `<path d="${d}"/>`;
+        };
+        return `<g stroke-width="${p.stroke}">${set(0, 0)}${set(p.angle, p.bend)}${p.third ? set(-p.angle, 0) : ""}</g>`;
+      },
+    },
+    {
+      id: "harmonograph", name: "Harmonograph", tags: ["curves"],
+      blurb: "A pen driven by two decaying pendulums per axis, as on the Victorian drawing machine. A tiny detune makes the figure slowly precess as it fades inward.",
+      params: [P("a", "X frequency", 1, 6, 0.01, 2), P("b", "Y frequency", 1, 6, 0.01, 3), P("detune", "Detune", 0, 0.1, 0.001, 0.014), P("phase", "Phase", 0, 180, 1, 90), P("mix", "Second pendulum", 0, 1, 0.01, 0.45), P("damp", "Damping", 0.0005, 0.03, 0.0005, 0.005), P("stroke", "Line width", 0.2, 3, 0.05, 0.6)],
+      draw(p, { W, H }) {
+        const T = Math.min(3000, 5 / p.damp), N = Math.min(40000, (T * 12) | 0), ph = p.phase * Math.PI / 180, S = Math.min(W, H) * 0.45 / (1 + p.mix);
+        const line = Array.from({ length: N + 1 }, (_, i) => {
+          const t = i / N * T, e = Math.exp(-p.damp * t);
+          return [W / 2 + S * e * (Math.sin(p.a * t + ph) + p.mix * Math.sin(p.b * t)), H / 2 + S * e * (Math.sin((p.b + p.detune) * t) + p.mix * Math.sin((p.a + p.detune) * t + ph / 2))];
+        });
+        return `<polyline points="${pts(line)}" stroke-width="${p.stroke}" stroke-linejoin="round"/>`;
+      },
+    },
+    {
+      id: "triangles", name: "Triangle Tiles", tags: ["tiles", "geometric"],
+      blurb: "Each square split corner to corner, one half inked, turned at random. Simple rules, and the eye keeps finding arrows, diamonds and stairs.",
+      params: [P("cells", "Tiles across", 2, 60, 1, 12), P("edge", "Gap", 0, 8, 0.25, 0), T("two", "Two-tone", true)],
+      draw(p, { W, H, r, fg, bg }) {
+        const s = W / p.cells, rows = Math.ceil(H / s), alt = mix(fg, bg, 0.55), out = [];
+        for (let j = 0; j < rows; j++) for (let i = 0; i < p.cells; i++) {
+          const x = i * s, y = j * s, C = [[x, y], [x + s, y], [x + s, y + s], [x, y + s]], o = (r() * 4) | 0;
+          const A = [C[o], C[(o + 1) % 4], C[(o + 2) % 4]], B = [C[(o + 2) % 4], C[(o + 3) % 4], C[o]];
+          out.push(`<polygon points="${pts(A)}" fill="${fg}"/>`);
+          if (p.two) out.push(`<polygon points="${pts(B)}" fill="${alt}"/>`);
+        }
+        return `<g stroke="${bg}" stroke-width="${p.edge}" stroke-linejoin="round">${out.join("")}</g>`;
+      },
+    },
+    {
+      id: "quadtree", name: "Quadtree Dots", tags: ["dots", "noise", "geometric"],
+      blurb: "Squares keep splitting into four where a noise field says ‘busy’ and rest where it says ‘quiet’, then each cell gets one circle.",
+      params: [P("depth", "Max depth", 1, 9, 1, 6), P("density", "Density", 0, 1, 0.01, 0.5), P("scale", "Field zoom", 0.3, 6, 0.1, 1.5), P("pad", "Padding", 0, 0.45, 0.01, 0.06), P("stroke", "Line width", 0.3, 5, 0.1, 1.2), T("circles", "Circles", true), T("solid", "Solid", true)],
+      draw(p, { W, H, r, n }) {
+        let d = "";
+        const go = (x, y, s, dep) => {
+          if (y > H) return;
+          // The field sets how deep this spot wants to go, so cell size drifts smoothly across the sheet.
+          const v = 0.5 + 0.5 * n((x + s / 2) / W * p.scale * 2, (y + s / 2) / W * p.scale * 2);
+          const want = 1 + (p.depth - 1) * Math.min(1, Math.max(0, (v - 0.5) * 1.8 + p.density - 0.1 + (r() - 0.5) * 0.18));
+          if (dep < p.depth && dep < want) {
+            const h = s / 2; go(x, y, h, dep + 1); go(x + h, y, h, dep + 1); go(x, y + h, h, dep + 1); go(x + h, y + h, h, dep + 1); return;
+          }
+          const pd = s * p.pad;
+          d += p.circles ? circ(x + s / 2, y + s / 2, s / 2 - pd) : `M${f(x + pd)} ${f(y + pd)}h${f(s - 2 * pd)}v${f(s - 2 * pd)}h${f(2 * pd - s)}z`;
+        };
+        for (let y = 0; y < H; y += W) go(0, y, W, 0);
+        return p.solid ? `<path d="${d}" fill="currentColor" stroke="none"/>` : `<path d="${d}" stroke-width="${p.stroke}"/>`;
+      },
+    },
+    {
+      id: "nested", name: "Hypnotic Squares", tags: ["tiles", "op-art", "3D"],
+      blurb: "Each tile is a stack of shrinking squares pulled toward a random side, so the grid reads as a field of tunnels and pyramids.",
+      params: [P("cells", "Tiles across", 1, 12, 1, 4), P("steps", "Squares per tile", 2, 24, 1, 9), P("pull", "Off-centre pull", 0, 1, 0.01, 0.8), P("stroke", "Line width", 0.3, 6, 0.1, 1.8)],
+      draw(p, { W, H, r }) {
+        const s = W / p.cells, rows = Math.ceil(H / s), out = [];
+        for (let j = 0; j < rows; j++) for (let i = 0; i < p.cells; i++) {
+          const dx = ((r() * 3) | 0) - 1, dy = ((r() * 3) | 0) - 1, full = s * 0.92;
+          for (let k = 0; k < p.steps; k++) {
+            const sz = full * (1 - k / p.steps), cx = i * s + s / 2 + dx * (full - sz) / 2 * p.pull, cy = j * s + s / 2 + dy * (full - sz) / 2 * p.pull;
+            out.push(`<rect x="${f(cx - sz / 2)}" y="${f(cy - sz / 2)}" width="${f(sz)}" height="${f(sz)}"/>`);
+          }
+        }
+        return `<g stroke-width="${p.stroke}">${out.join("")}</g>`;
+      },
+    },
+    {
+      id: "bauhaus", name: "Shape Tiles", tags: ["tiles", "geometric"],
+      blurb: "A grid of square tiles, each holding one bold primitive — quarter circle, half moon, disc, diagonal, inset square or bowtie — turned at random in two or three tones.",
+      params: [P("cells", "Tiles across", 2, 30, 1, 7), P("variety", "Shape variety", 1, 6, 1, 6), P("gap", "Gap", 0, 14, 0.25, 0), T("three", "Three tones", true)],
+      draw(p, { W, H, r, fg, bg }) {
+        const s = W / p.cells, rows = Math.ceil(H / s), tones = p.three ? [fg, mix(fg, bg, 0.5), bg] : [fg, bg], out = [];
+        const pick = () => tones[(r() * tones.length) | 0];
+        for (let j = 0; j < rows; j++) for (let i = 0; i < p.cells; i++) {
+          const z = s - p.gap, h = z / 2, back = pick();
+          let fore = pick(); while (fore === back) fore = pick();
+          const kind = (r() * p.variety) | 0, rot = ((r() * 4) | 0) * 90;
+          const shape = [
+            `<path d="M0 0H${f(z)}A${f(z)} ${f(z)} 0 0 1 0 ${f(z)}Z"/>`,
+            `<path d="M0 ${f(z)}A${f(h)} ${f(h)} 0 0 1 ${f(z)} ${f(z)}Z"/>`,
+            `<path d="${circ(h, h, z * 0.38)}"/>`,
+            `<path d="M0 0H${f(z)}V${f(z)}Z"/>`,
+            `<rect x="${f(z * 0.25)}" y="${f(z * 0.25)}" width="${f(h)}" height="${f(h)}"/>`,
+            `<path d="M0 0H${f(h)}A${f(h)} ${f(h)} 0 0 1 0 ${f(h)}ZM${f(z)} ${f(z)}H${f(h)}A${f(h)} ${f(h)} 0 0 1 ${f(z)} ${f(h)}Z"/>`,
+          ][kind];
+          out.push(`<g transform="translate(${f(i * s + p.gap / 2)} ${f(j * s + p.gap / 2)}) rotate(${rot} ${f(h)} ${f(h)})"><rect width="${f(z)}" height="${f(z)}" fill="${back}"/><g fill="${fore}">${shape}</g></g>`);
+        }
+        return `<g stroke="none">${out.join("")}</g>`;
+      },
+    },
+    {
+      id: "pursuit", name: "Pursuit Squares", tags: ["curves", "geometric", "op-art"],
+      blurb: "Four bugs at the corners of a square each chase the next one. Draw the square they form at every step and spiralling curves appear out of straight lines.",
+      params: [P("cells", "Tiles across", 1, 10, 1, 3), P("steps", "Layers", 3, 80, 1, 34), P("t", "Chase step", 0.01, 0.3, 0.005, 0.08), P("stroke", "Line width", 0.2, 4, 0.1, 0.9), T("alt", "Alternate direction", true)],
+      draw(p, { W, H }) {
+        const s = W / p.cells, rows = Math.ceil(H / s), out = [];
+        for (let j = 0; j < rows; j++) for (let i = 0; i < p.cells; i++) {
+          const x = i * s, y = j * s;
+          let poly = [[x, y], [x + s, y], [x + s, y + s], [x, y + s]];
+          if (p.alt && (i + j) % 2) poly.reverse();
+          for (let k = 0; k < p.steps; k++) {
+            out.push(`<polygon points="${pts(poly)}"/>`);
+            poly = poly.map((v, q) => { const w = poly[(q + 1) % 4]; return [v[0] + (w[0] - v[0]) * p.t, v[1] + (w[1] - v[1]) * p.t]; });
+          }
+        }
+        return `<g stroke-width="${p.stroke}" stroke-linejoin="round">${out.join("")}</g>`;
+      },
+    },
+    {
+      id: "dragon", name: "Dragon Curve", tags: ["fractal", "lines"],
+      blurb: "Fold a strip of paper in half again and again, open every fold to a right angle, and you get this: a line that tiles itself without ever crossing.",
+      params: [P("iter", "Folds", 1, 16, 1, 11), P("stroke", "Line width", 0.3, 8, 0.1, 3), T("round", "Rounded", true)],
+      draw(p, { W, H }) {
+        const DX = [1, 0, -1, 0], DY = [0, 1, 0, -1], N = 1 << p.iter, P0 = [[0, 0]];
+        let x = 0, y = 0, dir = 0;
+        for (let i = 1; i <= N; i++) { x += DX[dir]; y += DY[dir]; P0.push([x, y]); dir = (((i & -i) << 1) & i ? dir + 3 : dir + 1) % 4; }
+        return `<polyline points="${pts(fitPts(P0, W, H))}" stroke-width="${p.stroke}" stroke-linejoin="${p.round ? "round" : "miter"}" stroke-linecap="round"/>`;
+      },
+    },
+    {
+      id: "koch", name: "Koch Snowflake", tags: ["fractal", "geometric"],
+      blurb: "Replace the middle third of every edge with a little tent, forever. Nest a few spun copies for a crystal; flip the tents for the anti-snowflake.",
+      params: [P("iter", "Iterations", 0, 6, 1, 4), P("copies", "Copies", 1, 14, 1, 6), P("spin", "Spin per copy", 0, 60, 1, 0), P("shrink", "Shrink per copy", 0, 0.2, 0.005, 0.16), P("stroke", "Line width", 0.3, 5, 0.1, 1.6), T("anti", "Anti-snowflake", false)],
+      draw(p, { W, H }) {
+        let P0 = [0, 1, 2].map((k) => rotPt([0, -1], k * TAU / 3));
+        const turn = (p.anti ? 1 : -1) * Math.PI / 3;
+        for (let it = 0; it < p.iter; it++) {
+          const nx = [];
+          for (let i = 0; i < P0.length; i++) {
+            const a = P0[i], b = P0[(i + 1) % P0.length], v = [(b[0] - a[0]) / 3, (b[1] - a[1]) / 3], p1 = [a[0] + v[0], a[1] + v[1]], rv = rotPt(v, turn);
+            nx.push(a, p1, [p1[0] + rv[0], p1[1] + rv[1]], [a[0] + 2 * v[0], a[1] + 2 * v[1]]);
+          }
+          P0 = nx;
+        }
+        const R = Math.min(W, H) * (p.anti ? 0.46 : 0.36), out = [];
+        for (let c = 0; c < p.copies; c++) {
+          const s = R * Math.max(0.02, 1 - c * p.shrink), a = c * p.spin * Math.PI / 180;
+          out.push(`<polygon points="${pts(P0.map((q) => { const [x, y] = rotPt(q, a); return [W / 2 + x * s, H / 2 + y * s + (p.anti ? 0 : R * 0.08)]; }))}"/>`);
+        }
+        return `<g stroke-width="${p.stroke}" stroke-linejoin="round">${out.join("")}</g>`;
+      },
+    },
+    {
+      id: "fern", name: "Barnsley Fern", tags: ["fractal", "nature", "dots"],
+      blurb: "Four affine maps chosen at random, applied tens of thousands of times. The dots land, impossibly, in the shape of a fern frond.",
+      params: [P("points", "Points", 2000, 50000, 1000, 22000), P("dot", "Dot size", 0.4, 4, 0.1, 1.4), P("lean", "Curl", -0.08, 0.08, 0.002, 0.04)],
+      draw(p, { W, H, r }) {
+        let x = 0, y = 0, d = "";
+        const k = Math.min(W / 5.6, H / 10.6) * 0.95, dd = f(p.dot);
+        for (let i = 0; i < p.points; i++) {
+          const q = r(); let nx, ny;
+          if (q < 0.01) { nx = 0; ny = 0.16 * y; }
+          else if (q < 0.86) { nx = 0.85 * x + p.lean * y; ny = -p.lean * x + 0.85 * y + 1.6; }
+          else if (q < 0.93) { nx = 0.2 * x - 0.26 * y; ny = 0.23 * x + 0.22 * y + 1.6; }
+          else { nx = -0.15 * x + 0.28 * y; ny = 0.26 * x + 0.24 * y + 0.44; }
+          x = nx; y = ny;
+          if (i > 20) d += `M${f(W / 2 + (x - 0.25) * k)} ${f(H - H * 0.03 - y * k)}h${dd}v${dd}h-${dd}z`;
+        }
+        return `<path d="${d}" fill="currentColor" stroke="none"/>`;
+      },
+    },
+    {
+      id: "tunnel", name: "Perspective Tunnel", tags: ["geometric", "3D", "op-art"],
+      blurb: "Frames shrinking toward a vanishing point you can drag off-centre, spaced by a perspective curve. Fill alternate frames for a striped corridor.",
+      params: [P("count", "Frames", 2, 90, 1, 30), P("sides", "Sides", 3, 12, 1, 4), P("vx", "Vanish X", -0.45, 0.45, 0.01, 0.16), P("vy", "Vanish Y", -0.45, 0.45, 0.01, -0.1), P("ease", "Perspective", 0.4, 3, 0.05, 1.8), P("stroke", "Line width", 0.3, 8, 0.1, 1.5), T("filled", "Alternate fills", true)],
+      draw(p, { W, H, fg, bg }) {
+        const R0 = p.sides === 4 ? Math.max(W, H) / 2 * Math.SQRT2 : Math.hypot(W, H) / 2 / Math.cos(Math.PI / p.sides), rot = -Math.PI / 2 + Math.PI / p.sides, out = [];
+        for (let i = 0; i < p.count; i++) {
+          const t = (i / p.count) ** p.ease, R = R0 * (1 - t), cx = W / 2 + p.vx * W * t, cy = H / 2 + p.vy * H * t;
+          const poly = Array.from({ length: p.sides }, (_, k) => [cx + R * Math.cos(rot + k * TAU / p.sides), cy + R * Math.sin(rot + k * TAU / p.sides)]);
+          out.push(p.filled ? `<polygon points="${pts(poly)}" fill="${i % 2 ? bg : fg}" stroke="none"/>` : `<polygon points="${pts(poly)}"/>`);
+        }
+        return `<g stroke-width="${p.stroke}" stroke-linejoin="round">${out.join("")}</g>`;
+      },
+    },
   ];
+
+  const TAGS = { truchet: ["tiles", "curves"], maze: ["tiles", "lines"], flow: ["lines", "noise"], cubes: ["tiles", "3D", "op-art"], halftone: ["dots", "3D"],
+    lissajous: ["curves"], polygons: ["geometric"], rings: ["noise", "curves"], hexweave: ["tiles", "curves"], packing: ["dots", "geometric"],
+    moire: ["op-art", "curves"], spiro: ["curves"], wavedots: ["dots", "waves", "op-art"] };
+  for (const pat of PATTERNS) pat.tags = pat.tags || TAGS[pat.id] || [];
 
   const PALETTES = [
     ["Ink", "#141414", "#f3efe6"], ["Paper", "#f3efe6", "#141414"], ["Studio", "#ff5c8a", "#1e1f24"],
@@ -413,18 +998,51 @@
   }
 
   // ---- gallery
+  // Thumbnails render only as they scroll into view: some patterns are
+  // hundreds of KB of path data, and 40-odd at once would stall the first paint.
+  const lazy = "IntersectionObserver" in window
+    ? new IntersectionObserver((ents) => { for (const e of ents) if (e.isIntersecting) { paintThumb(e.target); lazy.unobserve(e.target); } }, { rootMargin: "400px" })
+    : null;
+  function paintThumb(card) {
+    const pat = PATTERNS.find((x) => x.id === card.dataset.id);
+    card.querySelector(".thumb").innerHTML = render(pat, defaults(pat), 7, 1);
+  }
   function drawGallery() {
     const g = $("gallery"); g.innerHTML = "";
     for (const pat of PATTERNS) {
       const a = document.createElement("a");
-      a.className = "card"; a.href = "#" + pat.id;
+      a.className = "card"; a.href = "#" + pat.id; a.dataset.id = pat.id;
       a.onclick = (e) => { e.preventDefault(); go(pat.id); };
-      a.innerHTML = render(pat, defaults(pat), 7, 1) + `<div><h2></h2><p></p></div>`;
+      a.innerHTML = `<div class="thumb" style="background:${colors.bg}"></div><div class="meta"><h2></h2><p></p></div>`;
       a.querySelector("h2").textContent = pat.name;
-      a.querySelector("p").textContent = pat.params.map((q) => q.label.toLowerCase()).slice(0, 3).join(" · ");
+      a.querySelector("p").textContent = pat.tags.join(" · ");
       g.append(a);
+      if (lazy) lazy.observe(a); else paintThumb(a);
+    }
+    applyFilter();
+  }
+  let tag = "", query = "";
+  function applyFilter() {
+    let shown = 0;
+    for (const a of $("gallery").children) {
+      const pat = PATTERNS.find((x) => x.id === a.dataset.id);
+      const hay = (pat.name + " " + pat.tags.join(" ") + " " + pat.blurb).toLowerCase();
+      a.hidden = (tag && !pat.tags.includes(tag)) || (query && !hay.includes(query));
+      if (!a.hidden) shown++;
+    }
+    $("count").textContent = shown === PATTERNS.length ? `${shown} patterns` : `${shown} of ${PATTERNS.length} patterns`;
+  }
+  function drawChips() {
+    const all = [...new Set(PATTERNS.flatMap((x) => x.tags))].sort();
+    $("chips").innerHTML = "";
+    for (const t of ["", ...all]) {
+      const b = document.createElement("button");
+      b.className = "chip" + (t === tag ? " on" : ""); b.textContent = t || "all";
+      b.onclick = () => { tag = t; drawChips(); applyFilter(); };
+      $("chips").append(b);
     }
   }
+  $("q").oninput = (e) => { query = e.target.value.trim().toLowerCase(); applyFilter(); };
 
   // ---- editor
   function open(id) {
@@ -475,17 +1093,29 @@
   const roll = () => { seed = (Math.random() * 1e6) | 0; $("seed").value = seed; drawEditor(); };
   $("roll").onclick = roll;
   $("aspect").onchange = (e) => { aspect = +e.target.value; drawEditor(); };
-  $("reset").onclick = () => {
-    params = defaults(current);
+  function syncControls() {
     for (const el of $("controls").querySelectorAll("input")) {
-      const q = current.params.find((x) => x.k === el.dataset.k);
-      if (el.type === "checkbox") el.checked = q.v; else { el.value = q.v; el.previousElementSibling.querySelector("b").textContent = q.v; }
+      const v = params[el.dataset.k];
+      if (el.type === "checkbox") el.checked = v; else { el.value = v; el.previousElementSibling.querySelector("b").textContent = v; }
     }
     drawEditor();
-  };
+  }
+  // Random values land on the slider's own step grid so they read like ones a person picked.
+  function randomize() {
+    for (const q of current.params) {
+      if (q.toggle) params[q.k] = Math.random() < 0.5;
+      else { const steps = Math.round((q.max - q.min) / q.step); params[q.k] = +(q.min + Math.round(Math.random() * steps) * q.step).toFixed(4); }
+    }
+    syncControls();
+  }
+  $("reset").onclick = () => { params = defaults(current); syncControls(); };
+  $("randomize").onclick = randomize;
+  $("surprise").onclick = () => { go(PATTERNS[(Math.random() * PATTERNS.length) | 0].id); randomize(); };
   document.addEventListener("keydown", (e) => {
     if (!current || e.target.matches("input[type=number], input[type=color]") || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.target.matches("input[type=search]")) return;
     if (e.key === "r" || e.key === "R") roll();
+    if (e.key === "s" || e.key === "S") randomize();
     if (e.key === "Escape") go("");
   });
 
@@ -514,7 +1144,7 @@
     catch { toast("Clipboard blocked — use SVG download"); }
   };
 
-  drawPalettes(); drawGallery(); route();
+  drawPalettes(); drawChips(); drawGallery(); route();
 })();
 </script>
 </body>
