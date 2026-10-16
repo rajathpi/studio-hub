@@ -30,7 +30,7 @@
     cursor: pointer;
   }
   button:hover { background: var(--h-btn-hover); }
-  button.primary { background: var(--h-accent); border-color: var(--h-accent); color: #fff; font-weight: 600; }
+  button.primary { background: var(--h-accent); border-color: var(--h-accent); color: var(--h-on-accent); font-weight: 600; }
   button.primary:hover { background: var(--h-accent-h); }
   main { flex: 1; display: flex; min-height: 0; }
 
@@ -59,7 +59,7 @@
     cursor: pointer; white-space: nowrap; color: var(--h-text2);
   }
   .entry:hover { background: var(--h-panel2); }
-  .entry.active { background: var(--h-border2); color: #fff; }
+  .entry.active { background: var(--h-border2); color: var(--h-strong); }
   .entry.drop-target { background: var(--h-accent-bg); box-shadow: inset 0 0 0 1px var(--h-accent); }
   .entry .chev { width: 12px; font-size: 9px; color: var(--h-muted); flex: none; transition: transform .1s; }
   .entry.open .chev { transform: rotate(90deg); }
@@ -68,7 +68,7 @@
   .entry .nm.dirty::after { content: ' ●'; color: var(--h-accent); font-size: 9px; }
   .entry input {
     font-size: 12px; padding: 2px 5px; border-radius: 4px;
-    border: 1px solid var(--h-accent); background: var(--h-bg); color: #fff; width: 100%;
+    border: 1px solid var(--h-accent); background: var(--h-bg); color: var(--h-strong); width: 100%;
     outline: none;
   }
   #empty {
@@ -134,7 +134,7 @@
     border: none; background: transparent; color: var(--h-text); border-radius: 10px;
   }
   .overlaybar button:hover { background: rgba(255,255,255,.13); }
-  .overlaybar button.active { background: var(--h-accent); color: #fff; }
+  .overlaybar button.active { background: var(--h-accent); color: var(--h-on-accent); }
   .overlaybar button svg { display: block; }
   #zoomLevel {
     width: auto; min-width: 44px; padding: 0 7px;
@@ -148,7 +148,7 @@
   }
   .overlaybar.light button { color: #3f3f46; }
   .overlaybar.light button:hover { background: rgba(0,0,0,.07); }
-  .overlaybar.light button.active { background: var(--h-accent); color: #fff; }
+  .overlaybar.light button.active { background: var(--h-accent); color: var(--h-on-accent); }
   .overlaybar.light #zoomLevel { color: #71717a; }
   .overlaybar.light #zoomLevel:hover { color: #18181b; }
   footer {
@@ -182,7 +182,7 @@
     --h-bg: #f1efe9; --h-panel: #faf9f5; --h-panel2: #f4f2ec; --h-deep: #ebe8e1; --h-deep2: #e7e4dc;
     --h-border: #dedad0; --h-border2: #d3cec2; --h-btn: #ffffff; --h-btn-border: #cfcabe; --h-btn-hover: #f1eee6;
     --h-text: #18181b; --h-text2: #3f3f46; --h-muted: #6b675f; --h-muted2: #8f8a7f; --h-faint: #aaa59a; --h-code: #27272a;
-    --h-accent: #d6336c; --h-accent-h: #c2255c; --h-accent2: #5b4fc4; --h-accent-bg: #f9dfe8;
+    --h-accent: #18181b; --h-accent-h: #3f3f46; --h-accent2: #8f8a7f; --h-accent-bg: #e4e0d6; --h-on-accent: #ffffff; --h-strong: #09090b;
     --h-yellow: #8a5a00; --h-blue: #0b5cad; --h-blue2: #2f5597; --h-purple: #6b3fa0; --h-green2: #2e7d4f; --h-ok: #1a7f37;
     --h-green: #1a7f37; --h-red: #cf222e; --h-amber: #9a6700; --h-err-bg: #fde2e4; --h-err-bg2: #f5b8be; --h-err-text: #8b1a2b;
     --h-title-shadow: 0 2px 3px rgba(24, 24, 27, .16), 0 8px 22px rgba(24, 24, 27, .18);
@@ -192,13 +192,13 @@
     --h-bg: #1e1f24; --h-panel: #26272e; --h-panel2: #2e2f37; --h-deep: #1b1c21; --h-deep2: #22232a;
     --h-border: #3a3b44; --h-border2: #3a3b46; --h-btn: #33343d; --h-btn-border: #4a4b55; --h-btn-hover: #41424d;
     --h-text: #e6e6e6; --h-text2: #b9bac2; --h-muted: #8a8b94; --h-muted2: #6f7078; --h-faint: #565761; --h-code: #d8dee9;
-    --h-accent: #ff5c8a; --h-accent-h: #ff7ba0; --h-accent2: #7f77dd; --h-accent-bg: #3d2a33;
+    --h-accent: #e6e6e6; --h-accent-h: #ffffff; --h-accent2: #8a8b94; --h-accent-bg: #3a3b44; --h-on-accent: #18181b; --h-strong: #ffffff;
     --h-yellow: #e8d3a8; --h-blue: #9ecbff; --h-blue2: #9db3d8; --h-purple: #c4a7e7; --h-green2: #a8d5b5; --h-ok: #8fd19e;
     --h-green: #3fb950; --h-red: #f85149; --h-amber: #e3b341; --h-err-bg: #5c1f2b; --h-err-bg2: #7a2938; --h-err-text: #ffb3c0;
     --h-title-shadow: 0 2px 3px rgba(0, 0, 0, .45), 0 8px 22px rgba(0, 0, 0, .5);
   }
   h1 { font-family: var(--h-head); font-weight: 800; font-stretch: 125%; letter-spacing: -.02em; text-shadow: var(--h-title-shadow); }
-  h1 span, h1 em { text-shadow: inherit; }
+  h1 span, h1 em { text-shadow: inherit; color: var(--h-muted); }
 
   /* the theme slider: fixed top-right, no labels */
   .hub-theme { position: fixed; top: 14px; right: 16px; z-index: 9999; }

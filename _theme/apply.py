@@ -24,7 +24,7 @@ TOKENS = {
     "deep": ["#1b1c21", "#1a1b20", "#17181c", "#191a1f", "#1b1f24"], "deep2": ["#22232a", "#24252c", "#202128"],
     "border": ["#3a3b44"], "border2": ["#3a3b46", "#383947"],
     "btn": ["#33343d"], "btn-border": ["#4a4b55"], "btn-hover": ["#41424d"],
-    "text": ["#e6e6e6", "#e9eaee"], "text2": ["#b9bac2", "#c9cad1", "#9a9ba3", "#b8bcc4", "#9aa0aa"],
+    "text": ["#e6e6e6", "#e9eaee"], "text2": ["#b9bac2", "#c9cad1", "#9a9ba3", "#b8bcc4", "#9aa0aa", "#d8d8de"],
     "muted": ["#8a8b94"], "muted2": ["#6f7078", "#5c5d66", "#666c76", "#6a707a"], "faint": ["#565761", "#444a54"],
     "code": ["#d8dee9"], "accent": ["#ff5c8a"], "accent-h": ["#ff7ba0"], "accent2": ["#7f77dd"], "accent-bg": ["#3d2a33", "#3a2b33"],
     "yellow": ["#e8d3a8"], "blue": ["#9ecbff"], "blue2": ["#9db3d8"], "purple": ["#c4a7e7"], "green2": ["#a8d5b5"], "ok": ["#8fd19e"],
@@ -52,8 +52,26 @@ def remap(css: str) -> tuple[str, int]:
         n += 1
         return f"var(--h-{tok})"
 
+    def sub_alpha(m):  # #rrggbbaa: same token, alpha kept via color-mix
+        nonlocal n
+        tok = HEX2TOK.get("#" + m.group(1).lower())
+        if not tok:
+            return m.group(0)
+        n += 1
+        return f"color-mix(in srgb, var(--h-{tok}) {round(int(m.group(2), 16) / 2.55)}%, transparent)"
+
+    css = re.sub(r"#([0-9a-fA-F]{6})([0-9a-fA-F]{2})\b", sub_alpha, css)
     css = re.sub(r"#[0-9a-fA-F]{6}\b", sub, css)
-    return css.replace(SYS_FONT, "var(--h-font)"), n
+    # White text: on an accent-filled control it means "text on accent"; anywhere
+    # else it meant "brightest text", which has to flip to near-black when light.
+    lines = []
+    for line in css.split("\n"):
+        if re.search(r"(?<![-\w])color: #fff\b", line):
+            tok = "on-accent" if re.search(r"background:\s*var\(--h-accent", line) else "strong"
+            line = re.sub(r"(?<![-\w])color: #fff\b", f"color: var(--h-{tok})", line)
+            n += 1
+        lines.append(line)
+    return "\n".join(lines).replace(SYS_FONT, "var(--h-font)"), n
 
 
 def apply(page: pathlib.Path) -> str:
