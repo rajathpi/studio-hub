@@ -41,6 +41,44 @@
   footer { margin-top: 54px; font-size: 12px; color: var(--muted2); text-align: center; }
   footer a { color: var(--muted); text-decoration: underline; text-underline-offset: 2px; text-decoration-thickness: 1px; }
   @media (max-width: 600px) { h1 { font-size: 34px; } body { padding-top: 8vh; } #grid { grid-template-columns: 1fr 1fr; gap: 10px; } .tile { min-height: 150px; padding: 18px 16px 16px; } .txt b em { display: none; } }
+
+  /* ---- icons: alive line glyphs on raised 3D plates ---- */
+  :root { --plate-a: #ffffff; --plate-b: #e9e5dc; --plate-edge: #d6d0c3; --plate-glow: rgba(24,24,27,.16); }
+  :root[data-theme="dark"] { --plate-a: #2c2c32; --plate-b: #19191d; --plate-edge: #3a3a42; --plate-glow: rgba(0,0,0,.55); }
+  .icon { display: block; width: 54px; height: 54px; perspective: 300px; }
+  .plate { width: 52px; height: 52px; border-radius: 15px; display: grid; place-items: center; position: relative;
+    background: linear-gradient(160deg, var(--plate-a), var(--plate-b)); border: 1px solid var(--plate-edge);
+    box-shadow: 0 1px 0 rgba(255,255,255,.6) inset, 0 10px 18px -6px var(--plate-glow), 0 3px 5px -2px var(--plate-glow);
+    transform: rotateX(10deg) rotateY(-12deg); transition: transform .35s cubic-bezier(.2,.7,.2,1); }
+  :root[data-theme="dark"] .plate { box-shadow: 0 1px 0 rgba(255,255,255,.08) inset, 0 10px 18px -6px var(--plate-glow), 0 3px 5px -2px var(--plate-glow); }
+  .plate::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+    background: radial-gradient(120% 80% at var(--gx, 30%) var(--gy, 0%), rgba(255,255,255,.5), transparent 55%); mix-blend-mode: soft-light; }
+  .tile:hover .plate { transition-duration: .12s; }
+  .plate svg { width: 26px !important; height: 26px !important; overflow: visible; }
+  .plate svg * { transform-box: fill-box; transform-origin: center; }
+  .pdf .ln path { stroke-dasharray: 1; animation: ic-write 3.2s ease-in-out infinite; }
+  .pdf .ln path:nth-child(2) { animation-delay: .25s; } .pdf .ln path:nth-child(3) { animation-delay: .5s; }
+  @keyframes ic-write { 0% { stroke-dashoffset: 1; } 30%, 80% { stroke-dashoffset: 0; } 100% { stroke-dashoffset: 1; } }
+  .md .arr { animation: ic-bounce 1.6s cubic-bezier(.5,0,.5,1) infinite; }
+  @keyframes ic-bounce { 0%, 100% { transform: translateY(-1.2px); } 50% { transform: translateY(1.6px); } }
+  .diff .hl { animation: ic-scan 3.6s steps(1) infinite; }
+  @keyframes ic-scan { 0% { transform: translateY(-4px); } 33% { transform: translateY(0); } 66% { transform: translateY(4px); } }
+  .rx .star { animation: ic-turn 2.4s cubic-bezier(.7,0,.3,1) infinite; }
+  @keyframes ic-turn { 0%, 30% { transform: rotate(0); } 70%, 100% { transform: rotate(60deg); } }
+  .mg .sheet { animation: ic-post 2.8s cubic-bezier(.65,0,.35,1) infinite; }
+  @keyframes ic-post { 0%, 15% { transform: translate(0, 0); } 45%, 70% { transform: translate(-3px, 3px); opacity: .25; } 100% { transform: translate(0, 0); } }
+  .pt .arcs { animation: ic-flip 3.2s cubic-bezier(.7,0,.3,1) infinite; }
+  @keyframes ic-flip { 0%, 35% { transform: rotate(0); } 50%, 85% { transform: rotate(90deg); } 100% { transform: rotate(180deg); } }
+  .bl .body { transform-origin: 50% 100%; animation: ic-squish 2.2s ease-in-out infinite; }
+  @keyframes ic-squish { 0%, 100% { transform: scale(1, 1); } 45% { transform: scale(1.05, .93); } 60% { transform: scale(.97, 1.04) translateY(-.6px); } }
+  .bl .eyes { animation: ic-blink 3.4s infinite; }
+  @keyframes ic-blink { 0%, 92%, 100% { transform: scaleY(1); } 95% { transform: scaleY(.1); } }
+  .cd .l { animation: ic-breathe-l 2s ease-in-out infinite; } .cd .r { animation: ic-breathe-r 2s ease-in-out infinite; }
+  .cd .cur { animation: ic-caret 1s steps(1) infinite; }
+  @keyframes ic-breathe-l { 50% { transform: translateX(-1.4px); } }
+  @keyframes ic-breathe-r { 50% { transform: translateX(1.4px); } }
+  @keyframes ic-caret { 50% { opacity: .15; } }
+  @media (prefers-reduced-motion: reduce) { .plate svg * { animation: none !important; } .plate { transition: none; } }
 </style>
 <!-- studio-hub theme kit v1: fonts, light/dark tokens, title shadow, theme slider. Source: _theme/kit.html, inlined by _theme/apply.py -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource-variable/mona-sans@5.3.0/wdth.css">
@@ -93,43 +131,65 @@
 <p class="sub">Small tools that run in your browser. Nothing leaves your machine.</p>
 <nav id="grid" aria-label="Tools">
   <a class="tile" href="./pdf-studio.html">
-    <span class="icon"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 3h8l4 4v14H6zM9 12h6M9 15h6M9 18h3.5M14 3v4h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+    <span class="icon"><span class="plate"><svg class="pdf" viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h8l4 4v14H6zM14 3v4h4"/><g class="ln"><path pathLength="1" d="M9 12h6"/><path pathLength="1" d="M9 15h6"/><path pathLength="1" d="M9 18h3.5"/></g></g></svg></span></span>
     <span class="txt"><b>PDF <em>Studio</em></b><small>Merge, split and convert PDFs</small></span>
   </a>
   <a class="tile" href="./markdown-studio.html">
-    <span class="icon"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 5h14a2.5 2.5 0 0 1 2.5 2.5v9a2.5 2.5 0 0 1-2.5 2.5H5a2.5 2.5 0 0 1-2.5-2.5v-9A2.5 2.5 0 0 1 5 5zM6 15V9l2.5 3L11 9v6M16 9v6M13.5 12.5 16 15l2.5-2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+    <span class="icon"><span class="plate"><svg class="md" viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 5h14a2.5 2.5 0 0 1 2.5 2.5v9a2.5 2.5 0 0 1-2.5 2.5H5a2.5 2.5 0 0 1-2.5-2.5v-9A2.5 2.5 0 0 1 5 5zM6 15V9l2.5 3L11 9v6"/><path class="arr" d="M16 9v6M13.5 12.5 16 15l2.5-2.5"/></g></svg></span></span>
     <span class="txt"><b>Markdown <em>Studio</em></b><small>Write, preview, export a PDF</small></span>
   </a>
   <a class="tile" href="./mermaid-live.html">
-    <span class="icon"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3.5 3.5h7v5h-7zM13.5 15.5h7v5h-7zM7 8.5V15a2 2 0 0 0 2 2h4.5M10.5 6H14M17.5 3.5a2.75 2.75 0 1 1 0 5.5a2.75 2.75 0 1 1 0-5.5z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+    <span class="icon"><span class="plate"><svg class="mm" viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 3.5h7v5h-7zM13.5 15.5h7v5h-7zM7 8.5V15a2 2 0 0 0 2 2h4.5M10.5 6H14.75"/><circle cx="17.5" cy="6.25" r="2.75"/></g><circle r="1.25" fill="currentColor"><animateMotion dur="2.2s" repeatCount="indefinite" keyPoints="0;1;1" keyTimes="0;.7;1" calcMode="linear" path="M7 8.5V15a2 2 0 0 0 2 2h4.5"/></circle></svg></span></span>
     <span class="txt"><b>Mermaid <em>Studio</em></b><small>Diagrams from plain text</small></span>
   </a>
   <a class="tile" href="./diff-studio.html">
-    <span class="icon"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3.5 4.5h7v15h-7zM13.5 4.5h7v15h-7zM5.5 8h3M5.5 11h3M5.5 14h2M15.5 8h3M15.5 17h3M15.5 12h3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+    <span class="icon"><span class="plate"><svg class="diff" viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 4.5h7v15h-7zM13.5 4.5h7v15h-7zM5.5 8h3M5.5 12h3M5.5 16h2"/></g><rect class="hl" x="15" y="10.5" width="4" height="3" rx=".8" fill="currentColor" opacity=".85"/></svg></span></span>
     <span class="txt"><b>Diff <em>Studio</em></b><small>See what changed between texts</small></span>
   </a>
   <a class="tile" href="./regex-studio.html">
-    <span class="icon"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 4c-1.7 0-2.5.8-2.5 2.5v3c0 1.3-.7 2.5-2 2.5 1.3 0 2 1.2 2 2.5v3c0 1.7.8 2.5 2.5 2.5M17 4c1.7 0 2.5.8 2.5 2.5v3c0 1.3.7 2.5 2 2.5-1.3 0-2 1.2-2 2.5v3c0 1.7-.8 2.5-2.5 2.5M12 8v8M8.5 10l7 4M15.5 10l-7 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+    <span class="icon"><span class="plate"><svg class="rx" viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4c-1.7 0-2.5.8-2.5 2.5v3c0 1.3-.7 2.5-2 2.5 1.3 0 2 1.2 2 2.5v3c0 1.7.8 2.5 2.5 2.5M17 4c1.7 0 2.5.8 2.5 2.5v3c0 1.3.7 2.5 2 2.5-1.3 0-2 1.2-2 2.5v3c0 1.7-.8 2.5-2.5 2.5"/><path class="star" d="M12 8v8M8.5 10l7 4M15.5 10l-7 4"/></g></svg></span></span>
     <span class="txt"><b>Regex <em>Studio</em></b><small>Test and explain patterns</small></span>
   </a>
   <a class="tile" href="./merge-studio.html">
-    <span class="icon"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 9.5h14v10H3zM3 9.5l7 5.2 7-5.2M7 7.5v-3h14v10h-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+    <span class="icon"><span class="plate"><svg class="mg" viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path class="sheet" d="M7 7.5v-3h14v10h-4"/><path d="M3 9.5h14v10H3zM3 9.5l7 5.2 7-5.2"/></g></svg></span></span>
     <span class="txt"><b>Merge <em>Studio</em></b><small>Mail merge, without the cloud</small></span>
   </a>
   <a class="tile" href="./pattern-studio.html">
-    <span class="icon"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 4h16v16H4zM4 12a8 8 0 0 0 8-8M12 20a8 8 0 0 1 8-8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+    <span class="icon"><span class="plate"><svg class="pt" viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4z"/><g class="arcs"><path d="M4 12a8 8 0 0 0 8-8M12 20a8 8 0 0 1 8-8"/><rect x="4" y="4" width="16" height="16" stroke="none"/></g></g></svg></span></span>
     <span class="txt"><b>Pattern <em>Studio</em></b><small>Generative art and wallpapers</small></span>
   </a>
   <a class="tile" href="./blob-studio.html">
-    <span class="icon"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12.5 4c4.6 0 7.8 3.2 7.8 7.7 0 4.9-3.6 8.3-8.4 8.3-4.4 0-8.2-2.6-8.2-7.1C3.7 7.9 7.4 4 12.5 4z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M9.6 10.2h1.7v3.6H9.6zM14.2 10.2h1.7v3.6h-1.7z" fill="currentColor"/></svg></span>
+    <span class="icon"><span class="plate"><svg class="bl" viewBox="0 0 24 24" aria-hidden="true"><g class="body"><path fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" d="M12.5 4c4.6 0 7.8 3.2 7.8 7.7 0 4.9-3.6 8.3-8.4 8.3-4.4 0-8.2-2.6-8.2-7.1C3.7 7.9 7.4 4 12.5 4z"/><g class="eyes" fill="currentColor"><rect x="9.6" y="10.2" width="1.7" height="3.6" rx=".5"/><rect x="14.2" y="10.2" width="1.7" height="3.6" rx=".5"/></g></g></svg></span></span>
     <span class="txt"><b>Blob <em>Studio</em></b><small>An avatar for any name</small></span>
   </a>
   <a class="tile dim" href="https://github.com/rajathpi/studio-hub#-code-studio--code-studiopy--code-studiohtml" title="Needs a local Python runner: clone the repo and run code-studio.command">
-    <span class="icon"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M8 7.5 3.5 12 8 16.5M16 7.5l4.5 4.5-4.5 4.5M14 4.5l-4 15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+    <span class="icon"><span class="plate"><svg class="cd" viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path class="l" d="M8 7.5 3.5 12 8 16.5"/><path class="r" d="M16 7.5l4.5 4.5-4.5 4.5"/><path class="cur" d="M14 4.5l-4 15"/></g></svg></span></span>
     <span class="txt"><b>Code <em>Studio</em></b><small>Runs locally &middot; clone to use</small></span>
   </a>
 </nav>
 <footer>Every tool is one file &middot; works offline &middot; <a href="https://github.com/rajathpi/studio-hub">GitHub</a></footer>
+<script>
+  // Plates lean toward the cursor while you point at a tile, then settle back.
+  // Each tile's loop also starts at a different point, so the grid ripples rather than moving in step.
+  (() => {
+    const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    document.querySelectorAll(".tile").forEach((t, i) => {
+      const plate = t.querySelector(".plate"); if (!plate) return;
+      plate.querySelectorAll("*").forEach((el) => {
+        const cs = getComputedStyle(el);
+        if (cs.animationName !== "none") el.style.animationDelay = `calc(${cs.animationDelay.split(",")[0]} - ${i * 0.37}s)`;
+      });
+      if (still) return;
+      t.addEventListener("pointermove", (e) => {
+        const r = plate.getBoundingClientRect();
+        const x = Math.max(-1, Math.min(1, (e.clientX - r.left) / r.width - .5)), y = Math.max(-1, Math.min(1, (e.clientY - r.top) / r.height - .5));
+        plate.style.transform = `rotateY(${x * 26}deg) rotateX(${-y * 26}deg) translateY(-2px)`;
+        plate.style.setProperty("--gx", `${(x + .5) * 100}%`); plate.style.setProperty("--gy", `${(y + .5) * 100}%`);
+      });
+      t.addEventListener("pointerleave", () => { plate.style.transform = ""; plate.style.removeProperty("--gx"); plate.style.removeProperty("--gy"); });
+    });
+  })();
+</script>
 <!-- studio-hub theme slider -->
 <div class="hub-theme" title="Light / dark"><button type="button" role="switch" aria-label="Dark theme" aria-checked="false"><i></i></button></div>
 <script>
