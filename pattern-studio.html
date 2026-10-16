@@ -9,31 +9,31 @@
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { min-height: 100%; }
   body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    background: #1e1f24; color: #e6e6e6;
+    font-family: var(--h-font);
+    background: var(--h-bg); color: var(--h-text);
     display: flex; flex-direction: column; align-items: center;
     padding: 6vh 24px 60px;
   }
   h1 { font-size: 26px; font-weight: 700; letter-spacing: -.3px; }
-  h1 span { color: #ff5c8a; }
-  p.sub { color: #8a8b94; font-size: 13px; margin: 10px 0 26px; text-align: center; line-height: 1.6; max-width: 560px; }
+  h1 span { color: var(--h-accent); }
+  p.sub { color: var(--h-muted); font-size: 13px; margin: 10px 0 26px; text-align: center; line-height: 1.6; max-width: 560px; }
   button, select, input[type=number] {
     font: inherit; font-size: 13px; padding: 7px 12px; border-radius: 8px;
-    border: 1px solid #4a4b55; background: #33343d; color: #e6e6e6;
+    border: 1px solid var(--h-btn-border); background: var(--h-btn); color: var(--h-text);
   }
   button, select { cursor: pointer; }
-  button:hover, select:hover { background: #41424d; border-color: #7f77dd; }
+  button:hover, select:hover { background: var(--h-btn-hover); border-color: var(--h-accent2); }
   .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 
   #palettes { justify-content: center; margin-bottom: 22px; }
   .sw {
-    width: 30px; height: 30px; border-radius: 50%; padding: 0; border: 2px solid #3a3b44;
+    width: 30px; height: 30px; border-radius: 50%; padding: 0; border: 2px solid var(--h-border);
     display: grid; place-items: center; overflow: hidden;
   }
   .sw i { width: 12px; height: 12px; border-radius: 50%; display: block; }
-  .sw.on { border-color: #ff5c8a; }
-  .sw:hover { border-color: #7f77dd; }
-  .custom { display: flex; gap: 4px; align-items: center; font-size: 12px; color: #8a8b94; margin-left: 6px; }
+  .sw.on { border-color: var(--h-accent); }
+  .sw:hover { border-color: var(--h-accent2); }
+  .custom { display: flex; gap: 4px; align-items: center; font-size: 12px; color: var(--h-muted); margin-left: 6px; }
   .custom input { width: 30px; height: 30px; border: none; background: none; padding: 0; cursor: pointer; }
 
   #gallery {
@@ -41,41 +41,41 @@
     gap: 16px; width: 100%; max-width: 1000px;
   }
   .card {
-    background: #26272e; border: 1px solid #3a3b44; border-radius: 12px; overflow: hidden;
+    background: var(--h-panel); border: 1px solid var(--h-border); border-radius: 12px; overflow: hidden;
     cursor: pointer; transition: transform .12s ease, border-color .12s ease; text-align: left;
     padding: 0; display: block; color: inherit; text-decoration: none;
   }
-  .card:hover { transform: translateY(-3px); border-color: #ff5c8a; background: #26272e; }
+  .card:hover { transform: translateY(-3px); border-color: var(--h-accent); background: var(--h-panel); }
   .card svg { display: block; width: 100%; height: auto; aspect-ratio: 1; }
   .card[hidden] { display: none; }
   .card .thumb { aspect-ratio: 1; }
   .card .meta { padding: 10px 12px 12px; }
   #filters { justify-content: center; margin-bottom: 20px; max-width: 1000px; }
   body.editing #filters { display: none; }
-  #q { font: inherit; font-size: 13px; padding: 7px 12px; border-radius: 8px; border: 1px solid #4a4b55; background: #1e1f24; color: #e6e6e6; width: 220px; }
-  #q:focus { outline: none; border-color: #ff5c8a; }
+  #q { font: inherit; font-size: 13px; padding: 7px 12px; border-radius: 8px; border: 1px solid var(--h-btn-border); background: var(--h-bg); color: var(--h-text); width: 220px; }
+  #q:focus { outline: none; border-color: var(--h-accent); }
   .chip { padding: 5px 11px; border-radius: 999px; font-size: 12px; }
-  .chip.on { border-color: #ff5c8a; background: #3d2a33; }
-  #count { font-size: 12px; color: #8a8b94; width: 100%; text-align: center; }
+  .chip.on { border-color: var(--h-accent); background: var(--h-accent-bg); }
+  #count { font-size: 12px; color: var(--h-muted); width: 100%; text-align: center; }
   .card h2 { font-size: 14px; font-weight: 600; }
-  .card p { font-size: 11px; color: #8a8b94; margin-top: 3px; }
+  .card p { font-size: 11px; color: var(--h-muted); margin-top: 3px; }
 
   #editor { display: none; width: 100%; max-width: 1000px; }
   body.editing #gallery { display: none; }
   body.editing #editor { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 20px; }
   @media (max-width: 780px) { body.editing #editor { grid-template-columns: minmax(0, 1fr); } }
-  .panel { background: #26272e; border: 1px solid #3a3b44; border-radius: 12px; padding: 18px; }
+  .panel { background: var(--h-panel); border: 1px solid var(--h-border); border-radius: 12px; padding: 18px; }
   #canvasWrap { display: grid; place-items: center; padding: 14px; }
   #canvasWrap svg { display: block; max-width: 100%; max-height: 72vh; width: auto; height: auto; box-shadow: 0 6px 30px rgba(0,0,0,.35); }
   #edName { font-size: 18px; font-weight: 700; }
-  #edBlurb { font-size: 12px; color: #8a8b94; line-height: 1.55; margin: 6px 0 4px; }
-  label.field { display: flex; justify-content: space-between; font-size: 12px; color: #8a8b94; margin: 14px 0 5px; }
-  label.field b { color: #e6e6e6; font-weight: 600; font-variant-numeric: tabular-nums; }
-  input[type=range] { width: 100%; accent-color: #ff5c8a; }
-  input[type=checkbox] { accent-color: #ff5c8a; width: 15px; height: 15px; }
+  #edBlurb { font-size: 12px; color: var(--h-muted); line-height: 1.55; margin: 6px 0 4px; }
+  label.field { display: flex; justify-content: space-between; font-size: 12px; color: var(--h-muted); margin: 14px 0 5px; }
+  label.field b { color: var(--h-text); font-weight: 600; font-variant-numeric: tabular-nums; }
+  input[type=range] { width: 100%; accent-color: var(--h-accent); }
+  input[type=checkbox] { accent-color: var(--h-accent); width: 15px; height: 15px; }
   #seed { width: 100%; }
   .seedrow { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
-  #toast { font-size: 12px; color: #8fd19e; min-height: 16px; margin-top: 10px; }
+  #toast { font-size: 12px; color: var(--h-ok); min-height: 16px; margin-top: 10px; }
   .actions { margin-top: 18px; }
   .actions button { flex: 1; }
   #deskPanel, #deskActions { display: none; }
@@ -85,22 +85,67 @@
   #deskActions button { padding: 7px 6px; white-space: nowrap; }
   #deskPanel h3 { font-size: 15px; font-weight: 700; margin-right: auto; }
   #deskPanel input[type=number] { width: 72px; padding: 6px 8px; }
-  #deskPanel input[type=text] { font: inherit; font-size: 13px; padding: 6px 8px; border-radius: 8px; border: 1px solid #4a4b55; background: #33343d; color: #e6e6e6; width: 130px; }
-  #deskMap { display: block; width: 100%; height: 230px; margin: 14px 0 10px; background: #1a1b20; border-radius: 10px; touch-action: none; user-select: none; }
-  #deskMap .mon rect { fill: #33343d; stroke: #7f77dd; stroke-width: .35; cursor: grab; }
-  #deskMap .mon:hover rect { fill: #41424d; }
-  #deskMap .mon.bad rect { stroke: #ff5c8a; fill: #3d2a33; }
-  #deskMap text { fill: #e6e6e6; text-anchor: middle; dominant-baseline: middle; pointer-events: none; }
-  #deskMap text.res { fill: #8a8b94; }
-  .monrow { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 12px; color: #8a8b94; padding: 7px 0; border-top: 1px solid #33343d; }
-  .monrow .num { width: 20px; height: 20px; border-radius: 50%; background: #3d2a33; color: #ff5c8a; display: grid; place-items: center; font-weight: 700; }
+  #deskPanel input[type=text] { font: inherit; font-size: 13px; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--h-btn-border); background: var(--h-btn); color: var(--h-text); width: 130px; }
+  #deskMap { display: block; width: 100%; height: 230px; margin: 14px 0 10px; background: var(--h-deep); border-radius: 10px; touch-action: none; user-select: none; }
+  #deskMap .mon rect { fill: var(--h-btn); stroke: var(--h-accent2); stroke-width: .35; cursor: grab; }
+  #deskMap .mon:hover rect { fill: var(--h-btn-hover); }
+  #deskMap .mon.bad rect { stroke: var(--h-accent); fill: var(--h-accent-bg); }
+  #deskMap text { fill: var(--h-text); text-anchor: middle; dominant-baseline: middle; pointer-events: none; }
+  #deskMap text.res { fill: var(--h-muted); }
+  .monrow { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 12px; color: var(--h-muted); padding: 7px 0; border-top: 1px solid var(--h-btn); }
+  .monrow .num { width: 20px; height: 20px; border-radius: 50%; background: var(--h-accent-bg); color: var(--h-accent); display: grid; place-items: center; font-weight: 700; }
   .monrow select { padding: 6px 8px; }
   .monrow .rm { padding: 5px 9px; }
   .monrow .info { margin-left: auto; font-variant-numeric: tabular-nums; }
-  .hint { font-size: 12px; color: #8a8b94; line-height: 1.6; margin-top: 12px; }
-  .hint b { color: #e6e6e6; font-weight: 600; }
-  footer { margin-top: 44px; font-size: 11px; color: #565761; text-align: center; line-height: 1.7; }
+  .hint { font-size: 12px; color: var(--h-muted); line-height: 1.6; margin-top: 12px; }
+  .hint b { color: var(--h-text); font-weight: 600; }
+  footer { margin-top: 44px; font-size: 11px; color: var(--h-faint); text-align: center; line-height: 1.7; }
 </style>
+<!-- studio-hub theme kit v1: fonts, light/dark tokens, title shadow, theme slider. Source: _theme/kit.html, inlined by _theme/apply.py -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource-variable/mona-sans@5.3.0/wdth.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource-variable/hubot-sans@5.3.0/wdth.css">
+<script>(function(){var t=null;try{t=new URLSearchParams(location.search).get("theme")||localStorage.getItem("hubTheme")}catch(e){}document.documentElement.dataset.theme=t==="dark"?"dark":"light"})()</script>
+<style id="hub-kit">
+  :root {
+    color-scheme: light;
+    --h-font: "Mona Sans Variable", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --h-head: "Hubot Sans Variable", var(--h-font);
+    --h-bg: #f1efe9; --h-panel: #faf9f5; --h-panel2: #f4f2ec; --h-deep: #ebe8e1; --h-deep2: #e7e4dc;
+    --h-border: #dedad0; --h-border2: #d3cec2; --h-btn: #ffffff; --h-btn-border: #cfcabe; --h-btn-hover: #f1eee6;
+    --h-text: #18181b; --h-text2: #3f3f46; --h-muted: #6b675f; --h-muted2: #8f8a7f; --h-faint: #aaa59a; --h-code: #27272a;
+    --h-accent: #d6336c; --h-accent-h: #c2255c; --h-accent2: #5b4fc4; --h-accent-bg: #f9dfe8;
+    --h-yellow: #8a5a00; --h-blue: #0b5cad; --h-blue2: #2f5597; --h-purple: #6b3fa0; --h-green2: #2e7d4f; --h-ok: #1a7f37;
+    --h-green: #1a7f37; --h-red: #cf222e; --h-amber: #9a6700; --h-err-bg: #fde2e4; --h-err-bg2: #f5b8be; --h-err-text: #8b1a2b;
+    --h-title-shadow: 0 2px 3px rgba(24, 24, 27, .16), 0 8px 22px rgba(24, 24, 27, .18);
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --h-bg: #1e1f24; --h-panel: #26272e; --h-panel2: #2e2f37; --h-deep: #1b1c21; --h-deep2: #22232a;
+    --h-border: #3a3b44; --h-border2: #3a3b46; --h-btn: #33343d; --h-btn-border: #4a4b55; --h-btn-hover: #41424d;
+    --h-text: #e6e6e6; --h-text2: #b9bac2; --h-muted: #8a8b94; --h-muted2: #6f7078; --h-faint: #565761; --h-code: #d8dee9;
+    --h-accent: #ff5c8a; --h-accent-h: #ff7ba0; --h-accent2: #7f77dd; --h-accent-bg: #3d2a33;
+    --h-yellow: #e8d3a8; --h-blue: #9ecbff; --h-blue2: #9db3d8; --h-purple: #c4a7e7; --h-green2: #a8d5b5; --h-ok: #8fd19e;
+    --h-green: #3fb950; --h-red: #f85149; --h-amber: #e3b341; --h-err-bg: #5c1f2b; --h-err-bg2: #7a2938; --h-err-text: #ffb3c0;
+    --h-title-shadow: 0 2px 3px rgba(0, 0, 0, .45), 0 8px 22px rgba(0, 0, 0, .5);
+  }
+  h1 { font-family: var(--h-head); font-weight: 800; font-stretch: 125%; letter-spacing: -.02em; text-shadow: var(--h-title-shadow); }
+  h1 span, h1 em { text-shadow: inherit; }
+
+  /* the theme slider: fixed top-right, no labels */
+  .hub-theme { position: fixed; top: 14px; right: 16px; z-index: 9999; }
+  .hub-theme button { all: unset; box-sizing: border-box; position: relative; display: block; width: 52px; height: 22px; border-radius: 999px; cursor: pointer;
+    background: linear-gradient(90deg, #f1efe9, #c9c4b7 38%, #3f3f46 62%, #09090b); border: 1px solid var(--h-border2); touch-action: none; }
+  .hub-theme button:focus-visible { outline: 2px solid var(--h-text); outline-offset: 3px; }
+  .hub-theme i { position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff;
+    box-shadow: 0 1px 2px rgba(0,0,0,.35), 0 0 0 1px rgba(0,0,0,.08); transition: left .4s cubic-bezier(.65, 0, .35, 1); }
+  :root[data-theme="dark"] .hub-theme i { left: 32px; }
+  .hub-theme.dragging i { transition: none; }
+  .hub-theme.docked { position: static; flex: none; display: flex; align-items: center; margin-left: 6px; }
+  [data-hub-theme-slot] { display: contents; }
+  @media (prefers-reduced-motion: reduce) { .hub-theme i { transition: none; } }
+  @media print { .hub-theme { display: none; } }
+</style>
+<!-- /studio-hub theme kit -->
 </head>
 <body>
   <h1>Pattern <span>Studio</span></h1>
@@ -162,7 +207,7 @@
         <button data-preset="one">1 screen</button>
         <button data-preset="two">2 side by side</button>
         <button data-preset="mine">My desk</button>
-        <label class="row" style="font-size:12px;color:#8a8b94">Bezel gap <input type="number" id="gap" min="0" max="30" step="0.5"> cm</label>
+        <label class="row" style="font-size:12px;color:var(--h-muted)">Bezel gap <input type="number" id="gap" min="0" max="30" step="0.5"> cm</label>
         <button id="addMon">+ Screen</button>
       </div>
       <svg id="deskMap" aria-label="Desk layout: drag screens to arrange them"></svg>
@@ -1460,5 +1505,40 @@
   drawPalettes(); drawChips(); drawGallery(); route();
 })();
 </script>
+<!-- studio-hub theme slider -->
+<div class="hub-theme" title="Light / dark"><button type="button" role="switch" aria-label="Dark theme" aria-checked="false"><i></i></button></div>
+<script>
+(() => {
+  const root = document.documentElement, wrap = document.querySelector(".hub-theme"), btn = wrap.querySelector("button"), knob = btn.querySelector("i");
+  const slot = document.querySelector("[data-hub-theme-slot]");
+  if (slot) { slot.append(wrap); wrap.classList.add("docked"); }  // app pages: sit at the end of the toolbar
+  const sync = () => btn.setAttribute("aria-checked", String(root.dataset.theme === "dark"));
+  const set = (t) => {
+    root.dataset.theme = t; knob.style.left = ""; sync();
+    try { localStorage.setItem("hubTheme", t); } catch (e) {}
+    window.dispatchEvent(new CustomEvent("hubthemechange", { detail: t }));
+  };
+  // Click toggles; a drag snaps to whichever end it is released nearer.
+  let drag = null, skipClick = false;
+  const frac = (e) => { const r = btn.getBoundingClientRect(); return Math.min(1, Math.max(0, (e.clientX - r.left - 10) / (r.width - 20))); };
+  btn.addEventListener("pointerdown", (e) => { drag = { x: e.clientX, moved: false }; btn.setPointerCapture(e.pointerId); });
+  btn.addEventListener("pointermove", (e) => {
+    if (!drag) return;
+    if (Math.abs(e.clientX - drag.x) > 3) { drag.moved = true; wrap.classList.add("dragging"); }
+    if (drag.moved) knob.style.left = 2 + frac(e) * 30 + "px";
+  });
+  btn.addEventListener("pointerup", (e) => {
+    wrap.classList.remove("dragging");
+    if (drag && drag.moved) { set(frac(e) > 0.5 ? "dark" : "light"); skipClick = true; }
+    drag = null;
+  });
+  btn.addEventListener("click", () => { if (skipClick) { skipClick = false; return; } set(root.dataset.theme === "dark" ? "light" : "dark"); });
+  btn.addEventListener("keydown", (e) => { if (e.key === "ArrowLeft") set("light"); if (e.key === "ArrowRight") set("dark"); });
+  // Another tab changed it: follow along.
+  window.addEventListener("storage", (e) => { if (e.key === "hubTheme") { root.dataset.theme = e.newValue === "dark" ? "dark" : "light"; sync(); } });
+  sync();
+})();
+</script>
+<!-- /studio-hub theme slider -->
 </body>
 </html>

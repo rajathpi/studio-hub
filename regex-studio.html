@@ -8,46 +8,46 @@
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { height: 100%; }
   body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    background: #1e1f24; color: #e6e6e6; display: flex; flex-direction: column;
+    font-family: var(--h-font);
+    background: var(--h-bg); color: var(--h-text); display: flex; flex-direction: column;
   }
   header {
     display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
-    padding: 10px 14px; background: #26272e; border-bottom: 1px solid #3a3b44;
+    padding: 10px 14px; background: var(--h-panel); border-bottom: 1px solid var(--h-border);
   }
   header h1 { font-size: 15px; font-weight: 600; }
-  header h1 span { color: #ff5c8a; }
-  #matchCount { font-size: 12px; color: #8a8b94; margin-right: auto; }
-  #matchCount b { color: #3fb950; }
-  .flag { font-size: 12px; color: #b9bac2; display: flex; align-items: center; gap: 4px; cursor: pointer; }
-  .flag code { color: #ff5c8a; font-weight: 700; }
+  header h1 span { color: var(--h-accent); }
+  #matchCount { font-size: 12px; color: var(--h-muted); margin-right: auto; }
+  #matchCount b { color: var(--h-green); }
+  .flag { font-size: 12px; color: var(--h-text2); display: flex; align-items: center; gap: 4px; cursor: pointer; }
+  .flag code { color: var(--h-accent); font-weight: 700; }
   button {
     font-size: 13px; padding: 6px 12px; border-radius: 6px;
-    border: 1px solid #4a4b55; background: #33343d; color: #e6e6e6; cursor: pointer;
+    border: 1px solid var(--h-btn-border); background: var(--h-btn); color: var(--h-text); cursor: pointer;
   }
-  button:hover { background: #41424d; }
+  button:hover { background: var(--h-btn-hover); }
 
-  #patternRow { display: flex; align-items: center; gap: 0; padding: 10px 14px; background: #22232a; border-bottom: 1px solid #3a3b44; }
-  #patternRow .slash { font: 18px/1 "SF Mono", Menlo, monospace; color: #6f7078; padding: 0 8px; }
+  #patternRow { display: flex; align-items: center; gap: 0; padding: 10px 14px; background: var(--h-deep2); border-bottom: 1px solid var(--h-border); }
+  #patternRow .slash { font: 18px/1 "SF Mono", Menlo, monospace; color: var(--h-muted2); padding: 0 8px; }
   #pattern {
-    flex: 1; background: #1b1c21; color: #e8d3a8; border: 1px solid #33343d; border-radius: 6px;
+    flex: 1; background: var(--h-deep); color: var(--h-yellow); border: 1px solid var(--h-btn); border-radius: 6px;
     outline: none; padding: 9px 12px; font: 14px/1.4 "SF Mono", Menlo, Consolas, monospace;
   }
-  #pattern:focus { border-color: #ff5c8a; }
-  #flagsShown { font: 14px/1 "SF Mono", Menlo, monospace; color: #ff5c8a; padding: 0 8px; min-width: 60px; }
+  #pattern:focus { border-color: var(--h-accent); }
+  #flagsShown { font: 14px/1 "SF Mono", Menlo, monospace; color: var(--h-accent); padding: 0 8px; min-width: 60px; }
   #error {
     display: none; padding: 8px 14px; font: 12px/1.5 Menlo, monospace;
-    background: #5c1f2b; color: #ffb3c0; border-bottom: 1px solid #7a2938; white-space: pre-wrap;
+    background: var(--h-err-bg); color: var(--h-err-text); border-bottom: 1px solid var(--h-err-bg2); white-space: pre-wrap;
   }
   #error.show { display: block; }
 
   main { flex: 1; display: flex; min-height: 0; }
   .col { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
-  #left { flex: 1.15; border-right: 1px solid #3a3b44; }
+  #left { flex: 1.15; border-right: 1px solid var(--h-border); }
   #right { flex: 1; overflow: auto; }
   .cap {
     font-size: 11px; font-weight: 700; letter-spacing: .4px; text-transform: uppercase;
-    color: #8a8b94; padding: 10px 14px 6px; flex: none;
+    color: var(--h-muted); padding: 10px 14px 6px; flex: none;
   }
 
   /* highlighted test string */
@@ -60,60 +60,105 @@
   #backdrop mark { color: transparent; border-radius: 2px; }
   #backdrop mark.h0 { background: rgba(255, 92, 138, .34); }
   #backdrop mark.h1 { background: rgba(88, 166, 255, .32); }
-  #text { background: transparent; color: #d8dee9; border: none; outline: none; resize: none; }
+  #text { background: transparent; color: var(--h-code); border: none; outline: none; resize: none; }
 
   /* matches */
-  #matches { max-height: 32%; overflow: auto; border-top: 1px solid #33343d; flex: none; padding-bottom: 8px; }
-  .m { padding: 5px 14px; font: 12px/1.5 "SF Mono", Menlo, monospace; border-bottom: 1px solid #26272e; }
-  .m .idx { color: #6f7078; }
-  .m .val { color: #e8d3a8; }
-  .m .g { color: #9db3d8; padding-left: 18px; display: block; }
-  .m .g b { color: #c4a7e7; font-weight: 400; }
+  #matches { max-height: 32%; overflow: auto; border-top: 1px solid var(--h-btn); flex: none; padding-bottom: 8px; }
+  .m { padding: 5px 14px; font: 12px/1.5 "SF Mono", Menlo, monospace; border-bottom: 1px solid var(--h-panel); }
+  .m .idx { color: var(--h-muted2); }
+  .m .val { color: var(--h-yellow); }
+  .m .g { color: var(--h-blue2); padding-left: 18px; display: block; }
+  .m .g b { color: var(--h-purple); font-weight: 400; }
 
   /* explain + cheatsheet + tests */
-  section { border-bottom: 1px solid #33343d; }
+  section { border-bottom: 1px solid var(--h-btn); }
   #explain { padding: 4px 14px 14px; font-size: 12.5px; line-height: 1.65; }
   #explain ul { list-style: none; padding-left: 18px; }
   #explain > ul { padding-left: 0; }
-  #explain li::before { content: '·'; color: #ff5c8a; margin-right: 7px; }
-  #explain code { background: #1b1c21; border: 1px solid #33343d; border-radius: 4px; padding: 0 5px; color: #e8d3a8; font: 11.5px "SF Mono", Menlo, monospace; }
-  #explain .muted { color: #8a8b94; }
+  #explain li::before { content: '·'; color: var(--h-accent); margin-right: 7px; }
+  #explain code { background: var(--h-deep); border: 1px solid var(--h-btn); border-radius: 4px; padding: 0 5px; color: var(--h-yellow); font: 11.5px "SF Mono", Menlo, monospace; }
+  #explain .muted { color: var(--h-muted); }
 
   #replRow { display: flex; align-items: center; gap: 8px; padding: 4px 14px 12px; }
   #repl {
-    flex: 1; background: #1b1c21; color: #d8dee9; border: 1px solid #33343d; border-radius: 6px;
+    flex: 1; background: var(--h-deep); color: var(--h-code); border: 1px solid var(--h-btn); border-radius: 6px;
     outline: none; padding: 7px 10px; font: 12.5px "SF Mono", Menlo, monospace;
   }
   #replOut {
-    margin: 0 14px 14px; padding: 8px 10px; background: #1b1c21; border: 1px solid #33343d;
+    margin: 0 14px 14px; padding: 8px 10px; background: var(--h-deep); border: 1px solid var(--h-btn);
     border-radius: 6px; font: 12px/1.6 "SF Mono", Menlo, monospace; white-space: pre-wrap;
-    max-height: 140px; overflow: auto; color: #a8d5b5;
+    max-height: 140px; overflow: auto; color: var(--h-green2);
   }
 
   #cases { padding: 4px 14px 12px; }
   .case { display: flex; gap: 6px; align-items: center; margin-bottom: 6px; }
   .case input[type=text] {
-    flex: 1; background: #1b1c21; color: #d8dee9; border: 1px solid #33343d; border-radius: 6px;
+    flex: 1; background: var(--h-deep); color: var(--h-code); border: 1px solid var(--h-btn); border-radius: 6px;
     outline: none; padding: 6px 10px; font: 12px "SF Mono", Menlo, monospace;
   }
-  .case select { background: #33343d; color: #e6e6e6; border: 1px solid #4a4b55; border-radius: 5px; font-size: 11px; padding: 5px 6px; }
+  .case select { background: var(--h-btn); color: var(--h-text); border: 1px solid var(--h-btn-border); border-radius: 5px; font-size: 11px; padding: 5px 6px; }
   .badge { font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 4px; min-width: 44px; text-align: center; }
-  .badge.pass { background: rgba(63,185,80,.2); color: #3fb950; }
-  .badge.fail { background: rgba(248,81,73,.2); color: #f85149; }
+  .badge.pass { background: rgba(63,185,80,.2); color: var(--h-green); }
+  .badge.fail { background: rgba(248,81,73,.2); color: var(--h-red); }
   .case .x { padding: 4px 8px; font-size: 11px; }
 
   details.cheat { margin: 0 14px 14px; }
-  details.cheat summary { cursor: pointer; font-size: 12px; color: #b9bac2; padding: 6px 0; }
+  details.cheat summary { cursor: pointer; font-size: 12px; color: var(--h-text2); padding: 6px 0; }
   .cheatGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 22px; font-size: 11.5px; }
-  .cheatGrid h3 { font-size: 10px; text-transform: uppercase; letter-spacing: .4px; color: #8a8b94; margin: 10px 0 4px; }
+  .cheatGrid h3 { font-size: 10px; text-transform: uppercase; letter-spacing: .4px; color: var(--h-muted); margin: 10px 0 4px; }
   .cheatGrid table { border-collapse: collapse; width: 100%; }
-  .cheatGrid td { padding: 2px 6px 2px 0; color: #9a9ba3; vertical-align: top; }
-  .cheatGrid td:first-child { font-family: "SF Mono", Menlo, monospace; color: #e8d3a8; white-space: nowrap; }
+  .cheatGrid td { padding: 2px 6px 2px 0; color: var(--h-text2); vertical-align: top; }
+  .cheatGrid td:first-child { font-family: "SF Mono", Menlo, monospace; color: var(--h-yellow); white-space: nowrap; }
   footer {
-    display: flex; gap: 14px; padding: 6px 14px; font-size: 11px; color: #8a8b94;
-    background: #26272e; border-top: 1px solid #3a3b44;
+    display: flex; gap: 14px; padding: 6px 14px; font-size: 11px; color: var(--h-muted);
+    background: var(--h-panel); border-top: 1px solid var(--h-border);
   }
 </style>
+<!-- studio-hub theme kit v1: fonts, light/dark tokens, title shadow, theme slider. Source: _theme/kit.html, inlined by _theme/apply.py -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource-variable/mona-sans@5.3.0/wdth.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource-variable/hubot-sans@5.3.0/wdth.css">
+<script>(function(){var t=null;try{t=new URLSearchParams(location.search).get("theme")||localStorage.getItem("hubTheme")}catch(e){}document.documentElement.dataset.theme=t==="dark"?"dark":"light"})()</script>
+<style id="hub-kit">
+  :root {
+    color-scheme: light;
+    --h-font: "Mona Sans Variable", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --h-head: "Hubot Sans Variable", var(--h-font);
+    --h-bg: #f1efe9; --h-panel: #faf9f5; --h-panel2: #f4f2ec; --h-deep: #ebe8e1; --h-deep2: #e7e4dc;
+    --h-border: #dedad0; --h-border2: #d3cec2; --h-btn: #ffffff; --h-btn-border: #cfcabe; --h-btn-hover: #f1eee6;
+    --h-text: #18181b; --h-text2: #3f3f46; --h-muted: #6b675f; --h-muted2: #8f8a7f; --h-faint: #aaa59a; --h-code: #27272a;
+    --h-accent: #d6336c; --h-accent-h: #c2255c; --h-accent2: #5b4fc4; --h-accent-bg: #f9dfe8;
+    --h-yellow: #8a5a00; --h-blue: #0b5cad; --h-blue2: #2f5597; --h-purple: #6b3fa0; --h-green2: #2e7d4f; --h-ok: #1a7f37;
+    --h-green: #1a7f37; --h-red: #cf222e; --h-amber: #9a6700; --h-err-bg: #fde2e4; --h-err-bg2: #f5b8be; --h-err-text: #8b1a2b;
+    --h-title-shadow: 0 2px 3px rgba(24, 24, 27, .16), 0 8px 22px rgba(24, 24, 27, .18);
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --h-bg: #1e1f24; --h-panel: #26272e; --h-panel2: #2e2f37; --h-deep: #1b1c21; --h-deep2: #22232a;
+    --h-border: #3a3b44; --h-border2: #3a3b46; --h-btn: #33343d; --h-btn-border: #4a4b55; --h-btn-hover: #41424d;
+    --h-text: #e6e6e6; --h-text2: #b9bac2; --h-muted: #8a8b94; --h-muted2: #6f7078; --h-faint: #565761; --h-code: #d8dee9;
+    --h-accent: #ff5c8a; --h-accent-h: #ff7ba0; --h-accent2: #7f77dd; --h-accent-bg: #3d2a33;
+    --h-yellow: #e8d3a8; --h-blue: #9ecbff; --h-blue2: #9db3d8; --h-purple: #c4a7e7; --h-green2: #a8d5b5; --h-ok: #8fd19e;
+    --h-green: #3fb950; --h-red: #f85149; --h-amber: #e3b341; --h-err-bg: #5c1f2b; --h-err-bg2: #7a2938; --h-err-text: #ffb3c0;
+    --h-title-shadow: 0 2px 3px rgba(0, 0, 0, .45), 0 8px 22px rgba(0, 0, 0, .5);
+  }
+  h1 { font-family: var(--h-head); font-weight: 800; font-stretch: 125%; letter-spacing: -.02em; text-shadow: var(--h-title-shadow); }
+  h1 span, h1 em { text-shadow: inherit; }
+
+  /* the theme slider: fixed top-right, no labels */
+  .hub-theme { position: fixed; top: 14px; right: 16px; z-index: 9999; }
+  .hub-theme button { all: unset; box-sizing: border-box; position: relative; display: block; width: 52px; height: 22px; border-radius: 999px; cursor: pointer;
+    background: linear-gradient(90deg, #f1efe9, #c9c4b7 38%, #3f3f46 62%, #09090b); border: 1px solid var(--h-border2); touch-action: none; }
+  .hub-theme button:focus-visible { outline: 2px solid var(--h-text); outline-offset: 3px; }
+  .hub-theme i { position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff;
+    box-shadow: 0 1px 2px rgba(0,0,0,.35), 0 0 0 1px rgba(0,0,0,.08); transition: left .4s cubic-bezier(.65, 0, .35, 1); }
+  :root[data-theme="dark"] .hub-theme i { left: 32px; }
+  .hub-theme.dragging i { transition: none; }
+  .hub-theme.docked { position: static; flex: none; display: flex; align-items: center; margin-left: 6px; }
+  [data-hub-theme-slot] { display: contents; }
+  @media (prefers-reduced-motion: reduce) { .hub-theme i { transition: none; } }
+  @media print { .hub-theme { display: none; } }
+</style>
+<!-- /studio-hub theme kit -->
 </head>
 <body>
 <header>
@@ -124,6 +169,7 @@
   <label class="flag"><input type="checkbox" data-flag="m"><code>m</code> multiline</label>
   <label class="flag"><input type="checkbox" data-flag="s"><code>s</code> dotall</label>
   <label class="flag"><input type="checkbox" data-flag="u"><code>u</code> unicode</label>
+  <span data-hub-theme-slot></span>
 </header>
 <div id="patternRow">
   <span class="slash">/</span>
@@ -620,5 +666,40 @@
   window.__rx = { update, explain, get cases() { return cases; } };
 })();
 </script>
+<!-- studio-hub theme slider -->
+<div class="hub-theme" title="Light / dark"><button type="button" role="switch" aria-label="Dark theme" aria-checked="false"><i></i></button></div>
+<script>
+(() => {
+  const root = document.documentElement, wrap = document.querySelector(".hub-theme"), btn = wrap.querySelector("button"), knob = btn.querySelector("i");
+  const slot = document.querySelector("[data-hub-theme-slot]");
+  if (slot) { slot.append(wrap); wrap.classList.add("docked"); }  // app pages: sit at the end of the toolbar
+  const sync = () => btn.setAttribute("aria-checked", String(root.dataset.theme === "dark"));
+  const set = (t) => {
+    root.dataset.theme = t; knob.style.left = ""; sync();
+    try { localStorage.setItem("hubTheme", t); } catch (e) {}
+    window.dispatchEvent(new CustomEvent("hubthemechange", { detail: t }));
+  };
+  // Click toggles; a drag snaps to whichever end it is released nearer.
+  let drag = null, skipClick = false;
+  const frac = (e) => { const r = btn.getBoundingClientRect(); return Math.min(1, Math.max(0, (e.clientX - r.left - 10) / (r.width - 20))); };
+  btn.addEventListener("pointerdown", (e) => { drag = { x: e.clientX, moved: false }; btn.setPointerCapture(e.pointerId); });
+  btn.addEventListener("pointermove", (e) => {
+    if (!drag) return;
+    if (Math.abs(e.clientX - drag.x) > 3) { drag.moved = true; wrap.classList.add("dragging"); }
+    if (drag.moved) knob.style.left = 2 + frac(e) * 30 + "px";
+  });
+  btn.addEventListener("pointerup", (e) => {
+    wrap.classList.remove("dragging");
+    if (drag && drag.moved) { set(frac(e) > 0.5 ? "dark" : "light"); skipClick = true; }
+    drag = null;
+  });
+  btn.addEventListener("click", () => { if (skipClick) { skipClick = false; return; } set(root.dataset.theme === "dark" ? "light" : "dark"); });
+  btn.addEventListener("keydown", (e) => { if (e.key === "ArrowLeft") set("light"); if (e.key === "ArrowRight") set("dark"); });
+  // Another tab changed it: follow along.
+  window.addEventListener("storage", (e) => { if (e.key === "hubTheme") { root.dataset.theme = e.newValue === "dark" ? "dark" : "light"; sync(); } });
+  sync();
+})();
+</script>
+<!-- /studio-hub theme slider -->
 </body>
 </html>

@@ -16,59 +16,104 @@
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { min-height: 100%; }
   body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    background: #1e1f24; color: #e6e6e6;
+    font-family: var(--h-font);
+    background: var(--h-bg); color: var(--h-text);
     display: flex; flex-direction: column; align-items: center;
     padding: 6vh 24px 60px;
   }
   h1 { font-size: 26px; font-weight: 700; letter-spacing: -.3px; }
-  h1 span { color: #ff5c8a; }
-  p.sub { color: #8a8b94; font-size: 13px; margin: 10px 0 30px; text-align: center; line-height: 1.6; max-width: 560px; }
+  h1 span { color: var(--h-accent); }
+  p.sub { color: var(--h-muted); font-size: 13px; margin: 10px 0 30px; text-align: center; line-height: 1.6; max-width: 560px; }
   main { display: grid; grid-template-columns: minmax(0, 340px) minmax(0, 440px); gap: 20px; width: 100%; max-width: 820px; }
   @media (max-width: 760px) { main { grid-template-columns: minmax(0, 1fr); } }
-  .panel { background: #26272e; border: 1px solid #3a3b44; border-radius: 12px; padding: 18px; }
+  .panel { background: var(--h-panel); border: 1px solid var(--h-border); border-radius: 12px; padding: 18px; }
   #stage { display: flex; flex-direction: column; align-items: center; gap: 14px; }
   #hero { width: 260px; height: 260px; max-width: 100%; display: grid; place-items: center; }
   #hero svg { width: 100%; height: 100%; display: block; }
   #hero svg .mo-eyes { --mo-track-travel: 3px; }
   #nameIn {
     width: 100%; font: inherit; font-size: 15px; padding: 10px 12px; border-radius: 8px;
-    border: 1px solid #4a4b55; background: #1e1f24; color: #e6e6e6; text-align: center;
+    border: 1px solid var(--h-btn-border); background: var(--h-bg); color: var(--h-text); text-align: center;
   }
-  #nameIn:focus { outline: none; border-color: #ff5c8a; }
+  #nameIn:focus { outline: none; border-color: var(--h-accent); }
   .row { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
   button, select {
     font: inherit; font-size: 13px; padding: 7px 12px; border-radius: 8px;
-    border: 1px solid #4a4b55; background: #33343d; color: #e6e6e6; cursor: pointer;
+    border: 1px solid var(--h-btn-border); background: var(--h-btn); color: var(--h-text); cursor: pointer;
   }
-  button:hover, select:hover { background: #41424d; border-color: #7f77dd; }
-  button.on { border-color: #ff5c8a; background: #3d2a33; }
-  label.field { display: block; font-size: 12px; color: #8a8b94; margin: 14px 0 6px; }
+  button:hover, select:hover { background: var(--h-btn-hover); border-color: var(--h-accent2); }
+  button.on { border-color: var(--h-accent); background: var(--h-accent-bg); }
+  label.field { display: block; font-size: 12px; color: var(--h-muted); margin: 14px 0 6px; }
   label.field:first-child { margin-top: 0; }
-  label.field b { color: #e6e6e6; font-weight: 600; }
+  label.field b { color: var(--h-text); font-weight: 600; }
   .ctl { display: flex; align-items: center; gap: 10px; }
-  .ctl input[type=range] { flex: 1; accent-color: #ff5c8a; }
-  .ctl input[type=checkbox] { accent-color: #ff5c8a; width: 15px; height: 15px; }
+  .ctl input[type=range] { flex: 1; accent-color: var(--h-accent); }
+  .ctl input[type=checkbox] { accent-color: var(--h-accent); width: 15px; height: 15px; }
   select { width: 100%; }
   #exprs { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 6px; }
   #exprs button { padding: 6px 4px; font-size: 12px; }
-  #toast { font-size: 12px; color: #8fd19e; min-height: 16px; }
+  #toast { font-size: 12px; color: var(--h-ok); min-height: 16px; }
   h3 { font-size: 13px; font-weight: 600; margin: 34px 0 6px; text-align: center; }
-  p.hint { font-size: 12px; color: #8a8b94; text-align: center; margin-bottom: 14px; }
+  p.hint { font-size: 12px; color: var(--h-muted); text-align: center; margin-bottom: 14px; }
   #crowd {
     display: grid; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr));
     gap: 10px; width: 100%; max-width: 820px;
   }
   .who {
-    background: #26272e; border: 1px solid #3a3b44; border-radius: 10px; padding: 8px 4px 6px;
+    background: var(--h-panel); border: 1px solid var(--h-border); border-radius: 10px; padding: 8px 4px 6px;
     text-align: center; cursor: pointer; transition: transform .12s ease, border-color .12s ease;
   }
-  .who:hover { transform: translateY(-3px); border-color: #ff5c8a; }
+  .who:hover { transform: translateY(-3px); border-color: var(--h-accent); }
   .who svg { width: 56px; height: 56px; display: block; margin: 0 auto; }
-  .who span { display: block; font-size: 10px; color: #8a8b94; margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  footer { margin-top: 44px; font-size: 11px; color: #565761; text-align: center; line-height: 1.7; }
-  footer a { color: #8a8b94; }
+  .who span { display: block; font-size: 10px; color: var(--h-muted); margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  footer { margin-top: 44px; font-size: 11px; color: var(--h-faint); text-align: center; line-height: 1.7; }
+  footer a { color: var(--h-muted); }
 </style>
+<!-- studio-hub theme kit v1: fonts, light/dark tokens, title shadow, theme slider. Source: _theme/kit.html, inlined by _theme/apply.py -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource-variable/mona-sans@5.3.0/wdth.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource-variable/hubot-sans@5.3.0/wdth.css">
+<script>(function(){var t=null;try{t=new URLSearchParams(location.search).get("theme")||localStorage.getItem("hubTheme")}catch(e){}document.documentElement.dataset.theme=t==="dark"?"dark":"light"})()</script>
+<style id="hub-kit">
+  :root {
+    color-scheme: light;
+    --h-font: "Mona Sans Variable", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --h-head: "Hubot Sans Variable", var(--h-font);
+    --h-bg: #f1efe9; --h-panel: #faf9f5; --h-panel2: #f4f2ec; --h-deep: #ebe8e1; --h-deep2: #e7e4dc;
+    --h-border: #dedad0; --h-border2: #d3cec2; --h-btn: #ffffff; --h-btn-border: #cfcabe; --h-btn-hover: #f1eee6;
+    --h-text: #18181b; --h-text2: #3f3f46; --h-muted: #6b675f; --h-muted2: #8f8a7f; --h-faint: #aaa59a; --h-code: #27272a;
+    --h-accent: #d6336c; --h-accent-h: #c2255c; --h-accent2: #5b4fc4; --h-accent-bg: #f9dfe8;
+    --h-yellow: #8a5a00; --h-blue: #0b5cad; --h-blue2: #2f5597; --h-purple: #6b3fa0; --h-green2: #2e7d4f; --h-ok: #1a7f37;
+    --h-green: #1a7f37; --h-red: #cf222e; --h-amber: #9a6700; --h-err-bg: #fde2e4; --h-err-bg2: #f5b8be; --h-err-text: #8b1a2b;
+    --h-title-shadow: 0 2px 3px rgba(24, 24, 27, .16), 0 8px 22px rgba(24, 24, 27, .18);
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --h-bg: #1e1f24; --h-panel: #26272e; --h-panel2: #2e2f37; --h-deep: #1b1c21; --h-deep2: #22232a;
+    --h-border: #3a3b44; --h-border2: #3a3b46; --h-btn: #33343d; --h-btn-border: #4a4b55; --h-btn-hover: #41424d;
+    --h-text: #e6e6e6; --h-text2: #b9bac2; --h-muted: #8a8b94; --h-muted2: #6f7078; --h-faint: #565761; --h-code: #d8dee9;
+    --h-accent: #ff5c8a; --h-accent-h: #ff7ba0; --h-accent2: #7f77dd; --h-accent-bg: #3d2a33;
+    --h-yellow: #e8d3a8; --h-blue: #9ecbff; --h-blue2: #9db3d8; --h-purple: #c4a7e7; --h-green2: #a8d5b5; --h-ok: #8fd19e;
+    --h-green: #3fb950; --h-red: #f85149; --h-amber: #e3b341; --h-err-bg: #5c1f2b; --h-err-bg2: #7a2938; --h-err-text: #ffb3c0;
+    --h-title-shadow: 0 2px 3px rgba(0, 0, 0, .45), 0 8px 22px rgba(0, 0, 0, .5);
+  }
+  h1 { font-family: var(--h-head); font-weight: 800; font-stretch: 125%; letter-spacing: -.02em; text-shadow: var(--h-title-shadow); }
+  h1 span, h1 em { text-shadow: inherit; }
+
+  /* the theme slider: fixed top-right, no labels */
+  .hub-theme { position: fixed; top: 14px; right: 16px; z-index: 9999; }
+  .hub-theme button { all: unset; box-sizing: border-box; position: relative; display: block; width: 52px; height: 22px; border-radius: 999px; cursor: pointer;
+    background: linear-gradient(90deg, #f1efe9, #c9c4b7 38%, #3f3f46 62%, #09090b); border: 1px solid var(--h-border2); touch-action: none; }
+  .hub-theme button:focus-visible { outline: 2px solid var(--h-text); outline-offset: 3px; }
+  .hub-theme i { position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff;
+    box-shadow: 0 1px 2px rgba(0,0,0,.35), 0 0 0 1px rgba(0,0,0,.08); transition: left .4s cubic-bezier(.65, 0, .35, 1); }
+  :root[data-theme="dark"] .hub-theme i { left: 32px; }
+  .hub-theme.dragging i { transition: none; }
+  .hub-theme.docked { position: static; flex: none; display: flex; align-items: center; margin-left: 6px; }
+  [data-hub-theme-slot] { display: contents; }
+  @media (prefers-reduced-motion: reduce) { .hub-theme i { transition: none; } }
+  @media print { .hub-theme { display: none; } }
+</style>
+<!-- /studio-hub theme kit -->
 </head>
 <body>
   <h1>Blob <span>Studio</span></h1>
@@ -313,5 +358,40 @@ return{_layout:Zt,_marks:Vt,_parts:Dt,_posed:Nt,fadeHex:It,lerpPose:Kt,poseTrans
   renderHero(); renderCrowd();
 })();
 </script>
+<!-- studio-hub theme slider -->
+<div class="hub-theme" title="Light / dark"><button type="button" role="switch" aria-label="Dark theme" aria-checked="false"><i></i></button></div>
+<script>
+(() => {
+  const root = document.documentElement, wrap = document.querySelector(".hub-theme"), btn = wrap.querySelector("button"), knob = btn.querySelector("i");
+  const slot = document.querySelector("[data-hub-theme-slot]");
+  if (slot) { slot.append(wrap); wrap.classList.add("docked"); }  // app pages: sit at the end of the toolbar
+  const sync = () => btn.setAttribute("aria-checked", String(root.dataset.theme === "dark"));
+  const set = (t) => {
+    root.dataset.theme = t; knob.style.left = ""; sync();
+    try { localStorage.setItem("hubTheme", t); } catch (e) {}
+    window.dispatchEvent(new CustomEvent("hubthemechange", { detail: t }));
+  };
+  // Click toggles; a drag snaps to whichever end it is released nearer.
+  let drag = null, skipClick = false;
+  const frac = (e) => { const r = btn.getBoundingClientRect(); return Math.min(1, Math.max(0, (e.clientX - r.left - 10) / (r.width - 20))); };
+  btn.addEventListener("pointerdown", (e) => { drag = { x: e.clientX, moved: false }; btn.setPointerCapture(e.pointerId); });
+  btn.addEventListener("pointermove", (e) => {
+    if (!drag) return;
+    if (Math.abs(e.clientX - drag.x) > 3) { drag.moved = true; wrap.classList.add("dragging"); }
+    if (drag.moved) knob.style.left = 2 + frac(e) * 30 + "px";
+  });
+  btn.addEventListener("pointerup", (e) => {
+    wrap.classList.remove("dragging");
+    if (drag && drag.moved) { set(frac(e) > 0.5 ? "dark" : "light"); skipClick = true; }
+    drag = null;
+  });
+  btn.addEventListener("click", () => { if (skipClick) { skipClick = false; return; } set(root.dataset.theme === "dark" ? "light" : "dark"); });
+  btn.addEventListener("keydown", (e) => { if (e.key === "ArrowLeft") set("light"); if (e.key === "ArrowRight") set("dark"); });
+  // Another tab changed it: follow along.
+  window.addEventListener("storage", (e) => { if (e.key === "hubTheme") { root.dataset.theme = e.newValue === "dark" ? "dark" : "light"; sync(); } });
+  sync();
+})();
+</script>
+<!-- /studio-hub theme slider -->
 </body>
 </html>
