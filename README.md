@@ -88,6 +88,16 @@ A gallery of seven hand-drawn SVG characters (Blob, Cat, Ghost, Robot, Owl, Toro
 
 ![Mascot Studio](docs/mascot-studio.png)
 
+### 🫧 Blob Studio — [`blob-studio.html`](blob-studio.html)
+
+Type any string — a username, an email, a repo — and get a deterministic blob avatar: the same name always gives the same creature. Pick one of 14 moods, pin the shape, hue or tone, add a backdrop, and export a 512 px SVG or PNG. The big preview idles and follows your cursor; the crowd below shows variations on the name.
+
+The generator is [blobatar](https://github.com/Alain00/blobatar) 2.7.0 by Alain (MIT), bundled inline unmodified with its license notice, so the page still works offline.
+
+### ◐ Pattern Studio — [`pattern-studio.html`](pattern-studio.html)
+
+A gallery of generative patterns you can tune and export: arc and hex Truchet weaves, a diagonal maze, noise flow fields, isometric cubes, a halftone sphere, Lissajous nests, twisted polygons, noise rings, circle packing, moiré rings, a spirograph and wave dots. Every pattern has its own sliders and a seed (press <kbd>R</kbd> to roll a new one), nine ink/paper palettes plus custom colours, five print and screen formats, and export as SVG or a 3000 px PNG. Each pattern has a deep link (`pattern-studio.html#flow`). All generators are original code, and whatever you export is yours.
+
 ### ▶ Code Studio — [`code-studio.py`](code-studio.py) + [`code-studio.html`](code-studio.html)
 
 A competitive-programming workbench: editor with tabs and per-language templates, a file explorer over a real workspace folder, and a **multi-test-case runner** with AC / WA / TLE / RE verdicts and per-test timing.

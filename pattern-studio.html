@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pattern Studio</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%E2%97%90%3C/text%3E%3C/svg%3E">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { min-height: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: #1e1f24; color: #e6e6e6;
+    display: flex; flex-direction: column; align-items: center;
+    padding: 6vh 24px 60px;
+  }
+  h1 { font-size: 26px; font-weight: 700; letter-spacing: -.3px; }
+  h1 span { color: #ff5c8a; }
+  p.sub { color: #8a8b94; font-size: 13px; margin: 10px 0 26px; text-align: center; line-height: 1.6; max-width: 560px; }
+  button, select, input[type=number] {
+    font: inherit; font-size: 13px; padding: 7px 12px; border-radius: 8px;
+    border: 1px solid #4a4b55; background: #33343d; color: #e6e6e6;
+  }
+  button, select { cursor: pointer; }
+  button:hover, select:hover { background: #41424d; border-color: #7f77dd; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+
+  #palettes { justify-content: center; margin-bottom: 22px; }
+  .sw {
+    width: 30px; height: 30px; border-radius: 50%; padding: 0; border: 2px solid #3a3b44;
+    display: grid; place-items: center; overflow: hidden;
+  }
+  .sw i { width: 12px; height: 12px; border-radius: 50%; display: block; }
+  .sw.on { border-color: #ff5c8a; }
+  .sw:hover { border-color: #7f77dd; }
+  .custom { display: flex; gap: 4px; align-items: center; font-size: 12px; color: #8a8b94; margin-left: 6px; }
+  .custom input { width: 30px; height: 30px; border: none; background: none; padding: 0; cursor: pointer; }
+
+  #gallery {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 16px; width: 100%; max-width: 1000px;
+  }
+  .card {
+    background: #26272e; border: 1px solid #3a3b44; border-radius: 12px; overflow: hidden;
+    cursor: pointer; transition: transform .12s ease, border-color .12s ease; text-align: left;
+    padding: 0; display: block; color: inherit; text-decoration: none;
+  }
+  .card:hover { transform: translateY(-3px); border-color: #ff5c8a; background: #26272e; }
+  .card svg { display: block; width: 100%; height: auto; aspect-ratio: 1; }
+  .card div { padding: 10px 12px 12px; }
+  .card h2 { font-size: 14px; font-weight: 600; }
+  .card p { font-size: 11px; color: #8a8b94; margin-top: 3px; }
+
+  #editor { display: none; width: 100%; max-width: 1000px; }
+  body.editing #gallery { display: none; }
+  body.editing #editor { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 20px; }
+  @media (max-width: 780px) { body.editing #editor { grid-template-columns: minmax(0, 1fr); } }
+  .panel { background: #26272e; border: 1px solid #3a3b44; border-radius: 12px; padding: 18px; }
+  #canvasWrap { display: grid; place-items: center; padding: 14px; }
+  #canvasWrap svg { display: block; max-width: 100%; max-height: 72vh; width: auto; height: auto; box-shadow: 0 6px 30px rgba(0,0,0,.35); }
+  #edName { font-size: 18px; font-weight: 700; }
+  #edBlurb { font-size: 12px; color: #8a8b94; line-height: 1.55; margin: 6px 0 4px; }
+  label.field { display: flex; justify-content: space-between; font-size: 12px; color: #8a8b94; margin: 14px 0 5px; }
+  label.field b { color: #e6e6e6; font-weight: 600; font-variant-numeric: tabular-nums; }
+  input[type=range] { width: 100%; accent-color: #ff5c8a; }
+  input[type=checkbox] { accent-color: #ff5c8a; width: 15px; height: 15px; }
+  #seed { width: 100%; }
+  .seedrow { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+  #toast { font-size: 12px; color: #8fd19e; min-height: 16px; margin-top: 10px; }
+  .actions { margin-top: 18px; }
+  .actions button { flex: 1; }
+  footer { margin-top: 44px; font-size: 11px; color: #565761; text-align: center; line-height: 1.7; }
+</style>
+</head>
+<body>
+  <h1>Pattern <span>Studio</span></h1>
+  <p class="sub">A gallery of generative patterns. Pick one, push its sliders, roll new seeds, and export a crisp SVG or a big PNG. Everything is drawn right here; nothing leaves this page.</p>
+
+  <div class="row" id="palettes"></div>
+
+  <div id="gallery"></div>
+
+  <div id="editor">
+    <section class="panel" id="canvasWrap"></section>
+    <aside class="panel">
+      <div class="row" style="justify-content:space-between">
+        <span id="edName"></span>
+        <button id="back">&larr; All</button>
+      </div>
+      <p id="edBlurb"></p>
+      <div id="controls"></div>
+      <label class="field">Seed</label>
+      <div class="seedrow">
+        <input type="number" id="seed" min="0" step="1">
+        <button id="roll" title="New seed (R)">&#127922; Roll</button>
+      </div>
+      <label class="field" for="aspect">Format</label>
+      <select id="aspect" style="width:100%">
+        <option value="1">Square 1:1</option>
+        <option value="1.25">Portrait 4:5</option>
+        <option value="1.4142">Poster A-series</option>
+        <option value="0.5625">Wide 16:9</option>
+        <option value="2.1653">Phone 9:19.5</option>
+      </select>
+      <div class="row actions">
+        <button id="dlSvg">SVG</button>
+        <button id="dlPng">PNG</button>
+        <button id="cpSvg">Copy</button>
+      </div>
+      <button id="reset" style="width:100%;margin-top:8px">Reset sliders</button>
+      <div id="toast"></div>
+    </aside>
+  </div>
+
+  <footer>
+    Original generators written for studio-hub &middot; classic techniques: Truchet tiles, 10&nbsp;PRINT, noise flow fields, isometric tilings, halftone shading, Lissajous &amp; spirograph curves, circle packing, moir&eacute;.<br>
+    What you export is yours to use however you like &middot; single file &middot; works offline
+  </footer>
+
+<script>
+(() => {
+  const TAU = Math.PI * 2;
+  const f = (n) => Math.round(n * 10) / 10;
+
+  // mulberry32: small, fast, good enough for art.
+  function rng(seed) {
+    let a = seed >>> 0;
+    return () => {
+      a = (a + 0x6D2B79F5) | 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  // Seeded 2D value noise in roughly [-1, 1].
+  function noise2(seed) {
+    const r = rng(seed * 7919 + 1), p = [...Array(256).keys()];
+    for (let i = 255; i > 0; i--) { const j = (r() * (i + 1)) | 0; [p[i], p[j]] = [p[j], p[i]]; }
+    const P = new Uint8Array(512); for (let i = 0; i < 512; i++) P[i] = p[i & 255];
+    const V = Float32Array.from({ length: 256 }, () => r() * 2 - 1);
+    const sm = (t) => t * t * (3 - 2 * t);
+    return (x, y) => {
+      const xi = Math.floor(x), yi = Math.floor(y), u = sm(x - xi), v = sm(y - yi);
+      const h = (i, j) => V[P[P[(xi + i) & 255] + ((yi + j) & 255)]];
+      const a = h(0, 0), b = h(1, 0), c = h(0, 1), d = h(1, 1);
+      return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v;
+    };
+  }
+
+  const pts = (arr) => arr.map(([x, y]) => f(x) + "," + f(y)).join(" ");
+  const arcPts = (cx, cy, r, a0, a1, n = 14) => {
+    let d = a1 - a0; while (d > Math.PI) d -= TAU; while (d < -Math.PI) d += TAU;
+    return Array.from({ length: n + 1 }, (_, i) => [cx + r * Math.cos(a0 + d * i / n), cy + r * Math.sin(a0 + d * i / n)]);
+  };
+  const P = (k, label, min, max, step, v) => ({ k, label, min, max, step, v });
+  const T = (k, label, v) => ({ k, label, toggle: true, v });
+
+  // Every pattern draws into a W x H box (W is always 1000) and returns SVG
+  // elements. The wrapping <g> defaults to fill:none, stroke:fg.
+  const PATTERNS = [
+    {
+      id: "truchet", name: "Arc Truchet", blurb: "Square tiles holding two quarter-circle arcs, each tile flipped by a coin toss. Extra bands turn the paths into ribbons.",
+      params: [P("cells", "Tiles across", 3, 40, 1, 12), P("bands", "Bands", 0, 3, 1, 1), P("stroke", "Line width", 0.5, 12, 0.5, 3)],
+      draw(p, { W, H, r }) {
+        const s = W / p.cells, rows = Math.ceil(H / s), m = p.bands, gap = m ? 0.2 * s / m : 0;
+        let d = "";
+        for (let j = 0; j < rows; j++) for (let i = 0; i < p.cells; i++) {
+          const x = i * s, y = j * s, flip = r() < 0.5;
+          for (let k = -m; k <= m; k++) {
+            const R = f(s / 2 + k * gap);
+            d += flip
+              ? `M${f(x + s)} ${f(y + R)}A${R} ${R} 0 0 1 ${f(x + s - R)} ${f(y)}M${f(x)} ${f(y + s - R)}A${R} ${R} 0 0 1 ${f(x + R)} ${f(y + s)}`
+              : `M${f(x + R)} ${f(y)}A${R} ${R} 0 0 1 ${f(x)} ${f(y + R)}M${f(x + s - R)} ${f(y + s)}A${R} ${R} 0 0 1 ${f(x + s)} ${f(y + s - R)}`;
+          }
+        }
+        return `<path d="${d}" stroke-width="${p.stroke}" stroke-linecap="round"/>`;
+      },
+    },
+    {
+      id: "maze", name: "Diagonal Maze", blurb: "The one-line BASIC classic: every cell gets a forward or a back slash. Lean the bias to tilt the maze.",
+      params: [P("cells", "Cells across", 4, 80, 1, 24), P("bias", "Slash bias", 0, 1, 0.05, 0.5), P("stroke", "Line width", 0.5, 14, 0.5, 4)],
+      draw(p, { W, H, r }) {
+        const s = W / p.cells, rows = Math.ceil(H / s);
+        let d = "";
+        for (let j = 0; j < rows; j++) for (let i = 0; i < p.cells; i++) {
+          const x = i * s, y = j * s;
+          d += r() < p.bias ? `M${f(x)} ${f(y)}L${f(x + s)} ${f(y + s)}` : `M${f(x + s)} ${f(y)}L${f(x)} ${f(y + s)}`;
+        }
+        return `<path d="${d}" stroke-width="${p.stroke}" stroke-linecap="square"/>`;
+      },
+    },
+    {
+      id: "flow", name: "Flow Field", blurb: "Hundreds of particles dropped on a noise field, each tracing the current until it runs out of steps or off the sheet.",
+      params: [P("count", "Lines", 50, 2500, 50, 700), P("length", "Steps", 10, 400, 5, 110), P("scale", "Field zoom", 0.5, 8, 0.1, 2.4), P("turn", "Turbulence", 0.5, 5, 0.1, 2), P("stroke", "Line width", 0.3, 5, 0.1, 1.2)],
+      draw(p, { W, H, r, n }) {
+        const step = W / 420, sc = p.scale / W, out = [];
+        const field = (x, y) => (n(x * sc, y * sc) + 0.5 * n(x * sc * 2 + 5.3, y * sc * 2 + 1.7)) * Math.PI * p.turn;
+        for (let i = 0; i < p.count; i++) {
+          let x = r() * W, y = r() * H; const line = [[x, y]];
+          for (let s = 0; s < p.length; s++) {
+            const a = field(x, y); x += Math.cos(a) * step; y += Math.sin(a) * step;
+            if (x < 0 || y < 0 || x > W || y > H) break;
+            line.push([x, y]);
+          }
+          if (line.length > 2) out.push(`<polyline points="${pts(line)}"/>`);
+        }
+        return `<g stroke-width="${p.stroke}" stroke-linecap="round" stroke-linejoin="round">${out.join("")}</g>`;
+      },
+    },
+    {
+      id: "cubes", name: "Isometric Cubes", blurb: "A hex lattice of cubes shaded in three tones. Knock some out and the eye starts flipping between floors and ceilings.",
+      params: [P("size", "Cube size", 12, 150, 1, 56), P("holes", "Missing cubes", 0, 0.8, 0.01, 0.12), P("edge", "Edge width", 0, 6, 0.25, 1)],
+      draw(p, { W, H, r, fg, bg }) {
+        const R = p.size, w = Math.sqrt(3) * R, out = [];
+        for (let row = -1; row * 1.5 * R < H + R; row++) for (let col = -1; col * w < W + w; col++) {
+          if (r() < p.holes) continue;
+          const cx = col * w + (row & 1 ? w / 2 : 0), cy = row * 1.5 * R, hx = w / 2;
+          const top = [cx, cy - R], ur = [cx + hx, cy - R / 2], lr = [cx + hx, cy + R / 2], bot = [cx, cy + R], ll = [cx - hx, cy + R / 2], ul = [cx - hx, cy - R / 2], c = [cx, cy];
+          out.push(`<polygon points="${pts([top, ur, c, ul])}" fill="${fg}"/>`,
+                   `<polygon points="${pts([ul, c, bot, ll])}" fill="${fg}" fill-opacity=".55"/>`,
+                   `<polygon points="${pts([c, ur, lr, bot])}" fill="${fg}" fill-opacity=".2"/>`);
+        }
+        return `<g stroke="${bg}" stroke-width="${p.edge}" stroke-linejoin="round">${out.join("")}</g>`;
+      },
+    },
+    {
+      id: "halftone", name: "Halftone Sphere", blurb: "A lit ball rendered only with dots: each dot grows with how far its patch of surface faces away from the light.",
+      params: [P("grid", "Dots across", 10, 110, 1, 44), P("radius", "Sphere size", 0.15, 0.5, 0.01, 0.38), P("azimuth", "Light direction", 0, 360, 1, 225), P("elev", "Light height", 5, 85, 1, 40), P("size", "Max dot", 0.2, 1.2, 0.05, 0.95), P("ground", "Background dots", 0, 1, 0.05, 0.12)],
+      draw(p, { W, H }) {
+        const c = W / p.grid, cx = W / 2, cy = H / 2, R = Math.min(W, H) * p.radius;
+        const az = p.azimuth * Math.PI / 180, el = p.elev * Math.PI / 180;
+        const L = [Math.cos(el) * Math.cos(az), Math.cos(el) * Math.sin(az), Math.sin(el)];
+        let d = "";
+        for (let y = c / 2; y < H; y += c) for (let x = c / 2; x < W; x += c) {
+          const dx = (x - cx) / R, dy = (y - cy) / R, d2 = dx * dx + dy * dy;
+          let k;
+          if (d2 < 1) { const nz = Math.sqrt(1 - d2); k = 1 - Math.max(0, dx * L[0] + dy * L[1] + nz * L[2]); }
+          else k = p.ground;
+          const rad = f((c / 2) * p.size * k);
+          if (rad > 0.15) d += `M${f(x - rad)} ${f(y)}a${rad} ${rad} 0 1 0 ${f(rad * 2)} 0a${rad} ${rad} 0 1 0 ${f(-rad * 2)} 0`;
+        }
+        return `<path d="${d}" fill="currentColor" stroke="none"/>`;
+      },
+    },
+    {
+      id: "lissajous", name: "Lissajous Nest", blurb: "Two sine waves at right angles, one per axis. Integer ratios close the loop; nested copies drift into a woven solid.",
+      params: [P("a", "X frequency", 1, 15, 1, 3), P("b", "Y frequency", 1, 15, 1, 4), P("phase", "Phase", 0, 180, 1, 90), P("copies", "Copies", 1, 40, 1, 14), P("depth", "Nesting depth", 0, 1, 0.01, 0.7), P("drift", "Phase drift", 0, 20, 0.5, 3), P("stroke", "Line width", 0.3, 6, 0.1, 1.2)],
+      draw(p, { W, H }) {
+        const out = [], N = 1600;
+        for (let c = 0; c < p.copies; c++) {
+          const s = 1 - (c / Math.max(1, p.copies)) * p.depth, ph = (p.phase + c * p.drift) * Math.PI / 180;
+          const line = Array.from({ length: N + 1 }, (_, i) => {
+            const t = (i / N) * TAU;
+            return [W / 2 + Math.sin(p.a * t + ph) * W * 0.44 * s, H / 2 + Math.sin(p.b * t) * H * 0.44 * s];
+          });
+          out.push(`<polyline points="${pts(line)}"/>`);
+        }
+        return `<g stroke-width="${p.stroke}" stroke-linejoin="round">${out.join("")}</g>`;
+      },
+    },
+    {
+      id: "polygons", name: "Twisted Polygons", blurb: "One polygon shrunk and turned over and over. Fill the bands for a tunnel; leave them open for a lattice of chords.",
+      params: [P("sides", "Sides", 3, 12, 1, 5), P("count", "Layers", 2, 90, 1, 32), P("twist", "Twist per layer", 0, 30, 0.5, 5), P("stroke", "Line width", 0.3, 8, 0.1, 1.5), T("filled", "Alternate fills", false)],
+      draw(p, { W, H, fg, bg }) {
+        const out = [], R0 = Math.min(W, H) * 0.46;
+        for (let i = 0; i < p.count; i++) {
+          const R = R0 * (1 - i / p.count), rot = -Math.PI / 2 + i * p.twist * Math.PI / 180;
+          const poly = Array.from({ length: p.sides }, (_, k) => [W / 2 + R * Math.cos(rot + k * TAU / p.sides), H / 2 + R * Math.sin(rot + k * TAU / p.sides)]);
+          out.push(p.filled ? `<polygon points="${pts(poly)}" fill="${i % 2 ? bg : fg}" stroke="none"/>` : `<polygon points="${pts(poly)}"/>`);
+        }
+        return `<g stroke-width="${p.stroke}" stroke-linejoin="round">${out.join("")}</g>`;
+      },
+    },
+    {
+      id: "rings", name: "Noise Rings", blurb: "Concentric circles pushed in and out by a slowly drifting noise, like growth rings in a cut log.",
+      params: [P("rings", "Rings", 3, 120, 1, 46), P("wobble", "Wobble", 0, 80, 1, 22), P("freq", "Lumpiness", 0.3, 6, 0.1, 1.6), P("stroke", "Line width", 0.3, 6, 0.1, 1.3)],
+      draw(p, { W, H, n }) {
+        const out = [], Rm = Math.min(W, H) * 0.44, N = 260;
+        for (let i = 0; i < p.rings; i++) {
+          const base = Rm * (i + 1) / p.rings, amp = p.wobble * Math.min(1, (i + 1) / 6);
+          const ring = Array.from({ length: N }, (_, k) => {
+            const t = (k / N) * TAU, rr = base + amp * n(Math.cos(t) * p.freq + 10, Math.sin(t) * p.freq + i * 0.06);
+            return [W / 2 + rr * Math.cos(t), H / 2 + rr * Math.sin(t)];
+          });
+          out.push(`<polygon points="${pts(ring)}"/>`);
+        }
+        return `<g stroke-width="${p.stroke}" stroke-linejoin="round">${out.join("")}</g>`;
+      },
+    },
+    {
+      id: "hexweave", name: "Hex Weave", blurb: "Hexagonal Truchet tiles: three arcs per tile in one of two rotations, so every path meets its neighbour and the whole sheet knots into rivers.",
+      params: [P("size", "Tile size", 12, 140, 1, 46), P("bands", "Bands", 0, 3, 1, 0), P("stroke", "Line width", 0.5, 14, 0.5, 4)],
+      draw(p, { W, H, r }) {
+        const R = p.size, w = Math.sqrt(3) * R, out = [], m = p.bands, gap = m ? 0.16 * R / m : 0;
+        for (let row = -1; row * 1.5 * R < H + R; row++) for (let col = -1; col * w < W + w; col++) {
+          const cx = col * w + (row & 1 ? w / 2 : 0), cy = row * 1.5 * R, rot = r() < 0.5 ? 0 : 1;
+          const V = Array.from({ length: 6 }, (_, k) => [cx + R * Math.cos(-Math.PI / 2 + k * Math.PI / 3), cy + R * Math.sin(-Math.PI / 2 + k * Math.PI / 3)]);
+          for (let k = rot; k < 6; k += 2) {
+            const [vx, vy] = V[k], [px, py] = V[(k + 5) % 6], [nx, ny] = V[(k + 1) % 6];
+            const a0 = Math.atan2(py - vy, px - vx), a1 = Math.atan2(ny - vy, nx - vx);
+            for (let b = -m; b <= m; b++) out.push(`<polyline points="${pts(arcPts(vx, vy, R / 2 + b * gap, a0, a1))}"/>`);
+          }
+        }
+        return `<g stroke-width="${p.stroke}" stroke-linecap="round">${out.join("")}</g>`;
+      },
+    },
+    {
+      id: "packing", name: "Circle Packing", blurb: "Throw darts at the sheet; wherever one lands with room to spare, grow the biggest circle that still touches nothing.",
+      params: [P("attempts", "Darts", 200, 20000, 100, 5000), P("minR", "Smallest", 1, 40, 0.5, 3), P("maxR", "Largest", 5, 350, 1, 110), P("gap", "Gap", 0, 14, 0.5, 3), P("stroke", "Line width", 0.3, 6, 0.1, 1.4), T("filled", "Solid fill", false), T("nested", "Nested rings", true)],
+      draw(p, { W, H, r }) {
+        const C = [];
+        for (let i = 0; i < p.attempts; i++) {
+          const x = r() * W, y = r() * H;
+          let room = Math.min(p.maxR, x, y, W - x, H - y);
+          for (const c of C) { room = Math.min(room, Math.hypot(x - c[0], y - c[1]) - c[2] - p.gap); if (room < p.minR) break; }
+          if (room >= p.minR) C.push([x, y, room]);
+        }
+        let d = "";
+        const circ = (x, y, rad) => `M${f(x - rad)} ${f(y)}a${f(rad)} ${f(rad)} 0 1 0 ${f(rad * 2)} 0a${f(rad)} ${f(rad)} 0 1 0 ${f(-rad * 2)} 0`;
+        for (const [x, y, rad] of C) {
+          d += circ(x, y, rad);
+          if (p.nested && !p.filled) for (let k = rad - p.stroke * 4; k > p.stroke * 2; k -= p.stroke * 4) d += circ(x, y, k);
+        }
+        return p.filled ? `<path d="${d}" fill="currentColor" stroke="none"/>` : `<path d="${d}" stroke-width="${p.stroke}"/>`;
+      },
+    },
+    {
+      id: "moire", name: "Moiré Rings", blurb: "Two identical sets of concentric circles, slightly offset. Where they overlap, ghost bands appear that neither set contains.",
+      params: [P("spacing", "Ring spacing", 3, 30, 0.5, 8), P("offset", "Offset", 0, 500, 1, 110), P("angle", "Offset angle", 0, 180, 1, 30), P("stroke", "Line width", 0.3, 5, 0.1, 1.6)],
+      draw(p, { W, H }) {
+        const a = p.angle * Math.PI / 180, dx = Math.cos(a) * p.offset / 2, dy = Math.sin(a) * p.offset / 2, Rmax = Math.hypot(W, H) * 0.6 + p.offset;
+        let d = "";
+        for (const [cx, cy] of [[W / 2 - dx, H / 2 - dy], [W / 2 + dx, H / 2 + dy]])
+          for (let rad = p.spacing; rad < Rmax; rad += p.spacing) d += `M${f(cx - rad)} ${f(cy)}a${f(rad)} ${f(rad)} 0 1 0 ${f(rad * 2)} 0a${f(rad)} ${f(rad)} 0 1 0 ${f(-rad * 2)} 0`;
+        return `<path d="${d}" stroke-width="${p.stroke}"/>`;
+      },
+    },
+    {
+      id: "spiro", name: "Spirograph", blurb: "A pen fixed to a small wheel rolling inside a big ring. Whole-number sizes close the curve after a predictable number of turns.",
+      params: [P("R", "Ring teeth", 20, 160, 1, 96), P("r", "Wheel teeth", 3, 150, 1, 35), P("d", "Pen offset", 0, 1.5, 0.01, 0.85), P("stroke", "Line width", 0.3, 5, 0.1, 1)],
+      draw(p, { W, H }) {
+        const gcd = (a, b) => (b ? gcd(b, a % b) : a), R = p.R, r = Math.min(p.r, R - 1), d = p.d * r;
+        const turns = r / gcd(R, r), N = Math.min(30000, 300 * turns), span = (R - r) + d, k = (Math.min(W, H) * 0.45) / span;
+        const line = Array.from({ length: N + 1 }, (_, i) => {
+          const t = (i / N) * TAU * turns;
+          return [W / 2 + k * ((R - r) * Math.cos(t) + d * Math.cos(((R - r) / r) * t)), H / 2 + k * ((R - r) * Math.sin(t) - d * Math.sin(((R - r) / r) * t))];
+        });
+        return `<polyline points="${pts(line)}" stroke-width="${p.stroke}" stroke-linejoin="round"/>`;
+      },
+    },
+    {
+      id: "wavedots", name: "Wave Dots", blurb: "A plain dot grid where each dot's size rides a ripple spreading from the centre, bent by a little noise.",
+      params: [P("grid", "Dots across", 8, 100, 1, 36), P("freq", "Ripples", 0.5, 20, 0.5, 5), P("warp", "Warp", 0, 8, 0.1, 1.5), P("size", "Max dot", 0.2, 1.3, 0.05, 1), P("phase", "Phase", 0, 360, 1, 0)],
+      draw(p, { W, H, n }) {
+        const c = W / p.grid, D = Math.hypot(W, H) / 2;
+        let d = "";
+        for (let y = c / 2; y < H; y += c) for (let x = c / 2; x < W; x += c) {
+          const dist = Math.hypot(x - W / 2, y - H / 2) / D;
+          const k = 0.5 + 0.5 * Math.sin(dist * p.freq * TAU + p.warp * n(x / 220, y / 220) + p.phase * Math.PI / 180);
+          const rad = f((c / 2) * p.size * k);
+          if (rad > 0.15) d += `M${f(x - rad)} ${f(y)}a${rad} ${rad} 0 1 0 ${f(rad * 2)} 0a${rad} ${rad} 0 1 0 ${f(-rad * 2)} 0`;
+        }
+        return `<path d="${d}" fill="currentColor" stroke="none"/>`;
+      },
+    },
+  ];
+
+  const PALETTES = [
+    ["Ink", "#141414", "#f3efe6"], ["Paper", "#f3efe6", "#141414"], ["Studio", "#ff5c8a", "#1e1f24"],
+    ["Blueprint", "#e6eeff", "#1f428f"], ["Moss", "#dbe8c8", "#22392a"], ["Mustard", "#1c1c1c", "#f2c230"],
+    ["Vermilion", "#d63a2c", "#f3e9d6"], ["Violet", "#cdbcff", "#24163f"], ["Teal", "#0f3d3e", "#9fd8cb"],
+  ];
+
+  const $ = (id) => document.getElementById(id);
+  const PREF = "patternStudio.v1";
+  const store = (() => { try { return JSON.parse(localStorage.getItem(PREF)) || {}; } catch { return {}; } })();
+  const persist = () => { try { localStorage.setItem(PREF, JSON.stringify(store)); } catch {} };
+
+  let colors = store.colors || { fg: PALETTES[0][1], bg: PALETTES[0][2] };
+  let current = null, params = {}, seed = 1, aspect = 1;
+
+  function render(pat, prm, sd, asp, fg = colors.fg, bg = colors.bg) {
+    const W = 1000, H = Math.round(1000 * asp);
+    const body = pat.draw(prm, { W, H, r: rng(sd), n: noise2(sd), fg, bg });
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" color="${fg}"><rect width="${W}" height="${H}" fill="${bg}"/><g fill="none" stroke="${fg}">${body}</g></svg>`;
+  }
+  const defaults = (pat) => Object.fromEntries(pat.params.map((q) => [q.k, q.v]));
+
+  // ---- palette bar
+  function drawPalettes() {
+    const bar = $("palettes"); bar.innerHTML = "";
+    for (const [name, fg, bg] of PALETTES) {
+      const b = document.createElement("button");
+      b.className = "sw" + (fg === colors.fg && bg === colors.bg ? " on" : "");
+      b.title = name; b.style.background = bg; b.innerHTML = `<i style="background:${fg}"></i>`;
+      b.onclick = () => setColors(fg, bg);
+      bar.append(b);
+    }
+    const c = document.createElement("span"); c.className = "custom";
+    c.innerHTML = `<input type="color" id="fgIn" title="Ink colour" value="${colors.fg}"><input type="color" id="bgIn" title="Paper colour" value="${colors.bg}"><button id="swap" title="Swap ink and paper">&#8645;</button>`;
+    bar.append(c);
+    $("fgIn").oninput = (e) => setColors(e.target.value, colors.bg, true);
+    $("bgIn").oninput = (e) => setColors(colors.fg, e.target.value, true);
+    $("swap").onclick = () => setColors(colors.bg, colors.fg);
+  }
+  let galleryTimer;
+  function setColors(fg, bg, live) {
+    colors = { fg, bg }; store.colors = colors; persist();
+    if (!live) drawPalettes();
+    if (current) drawEditor();
+    clearTimeout(galleryTimer); galleryTimer = setTimeout(drawGallery, live ? 120 : 0);
+  }
+
+  // ---- gallery
+  function drawGallery() {
+    const g = $("gallery"); g.innerHTML = "";
+    for (const pat of PATTERNS) {
+      const a = document.createElement("a");
+      a.className = "card"; a.href = "#" + pat.id;
+      a.onclick = (e) => { e.preventDefault(); go(pat.id); };
+      a.innerHTML = render(pat, defaults(pat), 7, 1) + `<div><h2></h2><p></p></div>`;
+      a.querySelector("h2").textContent = pat.name;
+      a.querySelector("p").textContent = pat.params.map((q) => q.label.toLowerCase()).slice(0, 3).join(" · ");
+      g.append(a);
+    }
+  }
+
+  // ---- editor
+  function open(id) {
+    const pat = PATTERNS.find((x) => x.id === id);
+    if (!pat) { current = null; document.body.classList.remove("editing"); return; }
+    current = pat; params = defaults(pat); seed = (Math.random() * 1e6) | 0;
+    $("edName").textContent = pat.name; $("edBlurb").textContent = pat.blurb;
+    $("seed").value = seed;
+    const box = $("controls"); box.innerHTML = "";
+    for (const q of pat.params) {
+      const lab = document.createElement("label"); lab.className = "field";
+      if (q.toggle) {
+        lab.innerHTML = `<span></span><input type="checkbox">`;
+        lab.querySelector("span").textContent = q.label;
+        const cb = lab.querySelector("input"); cb.checked = q.v; cb.dataset.k = q.k;
+        cb.onchange = () => { params[q.k] = cb.checked; drawEditor(); };
+        box.append(lab);
+      } else {
+        lab.innerHTML = `<span></span><b></b>`;
+        lab.querySelector("span").textContent = q.label;
+        const out = lab.querySelector("b"); out.textContent = q.v;
+        const rg = Object.assign(document.createElement("input"), { type: "range", min: q.min, max: q.max, step: q.step, value: q.v });
+        rg.dataset.k = q.k; rg.setAttribute("aria-label", q.label);
+        rg.oninput = () => { params[q.k] = +rg.value; out.textContent = rg.value; drawEditor(); };
+        box.append(lab, rg);
+      }
+    }
+    document.body.classList.add("editing");
+    window.scrollTo({ top: 0 });
+    drawEditor();
+  }
+  let raf = 0;
+  function drawEditor() {
+    cancelAnimationFrame(raf);
+    raf = requestAnimationFrame(() => { $("canvasWrap").innerHTML = render(current, params, seed, aspect); });
+  }
+  // The hash is a deep link, not the source of truth: some hosts (data: URLs,
+  // sandboxed previews) refuse hash navigation, so open first, then record it.
+  function go(id) {
+    open(id);
+    try { history.pushState(null, "", id ? "#" + id : location.pathname + location.search); } catch {}
+  }
+  const route = () => open(location.hash.slice(1));
+  window.addEventListener("popstate", route);
+  window.addEventListener("hashchange", route);
+  $("back").onclick = () => go("");
+  $("seed").oninput = (e) => { seed = Math.max(0, +e.target.value | 0); drawEditor(); };
+  const roll = () => { seed = (Math.random() * 1e6) | 0; $("seed").value = seed; drawEditor(); };
+  $("roll").onclick = roll;
+  $("aspect").onchange = (e) => { aspect = +e.target.value; drawEditor(); };
+  $("reset").onclick = () => {
+    params = defaults(current);
+    for (const el of $("controls").querySelectorAll("input")) {
+      const q = current.params.find((x) => x.k === el.dataset.k);
+      if (el.type === "checkbox") el.checked = q.v; else { el.value = q.v; el.previousElementSibling.querySelector("b").textContent = q.v; }
+    }
+    drawEditor();
+  };
+  document.addEventListener("keydown", (e) => {
+    if (!current || e.target.matches("input[type=number], input[type=color]") || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.key === "r" || e.key === "R") roll();
+    if (e.key === "Escape") go("");
+  });
+
+  // ---- export
+  const fileBase = () => `${current.id}-${seed}`;
+  function toast(msg) { $("toast").textContent = msg; clearTimeout(toast.t); toast.t = setTimeout(() => ($("toast").textContent = ""), 2000); }
+  function save(blob, name) {
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob); a.download = name; a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  }
+  $("dlSvg").onclick = () => { save(new Blob([render(current, params, seed, aspect)], { type: "image/svg+xml" }), fileBase() + ".svg"); toast("Saved SVG"); };
+  $("dlPng").onclick = () => {
+    const svg = render(current, params, seed, aspect), long = 3000;
+    const W = aspect >= 1 ? Math.round(long / aspect) : long, H = aspect >= 1 ? long : Math.round(long * aspect);
+    const img = new Image(), url = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml" }));
+    img.onload = () => {
+      const c = document.createElement("canvas"); c.width = W; c.height = H;
+      c.getContext("2d").drawImage(img, 0, 0, W, H); URL.revokeObjectURL(url);
+      c.toBlob((b) => { save(b, fileBase() + ".png"); toast(`Saved ${W}×${H} PNG`); }, "image/png");
+    };
+    img.src = url;
+  };
+  $("cpSvg").onclick = async () => {
+    try { await navigator.clipboard.writeText(render(current, params, seed, aspect)); toast("SVG copied"); }
+    catch { toast("Clipboard blocked — use SVG download"); }
+  };
+
+  drawPalettes(); drawGallery(); route();
+})();
+</script>
+</body>
+</html>
