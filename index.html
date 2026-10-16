@@ -4,61 +4,43 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Studio Hub — single-file browser tools</title>
-<meta name="description" content="Single-file developer tools that run entirely in your browser. No install, no accounts, nothing leaves your machine.">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%9B%A0%3C/text%3E%3C/svg%3E">
+<meta name="description" content="Small tools that run in your browser. No install, no accounts, nothing leaves your machine.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2318181b' stroke-width='2' stroke-linejoin='round'%3E%3Crect x='3' y='3' width='7.5' height='7.5' rx='2'/%3E%3Crect x='13.5' y='3' width='7.5' height='7.5' rx='2'/%3E%3Crect x='3' y='13.5' width='7.5' height='7.5' rx='2'/%3E%3Crect x='13.5' y='13.5' width='7.5' height='7.5' rx='2'/%3E%3C/svg%3E">
 <style>
   :root {
-    --bg: var(--h-bg); --panel: var(--h-panel); --panel-h: #ffffff; --border: var(--h-border); --border2: var(--h-border2);
-    --text: var(--h-text); --muted: var(--h-muted); --muted2: var(--h-muted2); --accent: var(--h-text);
+    --bg: var(--h-bg); --panel: var(--h-panel); --panel-h: #ffffff; --border: var(--h-border); --text: var(--h-text); --muted: var(--h-muted); --muted2: var(--h-muted2);
   }
   :root[data-theme="dark"] {
-    --bg: #09090b; --panel: #18181b; --panel-h: #1f1f23; --border: #27272a; --border2: #3f3f46;
-    --text: #e4e4e7; --muted: #71717a; --muted2: #52525b; --accent: #ffffff;
+    --bg: #09090b; --panel: #18181b; --panel-h: #1f1f23; --border: #27272a; --text: #e4e4e7; --muted: #8b8b94; --muted2: #5d5d66;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { min-height: 100%; }
   body {
-    font-family: var(--h-font);
-    background: var(--bg); color: var(--text); transition: background-color .4s, color .4s;
-    display: flex; flex-direction: column; align-items: center;
-    padding: 8vh 24px 60px;
+    font-family: var(--h-font); background: var(--bg); color: var(--text);
+    display: flex; flex-direction: column; align-items: center; padding: 11vh 24px 48px;
+    transition: background-color .4s, color .4s;
   }
-  h1 { font-size: 38px; letter-spacing: -.6px; }
-  h1 span { color: var(--muted); }
-  p.sub { color: var(--muted); font-size: 13px; margin: 12px 0 14px; text-align: center; line-height: 1.6; max-width: 560px; }
-  .badges { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; margin-bottom: 40px; }
-  .badge { font-size: 10.5px; color: var(--muted); border: 1px solid var(--border); background: var(--panel);
-    border-radius: 999px; padding: 4px 10px; }
-  #grid {
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 280px));
-    gap: 16px; justify-content: center; width: 100%; max-width: 920px;
+  a { color: inherit; text-decoration: none; }
+  h1 { font-size: 44px; letter-spacing: -.02em; text-align: center; }
+  .sub { color: var(--muted); font-size: 14px; margin: 12px 0 46px; text-align: center; }
+  #grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; width: 100%; max-width: 980px; }
+  .tile {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 16px; padding: 24px 22px 20px; min-height: 172px;
+    display: flex; flex-direction: column; justify-content: space-between; gap: 26px;
+    transition: transform .15s ease, border-color .15s ease, background-color .15s ease;
   }
-  a.card {
-    display: block; text-decoration: none; color: inherit;
-    background: var(--panel); border: 1px solid var(--border); border-radius: 14px;
-    padding: 20px; transition: transform .12s ease, border-color .12s ease, background .12s ease;
-  }
-  a.card:hover { transform: translateY(-3px); border-color: var(--accent); background: var(--panel-h); }
-  .card .icon { height: 30px; color: var(--text); }
-  .card .icon svg { display: block; }
-  .soon .icon { margin-bottom: 12px; }
-  .card h2 { font-family: var(--h-head); font-stretch: 112%; font-size: 16px; font-weight: 700; margin: 12px 0 6px; }
-  .card h2 em { color: var(--muted); font-style: normal; }
-  .card p { font-size: 12px; color: var(--muted); line-height: 1.55; }
-  .card .tags { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 10px; }
-  .card .tags span { font-size: 9.5px; color: var(--muted2); border: 1px solid var(--border);
-    border-radius: 4px; padding: 2px 5px; }
-  div.card.soon {
-    background: transparent; border: 1px dashed var(--border2); border-radius: 14px;
-    padding: 20px; opacity: .5;
-  }
-  .soon .tag {
-    display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: .5px;
-    text-transform: uppercase; color: var(--muted); border: 1px solid var(--border2);
-    border-radius: 4px; padding: 2px 6px; margin-bottom: 10px;
-  }
-  footer { margin-top: 48px; font-size: 11px; color: var(--muted2); text-align: center; line-height: 1.8; }
-  footer a { color: var(--muted); }
+  .tile:hover { transform: translateY(-3px); border-color: var(--text); background: var(--panel-h); }
+  .tile:focus-visible { outline: 2px solid var(--text); outline-offset: 3px; }
+  .icon svg { display: block; width: 30px; height: 30px; }
+  .txt b { display: block; font-family: var(--h-head); font-stretch: 112%; font-weight: 700; font-size: 17px; }
+  .txt b em { font-style: normal; font-weight: 600; color: var(--muted); }
+  /* captions reserve two lines, so every name sits at the same height */
+  .txt small { display: block; color: var(--muted); font-size: 13px; line-height: 1.4; margin-top: 3px; min-height: 2.8em; }
+  .tile.dim { background: transparent; border-style: dashed; opacity: .6; }
+  .tile.dim:hover { opacity: .85; background: transparent; }
+  footer { margin-top: 54px; font-size: 12px; color: var(--muted2); text-align: center; }
+  footer a { color: var(--muted); text-decoration: underline; text-underline-offset: 2px; text-decoration-thickness: 1px; }
+  @media (max-width: 600px) { h1 { font-size: 34px; } body { padding-top: 8vh; } #grid { grid-template-columns: 1fr 1fr; gap: 10px; } .tile { min-height: 150px; padding: 18px 16px 16px; } .txt b em { display: none; } }
 </style>
 <!-- studio-hub theme kit v1: fonts, light/dark tokens, title shadow, theme slider. Source: _theme/kit.html, inlined by _theme/apply.py -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource-variable/mona-sans@5.3.0/wdth.css">
@@ -108,79 +90,46 @@
 </head>
 <body>
 <h1>Studio <span>Hub</span></h1>
-<p class="sub">Single-file browser tools. No install, no accounts, no uploads &mdash; every file you open stays on your own machine.</p>
-<div class="badges">
-  <span class="badge">Runs offline</span>
-  <span class="badge">No sign-up</span>
-  <span class="badge">No watermarks</span>
-  <span class="badge">No file size limits</span>
-</div>
-<div id="grid">
-  <a class="card" href="./pdf-studio.html">
-    <div class="icon"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 3h8l4 4v14H6zM9 12h6M9 15h6M9 18h3.5M14 3v4h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-    <h2>PDF <em>Studio</em></h2>
-    <p>Merge, split, organise, rotate, watermark and number pages with a visual thumbnail editor &mdash; plus real PDF output from Word, PowerPoint and Excel.</p>
-    <div class="tags"><span>15 tools</span><span>drag &amp; drop pages</span><span>up to 600 DPI</span></div>
+<p class="sub">Small tools that run in your browser. Nothing leaves your machine.</p>
+<nav id="grid" aria-label="Tools">
+  <a class="tile" href="./pdf-studio.html">
+    <span class="icon"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 3h8l4 4v14H6zM9 12h6M9 15h6M9 18h3.5M14 3v4h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+    <span class="txt"><b>PDF <em>Studio</em></b><small>Merge, split and convert PDFs</small></span>
   </a>
-  <a class="card" href="./mermaid-live.html">
-    <div class="icon"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3.5 3.5h7v5h-7zM13.5 15.5h7v5h-7zM7 8.5V15a2 2 0 0 0 2 2h4.5M10.5 6H14M17.5 3.5a2.75 2.75 0 1 1 0 5.5a2.75 2.75 0 1 1 0-5.5z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-    <h2>Mermaid <em>Studio</em></h2>
-    <p>Live Mermaid diagrams with 8 hand-tuned themes, PNG/SVG export, and a file explorer that saves real .mmd files to disk.</p>
-    <div class="tags"><span>8 themes</span><span>PNG / SVG</span></div>
+  <a class="tile" href="./markdown-studio.html">
+    <span class="icon"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 5h14a2.5 2.5 0 0 1 2.5 2.5v9a2.5 2.5 0 0 1-2.5 2.5H5a2.5 2.5 0 0 1-2.5-2.5v-9A2.5 2.5 0 0 1 5 5zM6 15V9l2.5 3L11 9v6M16 9v6M13.5 12.5 16 15l2.5-2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+    <span class="txt"><b>Markdown <em>Studio</em></b><small>Write, preview, export a PDF</small></span>
   </a>
-  <a class="card" href="./diff-studio.html">
-    <div class="icon"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3.5 4.5h7v15h-7zM13.5 4.5h7v15h-7zM5.5 8h3M5.5 11h3M5.5 14h2M15.5 8h3M15.5 17h3M15.5 12h3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-    <h2>Diff <em>Studio</em></h2>
-    <p>Compare two texts with git-grade line diffing, word-level highlights, side-by-side or unified view, and patch export.</p>
-    <div class="tags"><span>word-level</span><span>patch export</span></div>
+  <a class="tile" href="./mermaid-live.html">
+    <span class="icon"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3.5 3.5h7v5h-7zM13.5 15.5h7v5h-7zM7 8.5V15a2 2 0 0 0 2 2h4.5M10.5 6H14M17.5 3.5a2.75 2.75 0 1 1 0 5.5a2.75 2.75 0 1 1 0-5.5z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+    <span class="txt"><b>Mermaid <em>Studio</em></b><small>Diagrams from plain text</small></span>
   </a>
-  <a class="card" href="./markdown-studio.html">
-    <div class="icon"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 5h14a2.5 2.5 0 0 1 2.5 2.5v9a2.5 2.5 0 0 1-2.5 2.5H5a2.5 2.5 0 0 1-2.5-2.5v-9A2.5 2.5 0 0 1 5 5zM6 15V9l2.5 3L11 9v6M16 9v6M13.5 12.5 16 15l2.5-2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-    <h2>Markdown <em>Studio</em></h2>
-    <p>Paste markdown, see it rendered live. Download a clean PDF in one click, or export HTML.</p>
-    <div class="tags"><span>live preview</span><span>one-click PDF</span></div>
+  <a class="tile" href="./diff-studio.html">
+    <span class="icon"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3.5 4.5h7v15h-7zM13.5 4.5h7v15h-7zM5.5 8h3M5.5 11h3M5.5 14h2M15.5 8h3M15.5 17h3M15.5 12h3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+    <span class="txt"><b>Diff <em>Studio</em></b><small>See what changed between texts</small></span>
   </a>
-  <a class="card" href="./regex-studio.html">
-    <div class="icon"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 4c-1.7 0-2.5.8-2.5 2.5v3c0 1.3-.7 2.5-2 2.5 1.3 0 2 1.2 2 2.5v3c0 1.7.8 2.5 2.5 2.5M17 4c1.7 0 2.5.8 2.5 2.5v3c0 1.3.7 2.5 2 2.5-1.3 0-2 1.2-2 2.5v3c0 1.7-.8 2.5-2.5 2.5M12 8v8M8.5 10l7 4M15.5 10l-7 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-    <h2>Regex <em>Studio</em></h2>
-    <p>Live match highlighting, plain-English pattern explanations, test-case table with PASS/FAIL, replace preview, and a cheatsheet.</p>
-    <div class="tags"><span>explains patterns</span><span>test table</span></div>
+  <a class="tile" href="./regex-studio.html">
+    <span class="icon"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 4c-1.7 0-2.5.8-2.5 2.5v3c0 1.3-.7 2.5-2 2.5 1.3 0 2 1.2 2 2.5v3c0 1.7.8 2.5 2.5 2.5M17 4c1.7 0 2.5.8 2.5 2.5v3c0 1.3.7 2.5 2 2.5-1.3 0-2 1.2-2 2.5v3c0 1.7-.8 2.5-2.5 2.5M12 8v8M8.5 10l7 4M15.5 10l-7 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+    <span class="txt"><b>Regex <em>Studio</em></b><small>Test and explain patterns</small></span>
   </a>
-  <a class="card" href="./merge-studio.html">
-    <div class="icon"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 9.5h14v10H3zM3 9.5l7 5.2 7-5.2M7 7.5v-3h14v10h-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-    <h2>Merge <em>Studio</em></h2>
-    <p>Mail merge without the cloud: drop a spreadsheet, write a template, get one personalised PDF per row &mdash; plus Outlook-ready email drafts.</p>
-    <div class="tags"><span>spreadsheet in</span><span>PDF + email out</span></div>
+  <a class="tile" href="./merge-studio.html">
+    <span class="icon"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 9.5h14v10H3zM3 9.5l7 5.2 7-5.2M7 7.5v-3h14v10h-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+    <span class="txt"><b>Merge <em>Studio</em></b><small>Mail merge, without the cloud</small></span>
   </a>
-  <a class="card" href="./blob-studio.html">
-    <div class="icon"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12.5 4c4.6 0 7.8 3.2 7.8 7.7 0 4.9-3.6 8.3-8.4 8.3-4.4 0-8.2-2.6-8.2-7.1C3.7 7.9 7.4 4 12.5 4z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M9.6 10.2h1.7v3.6H9.6zM14.2 10.2h1.7v3.6h-1.7z" fill="currentColor"/></svg></div>
-    <h2>Blob <em>Studio</em></h2>
-    <p>Turn any name into the same little blob creature every time &mdash; 14 moods, cursor-following eyes, locked colours or shapes, SVG/PNG export.</p>
-    <div class="tags"><span>deterministic</span><span>SVG + PNG</span></div>
+  <a class="tile" href="./pattern-studio.html">
+    <span class="icon"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 4h16v16H4zM4 12a8 8 0 0 0 8-8M12 20a8 8 0 0 1 8-8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+    <span class="txt"><b>Pattern <em>Studio</em></b><small>Generative art and wallpapers</small></span>
   </a>
-  <a class="card" href="./pattern-studio.html">
-    <div class="icon"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 4h16v16H4zM4 12a8 8 0 0 0 8-8M12 20a8 8 0 0 1 8-8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-    <h2>Pattern <em>Studio</em></h2>
-    <p>A gallery of 41 generative patterns &mdash; Voronoi cells, topographic maps, flow fields, fractal trees, op-art tunnels, Bauhaus tiles &mdash; with live sliders, seeds, palettes and SVG/PNG export.</p>
-    <div class="tags"><span>generative</span><span>SVG + PNG</span></div>
+  <a class="tile" href="./blob-studio.html">
+    <span class="icon"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12.5 4c4.6 0 7.8 3.2 7.8 7.7 0 4.9-3.6 8.3-8.4 8.3-4.4 0-8.2-2.6-8.2-7.1C3.7 7.9 7.4 4 12.5 4z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M9.6 10.2h1.7v3.6H9.6zM14.2 10.2h1.7v3.6h-1.7z" fill="currentColor"/></svg></span>
+    <span class="txt"><b>Blob <em>Studio</em></b><small>An avatar for any name</small></span>
   </a>
-  <div class="card soon">
-    <div class="icon"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M8 7.5 3.5 12 8 16.5M16 7.5l4.5 4.5-4.5 4.5M14 4.5l-4 15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-    <span class="tag">local only</span>
-    <h2>Code <em>Studio</em></h2>
-    <p>Competitive programming editor with a multi-test-case runner and AC/WA/TLE verdicts. Needs a local Python server, so it is not available on the hosted hub &mdash; clone the repo and run <code>code-studio.command</code>.</p>
-  </div>
-  <div class="card soon">
-    <div class="icon"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 5.5h16M4 18.5h10M15.5 18.5h4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 10h16v4H4z" fill="currentColor"/></svg></div>
-    <span class="tag">planned</span>
-    <h2>Redact <em>Studio</em></h2>
-    <p>Paste a screenshot, annotate it, auto-find secrets with local OCR, redact safely, copy it back.</p>
-  </div>
-</div>
-<footer>
-  Every tool is a single .html file &mdash; open it from the web or save it and use it offline.<br>
-  <a href="https://github.com/rajathpi/studio-hub">Source on GitHub</a>
-</footer>
+  <a class="tile dim" href="https://github.com/rajathpi/studio-hub#-code-studio--code-studiopy--code-studiohtml" title="Needs a local Python runner: clone the repo and run code-studio.command">
+    <span class="icon"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M8 7.5 3.5 12 8 16.5M16 7.5l4.5 4.5-4.5 4.5M14 4.5l-4 15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+    <span class="txt"><b>Code <em>Studio</em></b><small>Runs locally &middot; clone to use</small></span>
+  </a>
+</nav>
+<footer>Every tool is one file &middot; works offline &middot; <a href="https://github.com/rajathpi/studio-hub">GitHub</a></footer>
 <!-- studio-hub theme slider -->
 <div class="hub-theme" title="Light / dark"><button type="button" role="switch" aria-label="Dark theme" aria-checked="false"><i></i></button></div>
 <script>
