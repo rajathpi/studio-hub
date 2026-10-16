@@ -92,6 +92,17 @@
   #deskMap .mon.bad rect { stroke: var(--h-accent); fill: var(--h-accent-bg); }
   #deskMap text { fill: var(--h-text); text-anchor: middle; dominant-baseline: middle; pointer-events: none; }
   #deskMap text.res { fill: var(--h-muted); }
+  button.primary { background: var(--h-accent); border-color: var(--h-accent); color: var(--h-on-accent); font-weight: 600; }
+  button.primary:hover { background: var(--h-accent-h); border-color: var(--h-accent-h); }
+  #spanHelp { margin: auto; max-width: 440px; width: calc(100% - 32px); padding: 22px 22px 18px; border-radius: 16px; border: 1px solid var(--h-border);
+    background: var(--h-panel); color: var(--h-text); box-shadow: 0 24px 60px rgba(0,0,0,.25); }
+  #spanHelp::backdrop { background: rgba(0,0,0,.35); }
+  #spanHelp h3 { font-family: var(--h-head); font-stretch: 112%; font-size: 19px; margin-bottom: 4px; }
+  #spanHelp .saved { font-size: 12.5px; color: var(--h-muted); margin-bottom: 14px; overflow-wrap: anywhere; }
+  #spanHelp ol { padding-left: 1.3em; display: grid; gap: 9px; font-size: 14px; line-height: 1.45; }
+  #spanHelp ol a { font-weight: 650; color: var(--h-text); }
+  #spanHelp .warn { margin-top: 14px; font-size: 12.5px; color: var(--h-muted); border-left: 2px solid var(--h-border2); padding-left: 10px; line-height: 1.5; }
+  #spanHelp .end { justify-content: flex-end; margin-top: 18px; }
   .monrow { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 12px; color: var(--h-muted); padding: 7px 0; border-top: 1px solid var(--h-btn); }
   .monrow .num { width: 20px; height: 20px; border-radius: 50%; background: var(--h-accent-bg); color: var(--h-accent); display: grid; place-items: center; font-weight: 700; }
   .monrow select { padding: 6px 8px; }
@@ -204,20 +215,37 @@
     <section class="panel" id="deskPanel">
       <div class="row">
         <h3>Monitors</h3>
+        <button id="detect" class="primary" title="Read your screens and how Windows has them arranged">Detect my screens</button>
         <button data-preset="one">1 screen</button>
         <button data-preset="two">2 side by side</button>
-        <button data-preset="mine">My desk</button>
         <label class="row" style="font-size:12px;color:var(--h-muted)">Bezel gap <input type="number" id="gap" min="0" max="30" step="0.5"> cm</label>
         <button id="addMon">+ Screen</button>
       </div>
       <svg id="deskMap" aria-label="Desk layout: drag screens to arrange them"></svg>
       <div id="monList"></div>
       <p class="hint" id="deskSum"></p>
-      <p class="hint">Enter each screen's resolution as Windows runs it (Settings &rsaquo; System &rsaquo; Display) and its diagonal, then drag the screens above into the order they stand on your desk; they snap to each other's edges. The pattern is laid out in real centimetres, so lines carry on across the bezels at the same size on every screen.<br>
-      <b>Set it on Windows:</b> save the <b>Span PNG</b>, open Settings &rsaquo; Personalization &rsaquo; Background, pick <i>Picture</i> &rarr; <i>Browse photos</i>, then set <i>Choose a fit for your desktop image</i> to <b>Span</b>. Span assumes Settings &rsaquo; Display shows these screens in the same left-to-right order with their top edges lined up. <b>Screens</b> saves one PNG per screen instead, for setting each one separately (right-click a picture under Background &rarr; <i>Set for monitor N</i>, or on a Mac).</p>
+      <p class="hint">Press <b>Detect my screens</b> (or add them by hand), then drag them into the order they stand on your desk. Lines carry on across the gaps between screens at true size. Check each diagonal: browsers can read resolution but not inches.</p>
     </section>
   </div>
 
+  <dialog id="spanHelp" aria-labelledby="spanHelpTitle">
+    <form method="dialog">
+      <h3 id="spanHelpTitle">One last step</h3>
+      <p class="saved">Saved <b id="spanFile"></b> to your Downloads.</p>
+      <div id="spanWin">
+        <ol>
+          <li><a id="openBg" href="ms-settings:personalization-background">Open Background settings</a></li>
+          <li>Next to <i>Personalize your background</i>, choose <b>Picture</b>, then <b>Browse photos</b> and pick the file.</li>
+          <li>Set <i>Choose a fit for your desktop image</i> to <b>Span</b>.</li>
+        </ol>
+        <p class="warn">Don&rsquo;t use &ldquo;Set as desktop background&rdquo; from Photos or a right-click: Windows then squeezes the whole picture onto every screen.</p>
+      </div>
+      <div id="spanMac" hidden>
+        <p>macOS can&rsquo;t stretch one picture across displays. Use <b>Screens</b> instead: it saves one picture per display, then System Settings &rsaquo; Wallpaper lets you pick one for each.</p>
+      </div>
+      <div class="row end"><button value="ok" class="primary">Got it</button></div>
+    </form>
+  </dialog>
   <footer>
     Original generators written for studio-hub &middot; classic techniques: Truchet tiles, 10&nbsp;PRINT, noise flow fields, isometric tilings, halftone shading, Lissajous &amp; spirograph curves, circle packing, moir&eacute;.<br>
     What you export is yours to use however you like &middot; single file &middot; works offline
@@ -1251,9 +1279,6 @@
   const DESKS = {
     one: [["Screen", 1920, 1080, 24]],
     two: [["Left", 1920, 1080, 24], ["Right", 1920, 1080, 24]],
-    // The BenQ is a 16:9 panel running a 10:16 mode, so its diagonal alone would
-    // misjudge its width: these use the panel sizes the monitors report (EDID).
-    mine: [["Samsung 27\"", 1920, 1080, 27, 60, 34], ["BenQ 24\"", 900, 1440, 24, 30, 53], ["Dell 22\"", 1050, 1680, 22, 30, 47], ["Laptop 15.6\"", 1920, 1080, 15.6, 34, 19]],
   };
   const size = (m) => {
     if (m.cm) return m.cm;
@@ -1277,11 +1302,19 @@
     const x1 = Math.max(...ms.map((s) => s.x + s.cw)), y1 = Math.max(...ms.map((s) => s.y + s.ch));
     const k = 1000 / (x1 - x0), H = Math.ceil((y1 - y0) * k);
     for (const s of ms) s.u = [(s.x - x0) * k, (s.y - y0) * k, s.cw * k, s.ch * k];
-    // Windows lays the row out left to right in Settings order, top edges at y = 0.
-    const order = [...ms].sort((a, b) => a.x - b.x);
-    let wx = 0;
-    for (const s of order) { s.wx = wx; wx += s.m.w; }
-    return { ms, order, k, H, x0, y0, cmW: x1 - x0, cmH: y1 - y0, vw: wx, vh: Math.max(...ms.map((s) => s.m.h)) };
+    // Where each screen sits in Windows' own layout, which is what Span follows. Detected
+    // screens carry their real position; otherwise assume left to right, tops level.
+    const win = ms.every((s) => s.m.win);
+    const order = [...ms].sort((a, b) => (win ? a.m.win[0] - b.m.win[0] : a.x - b.x));
+    if (win) {
+      const mx = Math.min(...ms.map((s) => s.m.win[0])), my = Math.min(...ms.map((s) => s.m.win[1]));
+      for (const s of ms) { s.wx = s.m.win[0] - mx; s.wy = s.m.win[1] - my; }
+    } else {
+      let wx = 0;
+      for (const s of order) { s.wx = wx; s.wy = 0; wx += s.m.w; }
+    }
+    const vw = Math.max(...ms.map((s) => s.wx + s.m.w)), vh = Math.max(...ms.map((s) => s.wy + s.m.h));
+    return { ms, order, k, H, x0, y0, cmW: x1 - x0, cmH: y1 - y0, vw, vh, win };
   }
   const deskBody = (g) => current.draw(params, { W: 1000, H: g.H, r: rng(seed), n: noise2(seed), fg: colors.fg, bg: colors.bg });
   const u3 = (n) => +n.toFixed(3);
@@ -1334,7 +1367,7 @@
         `<input type="number" class="dg" min="5" max="120" step="0.1" aria-label="Diagonal in inches"><span>in</span>` +
         `<select class="or" aria-label="Orientation"><option value="l">Landscape</option><option value="p">Portrait</option></select>` +
         `<button class="rm" title="Remove this screen"${desk.mons.length < 2 ? " disabled" : ""}>&times;</button>` +
-        `<span class="info">${s.cw.toFixed(1)} × ${s.ch.toFixed(1)} cm &middot; ${Math.round(m.w / s.cw)} px/cm &middot; Span x ${s.wx}</span>`;
+        `<span class="info">${s.cw.toFixed(1)} × ${s.ch.toFixed(1)} cm &middot; ${Math.round(m.w / s.cw)} px/cm &middot; Windows at ${s.wx}, ${s.wy}</span>`;
       const q = (c) => row.querySelector(c);
       q(".nm").value = m.name; q(".w").value = m.w; q(".h").value = m.h; q(".dg").value = m.diag; q(".or").value = m.h > m.w ? "p" : "l";
       q(".nm").oninput = (e) => { m.name = e.target.value; saveDesk(); };
@@ -1349,6 +1382,7 @@
       });
       q(".rm").onclick = () => {
         if (desk.mons.length < 2) return;
+        forgetWindows();
         const [w] = size(m), right = m.x + w;
         desk.mons.splice(i, 1);
         for (const o of desk.mons) if (o.x >= right - 0.5) o.x -= w + desk.gap;
@@ -1360,7 +1394,9 @@
       (desk.mons.some((a) => desk.mons.some((b) => a !== b && overlap(a, b))) ? ` &middot; <span style="color:var(--h-red)">two screens overlap: drag them apart</span>` : "");
   }
   // A screen changing size keeps its bottom edge and pushes the screens to its right along.
+  const forgetWindows = () => { for (const o of desk.mons) delete o.win; };
   function resize(m, fn) {
+    forgetWindows();
     const [ow, oh] = size(m), right = m.x + ow;
     fn();
     const [nw, nh] = size(m);
@@ -1423,7 +1459,39 @@
   $("addMon").onclick = () => {
     const g = geom(), m = { name: `Screen ${desk.mons.length + 1}`, w: 1920, h: 1080, diag: 24 }, [, h] = size(m);
     m.x = g.x0 + g.cmW + desk.gap; m.y = g.y0 + g.cmH - h;
-    desk.mons.push(m); deskChanged();
+    forgetWindows(); desk.mons.push(m); deskChanged();
+  };
+
+  // ---- detect the real screens (Chrome/Edge: Window Management permission; elsewhere just this one)
+  // Resolution comes back in CSS pixels times each screen's scale; positions are rebuilt from
+  // which screens touch, so mixed scaling still gives Windows' pixel layout. Inches aren't
+  // exposed by any browser, so diagonals are a guess from typical pixel densities.
+  const guessDiag = (w, h, internal) => Math.round(Math.hypot(w, h) / (internal ? 140 : 92) * 2) / 2;
+  $("detect").onclick = async () => {
+    let list = null;
+    try { if ("getScreenDetails" in window) list = (await window.getScreenDetails()).screens; } catch (e) { list = null; }
+    if (!list || !list.length) {
+      list = [{ left: 0, top: 0, width: screen.width, height: screen.height, devicePixelRatio, isInternal: false, label: "This screen" }];
+      toast("Your browser only shares this screen. Add the others by hand.");
+    }
+    const scr = [...list].sort((a, b) => a.left - b.left || a.top - b.top), rects = [];
+    for (const sc of scr) {
+      const dpr = sc.devicePixelRatio || 1, w = Math.round(sc.width * dpr), h = Math.round(sc.height * dpr);
+      const left = rects.find((r) => Math.abs(r.dipRight - sc.left) < 2 && sc.top < r.dipBottom && sc.top + sc.height > r.dipTop);
+      rects.push({ sc, w, h, x: left ? left.x + left.w : Math.round(sc.left * dpr), y: Math.round(sc.top * dpr),
+        dipRight: sc.left + sc.width, dipTop: sc.top, dipBottom: sc.top + sc.height });
+    }
+    const old = desk.mons;
+    const rows = rects.map((r, i) => {
+      const name = (r.sc.label || "").trim() || (r.sc.isInternal ? "Built-in" : `Screen ${i + 1}`);
+      // Keep a diagonal the user already corrected, but only for the same screen.
+      const prev = old.find((m) => m.name === name && m.w === r.w && m.h === r.h);
+      return [name, r.w, r.h, prev ? prev.diag : guessDiag(r.w, r.h, r.sc.isInternal), ...(prev && prev.cm ? prev.cm : [])];
+    });
+    desk = pack(rows, desk.gap);
+    desk.mons.forEach((m, i) => (m.win = [rects[i].x, rects[i].y]));
+    deskChanged();
+    if (list.length > 1) toast(`Found ${list.length} screens. Check their diagonals.`);
   };
 
   // ---- desk export
@@ -1455,11 +1523,21 @@
   $("dlSpan").onclick = busy(async () => {
     const g = geom(), cs = await screens(g), c = document.createElement("canvas"), x = c.getContext("2d");
     c.width = g.vw; c.height = g.vh;
-    x.fillStyle = "#000"; x.fillRect(0, 0, g.vw, g.vh);
-    g.order.forEach((s, i) => x.drawImage(cs[i], s.wx, 0));
-    save(await blobOf(c), `${deskBase()}-span-${g.vw}x${g.vh}.png`);
-    toast(`Saved ${g.vw}×${g.vh} Span PNG`);
+    // Parts of the rectangle no screen covers are never seen with Span; fill them with the
+    // paper colour so a wrong fit setting looks off rather than broken.
+    x.fillStyle = colors.bg; x.fillRect(0, 0, g.vw, g.vh);
+    g.order.forEach((s, i) => x.drawImage(cs[i], s.wx, s.wy));
+    const name = `${deskBase()}-span-${g.vw}x${g.vh}.png`;
+    save(await blobOf(c), name);
+    $("toast").textContent = "";
+    showSpanHelp(name);
   });
+  function showSpanHelp(name) {
+    const mac = /Mac/i.test(navigator.userAgentData?.platform || navigator.platform || "");
+    $("spanFile").textContent = name; $("spanWin").hidden = mac; $("spanMac").hidden = !mac;
+    const d = $("spanHelp");
+    if (d.showModal) d.showModal(); else alert("Saved " + name + ". Set it in Settings > Personalization > Background, fit: Span.");
+  }
   $("dlScreens").onclick = busy(async () => {
     const g = geom(), cs = await screens(g);
     const files = await Promise.all(g.order.map(async (s, i) => ({
