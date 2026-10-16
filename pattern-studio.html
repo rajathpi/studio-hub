@@ -78,6 +78,27 @@
   #toast { font-size: 12px; color: #8fd19e; min-height: 16px; margin-top: 10px; }
   .actions { margin-top: 18px; }
   .actions button { flex: 1; }
+  #deskPanel, #deskActions { display: none; }
+  body.desk #deskPanel { display: block; grid-column: 1 / -1; }
+  body.desk #deskActions { display: flex; }
+  body.desk #imgActions { display: none; }
+  #deskActions button { padding: 7px 6px; white-space: nowrap; }
+  #deskPanel h3 { font-size: 15px; font-weight: 700; margin-right: auto; }
+  #deskPanel input[type=number] { width: 72px; padding: 6px 8px; }
+  #deskPanel input[type=text] { font: inherit; font-size: 13px; padding: 6px 8px; border-radius: 8px; border: 1px solid #4a4b55; background: #33343d; color: #e6e6e6; width: 130px; }
+  #deskMap { display: block; width: 100%; height: 230px; margin: 14px 0 10px; background: #1a1b20; border-radius: 10px; touch-action: none; user-select: none; }
+  #deskMap .mon rect { fill: #33343d; stroke: #7f77dd; stroke-width: .35; cursor: grab; }
+  #deskMap .mon:hover rect { fill: #41424d; }
+  #deskMap .mon.bad rect { stroke: #ff5c8a; fill: #3d2a33; }
+  #deskMap text { fill: #e6e6e6; text-anchor: middle; dominant-baseline: middle; pointer-events: none; }
+  #deskMap text.res { fill: #8a8b94; }
+  .monrow { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 12px; color: #8a8b94; padding: 7px 0; border-top: 1px solid #33343d; }
+  .monrow .num { width: 20px; height: 20px; border-radius: 50%; background: #3d2a33; color: #ff5c8a; display: grid; place-items: center; font-weight: 700; }
+  .monrow select { padding: 6px 8px; }
+  .monrow .rm { padding: 5px 9px; }
+  .monrow .info { margin-left: auto; font-variant-numeric: tabular-nums; }
+  .hint { font-size: 12px; color: #8a8b94; line-height: 1.6; margin-top: 12px; }
+  .hint b { color: #e6e6e6; font-weight: 600; }
   footer { margin-top: 44px; font-size: 11px; color: #565761; text-align: center; line-height: 1.7; }
 </style>
 </head>
@@ -117,11 +138,17 @@
         <option value="1.4142">Poster A-series</option>
         <option value="0.5625">Wide 16:9</option>
         <option value="2.1653">Phone 9:19.5</option>
+        <option value="desk">Desk &middot; multi-monitor</option>
       </select>
-      <div class="row actions">
+      <div class="row actions" id="imgActions">
         <button id="dlSvg">SVG</button>
         <button id="dlPng">PNG</button>
         <button id="cpSvg">Copy</button>
+      </div>
+      <div class="row actions" id="deskActions">
+        <button id="dlSpan" title="One image for Windows' Span fit">Span PNG</button>
+        <button id="dlScreens" title="One PNG per screen, zipped">Screens</button>
+        <button id="dlDesk" title="Picture of the whole desk">Preview</button>
       </div>
       <div class="row" style="margin-top:8px">
         <button id="randomize" style="flex:1" title="Random settings (S)">Randomise</button>
@@ -129,6 +156,21 @@
       </div>
       <div id="toast"></div>
     </aside>
+    <section class="panel" id="deskPanel">
+      <div class="row">
+        <h3>Monitors</h3>
+        <button data-preset="one">1 screen</button>
+        <button data-preset="two">2 side by side</button>
+        <button data-preset="mine">My desk</button>
+        <label class="row" style="font-size:12px;color:#8a8b94">Bezel gap <input type="number" id="gap" min="0" max="30" step="0.5"> cm</label>
+        <button id="addMon">+ Screen</button>
+      </div>
+      <svg id="deskMap" aria-label="Desk layout: drag screens to arrange them"></svg>
+      <div id="monList"></div>
+      <p class="hint" id="deskSum"></p>
+      <p class="hint">Enter each screen's resolution as Windows runs it (Settings &rsaquo; System &rsaquo; Display) and its diagonal, then drag the screens above into the order they stand on your desk; they snap to each other's edges. The pattern is laid out in real centimetres, so lines carry on across the bezels at the same size on every screen.<br>
+      <b>Set it on Windows:</b> save the <b>Span PNG</b>, open Settings &rsaquo; Personalization &rsaquo; Background, pick <i>Picture</i> &rarr; <i>Browse photos</i>, then set <i>Choose a fit for your desktop image</i> to <b>Span</b>. Span assumes Settings &rsaquo; Display shows these screens in the same left-to-right order with their top edges lined up. <b>Screens</b> saves one PNG per screen instead, for setting each one separately (right-click a picture under Background &rarr; <i>Set for monitor N</i>, or on a Mac).</p>
+    </section>
   </div>
 
   <footer>
@@ -968,8 +1010,10 @@
   function render(pat, prm, sd, asp, fg = colors.fg, bg = colors.bg) {
     const W = 1000, H = Math.round(1000 * asp);
     const body = pat.draw(prm, { W, H, r: rng(sd), n: noise2(sd), fg, bg });
-    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" color="${fg}"><rect width="${W}" height="${H}" fill="${bg}"/><g fill="none" stroke="${fg}">${body}</g></svg>`;
+    return sheet(body, W, H, `viewBox="0 0 ${W} ${H}" width="${W}" height="${H}"`, fg, bg);
   }
+  const sheet = (body, W, H, attrs, fg = colors.fg, bg = colors.bg) =>
+    `<svg xmlns="http://www.w3.org/2000/svg" ${attrs} color="${fg}"><rect width="${W}" height="${H}" fill="${bg}"/><g fill="none" stroke="${fg}">${body}</g></svg>`;
   const defaults = (pat) => Object.fromEntries(pat.params.map((q) => [q.k, q.v]));
 
   // ---- palette bar
@@ -1077,7 +1121,11 @@
   let raf = 0;
   function drawEditor() {
     cancelAnimationFrame(raf);
-    raf = requestAnimationFrame(() => { $("canvasWrap").innerHTML = render(current, params, seed, aspect); });
+    raf = requestAnimationFrame(() => {
+      if (!deskMode) { $("canvasWrap").innerHTML = render(current, params, seed, aspect); return; }
+      const g = geom();
+      $("canvasWrap").innerHTML = deskPreview(g, deskBody(g));
+    });
   }
   // The hash is a deep link, not the source of truth: some hosts (data: URLs,
   // sandboxed previews) refuse hash navigation, so open first, then record it.
@@ -1092,7 +1140,12 @@
   $("seed").oninput = (e) => { seed = Math.max(0, +e.target.value | 0); drawEditor(); };
   const roll = () => { seed = (Math.random() * 1e6) | 0; $("seed").value = seed; drawEditor(); };
   $("roll").onclick = roll;
-  $("aspect").onchange = (e) => { aspect = +e.target.value; drawEditor(); };
+  $("aspect").onchange = (e) => {
+    deskMode = e.target.value === "desk";
+    if (!deskMode) aspect = +e.target.value;
+    document.body.classList.toggle("desk", deskMode);
+    if (deskMode) drawDesk(); else drawEditor();
+  };
   function syncControls() {
     for (const el of $("controls").querySelectorAll("input")) {
       const v = params[el.dataset.k];
@@ -1112,7 +1165,7 @@
   $("randomize").onclick = randomize;
   $("surprise").onclick = () => { go(PATTERNS[(Math.random() * PATTERNS.length) | 0].id); randomize(); };
   document.addEventListener("keydown", (e) => {
-    if (!current || e.target.matches("input[type=number], input[type=color]") || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (!current || e.target.matches("input[type=number], input[type=color], input[type=text]") || e.ctrlKey || e.metaKey || e.altKey) return;
     if (e.target.matches("input[type=search]")) return;
     if (e.key === "r" || e.key === "R") roll();
     if (e.key === "s" || e.key === "S") randomize();
@@ -1143,6 +1196,266 @@
     try { await navigator.clipboard.writeText(render(current, params, seed, aspect)); toast("SVG copied"); }
     catch { toast("Clipboard blocked — use SVG download"); }
   };
+
+  // ---- desk: one artwork across several monitors
+  // Screens live in physical centimetres (x, y = top-left of the visible panel).
+  // The pattern is drawn once over the desk's bounding box, so a line keeps its
+  // real-world position and size across bezels even when the screens' PPI differs;
+  // each screen is then rasterised from its own slice at its own resolution.
+  // Preset rows: name, px wide, px high, diagonal in inches[, measured cm wide, cm high].
+  const DESKS = {
+    one: [["Screen", 1920, 1080, 24]],
+    two: [["Left", 1920, 1080, 24], ["Right", 1920, 1080, 24]],
+    // The BenQ is a 16:9 panel running a 10:16 mode, so its diagonal alone would
+    // misjudge its width: these use the panel sizes the monitors report (EDID).
+    mine: [["Samsung 27\"", 1920, 1080, 27, 60, 34], ["BenQ 24\"", 900, 1440, 24, 30, 53], ["Dell 22\"", 1050, 1680, 22, 30, 47], ["Laptop 15.6\"", 1920, 1080, 15.6, 34, 19]],
+  };
+  const size = (m) => {
+    if (m.cm) return m.cm;
+    const k = m.diag * 2.54 / Math.hypot(m.w, m.h);
+    return [m.w * k, m.h * k];
+  };
+  // Left to right, bottoms level, one bezel gap apart.
+  function pack(rows, gap) {
+    const mons = rows.map(([name, w, h, diag, cw, ch]) => ({ name, w, h, diag, ...(cw ? { cm: [cw, ch] } : {}), x: 0, y: 0 }));
+    const tall = Math.max(...mons.map((m) => size(m)[1]));
+    let x = 0;
+    for (const m of mons) { const [cw, ch] = size(m); m.x = x; m.y = tall - ch; x += cw + gap; }
+    return { gap, mons };
+  }
+  let desk = store.desk && store.desk.mons && store.desk.mons.length ? store.desk : pack(DESKS.two, 2);
+  let deskMode = false;
+
+  function geom() {
+    const ms = desk.mons.map((m) => { const [cw, ch] = size(m); return { m, x: m.x, y: m.y, cw, ch }; });
+    const x0 = Math.min(...ms.map((s) => s.x)), y0 = Math.min(...ms.map((s) => s.y));
+    const x1 = Math.max(...ms.map((s) => s.x + s.cw)), y1 = Math.max(...ms.map((s) => s.y + s.ch));
+    const k = 1000 / (x1 - x0), H = Math.ceil((y1 - y0) * k);
+    for (const s of ms) s.u = [(s.x - x0) * k, (s.y - y0) * k, s.cw * k, s.ch * k];
+    // Windows lays the row out left to right in Settings order, top edges at y = 0.
+    const order = [...ms].sort((a, b) => a.x - b.x);
+    let wx = 0;
+    for (const s of order) { s.wx = wx; wx += s.m.w; }
+    return { ms, order, k, H, x0, y0, cmW: x1 - x0, cmH: y1 - y0, vw: wx, vh: Math.max(...ms.map((s) => s.m.h)) };
+  }
+  const deskBody = (g) => current.draw(params, { W: 1000, H: g.H, r: rng(seed), n: noise2(seed), fg: colors.fg, bg: colors.bg });
+  const u3 = (n) => +n.toFixed(3);
+  // One screen's slice. preserveAspectRatio="none" lets a panel whose pixels are
+  // not square (a non-native mode) still map its cm onto its pixels exactly.
+  const screenSvg = (g, s, body) => sheet(body, 1000, g.H, `viewBox="${s.u.map(u3).join(" ")}" width="${s.m.w}" height="${s.m.h}" preserveAspectRatio="none"`);
+  const DESK_BG = "#121317";
+  function deskPreview(g, body) {
+    const pad = 4 * g.k, bz = Math.max(0.3, Math.min(1, desk.gap * 0.45)) * g.k;
+    const box = (s, e) => `<rect x="${u3(s.u[0] - e)}" y="${u3(s.u[1] - e)}" width="${u3(s.u[2] + 2 * e)}" height="${u3(s.u[3] + 2 * e)}"${e ? ` rx="${u3(e * 0.6)}"` : ""}/>`;
+    const vw = 1000 + 2 * pad, vh = g.H + 2 * pad;
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${u3(-pad)} ${u3(-pad)} ${u3(vw)} ${u3(vh)}" width="${Math.round(vw)}" height="${Math.round(vh)}" color="${colors.fg}">` +
+      `<rect x="${u3(-pad)}" y="${u3(-pad)}" width="${u3(vw)}" height="${u3(vh)}" fill="${DESK_BG}"/>` +
+      `<g fill="#050506">${g.ms.map((s) => box(s, bz)).join("")}</g>` +
+      `<clipPath id="deskClip">${g.ms.map((s) => box(s, 0)).join("")}</clipPath>` +
+      `<g clip-path="url(#deskClip)"><rect width="1000" height="${g.H}" fill="${colors.bg}"/><g fill="none" stroke="${colors.fg}">${body}</g></g></svg>`;
+  }
+
+  // ---- desk layout editor
+  const saveDesk = () => { store.desk = desk; persist(); };
+  const overlap = (a, b) => {
+    const [aw, ah] = size(a), [bw, bh] = size(b);
+    return a.x < b.x + bw - 0.1 && b.x < a.x + aw - 0.1 && a.y < b.y + bh - 0.1 && b.y < a.y + ah - 0.1;
+  };
+  let mapView = null;
+  function drawMap(view) {
+    const g = geom(), svg = $("deskMap");
+    if (!view) {
+      const pad = Math.max(g.cmW, g.cmH) * 0.05 + 5;
+      view = [g.x0 - pad, g.y0 - pad, g.cmW + 2 * pad, g.cmH + 2 * pad];
+    }
+    mapView = view;
+    svg.setAttribute("viewBox", view.map(u3).join(" "));
+    svg.innerHTML = g.ms.map((s, i) => {
+      const bad = desk.mons.some((o) => o !== s.m && overlap(o, s.m)), cx = s.x + s.cw / 2, cy = s.y + s.ch / 2, fs = Math.min(s.cw, s.ch);
+      return `<g class="mon${bad ? " bad" : ""}" data-i="${i}"><rect x="${u3(s.x)}" y="${u3(s.y)}" width="${u3(s.cw)}" height="${u3(s.ch)}" rx="0.8"/>` +
+        `<text x="${u3(cx)}" y="${u3(cy - fs * 0.08)}" font-size="${u3(fs * 0.32)}" font-weight="700">${i + 1}</text>` +
+        `<text class="res" x="${u3(cx)}" y="${u3(cy + fs * 0.24)}" font-size="${u3(Math.min(fs * 0.15, s.cw * 0.11))}">${s.m.w}×${s.m.h}</text></g>`;
+    }).join("");
+  }
+  function drawList() {
+    const g = geom(), box = $("monList");
+    box.innerHTML = "";
+    desk.mons.forEach((m, i) => {
+      const s = g.ms[i], row = document.createElement("div");
+      row.className = "monrow";
+      row.innerHTML = `<span class="num">${i + 1}</span><input type="text" class="nm" aria-label="Screen name">` +
+        `<input type="number" class="w" min="100" max="16384" step="1" aria-label="Width in pixels"><span>×</span>` +
+        `<input type="number" class="h" min="100" max="16384" step="1" aria-label="Height in pixels"><span>px</span>` +
+        `<input type="number" class="dg" min="5" max="120" step="0.1" aria-label="Diagonal in inches"><span>in</span>` +
+        `<select class="or" aria-label="Orientation"><option value="l">Landscape</option><option value="p">Portrait</option></select>` +
+        `<button class="rm" title="Remove this screen"${desk.mons.length < 2 ? " disabled" : ""}>&times;</button>` +
+        `<span class="info">${s.cw.toFixed(1)} × ${s.ch.toFixed(1)} cm &middot; ${Math.round(m.w / s.cw)} px/cm &middot; Span x ${s.wx}</span>`;
+      const q = (c) => row.querySelector(c);
+      q(".nm").value = m.name; q(".w").value = m.w; q(".h").value = m.h; q(".dg").value = m.diag; q(".or").value = m.h > m.w ? "p" : "l";
+      q(".nm").oninput = (e) => { m.name = e.target.value; saveDesk(); };
+      const num = (c, key, lo, hi) => (q(c).onchange = (e) => {
+        const v = +e.target.value;
+        if (!(v >= lo && v <= hi)) { e.target.value = m[key]; return; }
+        resize(m, () => { m[key] = key === "diag" ? v : Math.round(v); delete m.cm; });
+      });
+      num(".w", "w", 100, 16384); num(".h", "h", 100, 16384); num(".dg", "diag", 5, 120);
+      q(".or").onchange = (e) => resize(m, () => {
+        if ((e.target.value === "p") !== (m.h > m.w)) { [m.w, m.h] = [m.h, m.w]; if (m.cm) m.cm = [m.cm[1], m.cm[0]]; }
+      });
+      q(".rm").onclick = () => {
+        if (desk.mons.length < 2) return;
+        const [w] = size(m), right = m.x + w;
+        desk.mons.splice(i, 1);
+        for (const o of desk.mons) if (o.x >= right - 0.5) o.x -= w + desk.gap;
+        deskChanged();
+      };
+      box.append(row);
+    });
+    $("deskSum").innerHTML = `Desk <b>${g.cmW.toFixed(0)} × ${g.cmH.toFixed(0)} cm</b> &middot; Span image <b>${g.vw} × ${g.vh} px</b>` +
+      (desk.mons.some((a) => desk.mons.some((b) => a !== b && overlap(a, b))) ? ` &middot; <span style="color:#ff5c8a">two screens overlap: drag them apart</span>` : "");
+  }
+  // A screen changing size keeps its bottom edge and pushes the screens to its right along.
+  function resize(m, fn) {
+    const [ow, oh] = size(m), right = m.x + ow;
+    fn();
+    const [nw, nh] = size(m);
+    for (const o of desk.mons) if (o !== m && o.x >= right - 0.5) o.x += nw - ow;
+    m.y += oh - nh;
+    deskChanged();
+  }
+  // Widen or narrow every gap: each screen moves by the change times the number of
+  // screens chained to its left, so stacked or spaced-out screens keep their shape.
+  function setGap(gap) {
+    const d = gap - desk.gap, order = [...desk.mons].sort((a, b) => a.x - b.x), hops = new Map();
+    for (const m of order) {
+      let n = 0;
+      for (const o of order) if (hops.has(o) && o.x + size(o)[0] <= m.x + 0.5) n = Math.max(n, hops.get(o) + 1);
+      hops.set(m, n);
+    }
+    for (const m of order) m.x += d * hops.get(m);
+    desk.gap = gap;
+  }
+  function drawDesk() { drawMap(); drawList(); $("gap").value = desk.gap; drawEditor(); }
+  function deskChanged() { saveDesk(); drawDesk(); }
+
+  // Snap a dragged screen's edges to its neighbours: beside them one bezel gap
+  // away, or flush with their sides; vertically bottoms, tops or centres level.
+  function snap(m, x, y, tol) {
+    const [w, h] = size(m), g = desk.gap;
+    let bx = x, by = y, dx = tol, dy = tol;
+    for (const o of desk.mons) {
+      if (o === m) continue;
+      const [ow, oh] = size(o);
+      for (const c of [o.x + ow + g, o.x - w - g, o.x, o.x + ow - w]) if (Math.abs(c - x) < dx) { dx = Math.abs(c - x); bx = c; }
+      for (const c of [o.y + oh - h, o.y, o.y + (oh - h) / 2, o.y - h - g, o.y + oh + g]) if (Math.abs(c - y) < dy) { dy = Math.abs(c - y); by = c; }
+    }
+    return [bx, by];
+  }
+  let drag = null;
+  const map = $("deskMap");
+  const toCm = (e) => new DOMPoint(e.clientX, e.clientY).matrixTransform(map.getScreenCTM().inverse());
+  map.onpointerdown = (e) => {
+    const el = e.target.closest(".mon");
+    if (!el) return;
+    const m = desk.mons[+el.dataset.i], p = toCm(e);
+    drag = { m, dx: p.x - m.x, dy: p.y - m.y, view: mapView };
+    map.setPointerCapture(e.pointerId);
+    e.preventDefault();
+  };
+  map.onpointermove = (e) => {
+    if (!drag) return;
+    const p = toCm(e), tol = 12 * Math.max(drag.view[2] / map.clientWidth, drag.view[3] / map.clientHeight);
+    [drag.m.x, drag.m.y] = snap(drag.m, p.x - drag.dx, p.y - drag.dy, tol);
+    drawMap(drag.view);   // the view stays put while dragging so the screen tracks the pointer
+  };
+  map.onpointerup = map.onpointercancel = () => { if (drag) { drag = null; deskChanged(); } };
+
+  for (const b of document.querySelectorAll("[data-preset]")) b.onclick = () => { desk = pack(DESKS[b.dataset.preset], desk.gap); deskChanged(); };
+  $("gap").onchange = (e) => {
+    const v = +e.target.value;
+    if (v >= 0 && v <= 30) { setGap(v); deskChanged(); } else e.target.value = desk.gap;
+  };
+  $("addMon").onclick = () => {
+    const g = geom(), m = { name: `Screen ${desk.mons.length + 1}`, w: 1920, h: 1080, diag: 24 }, [, h] = size(m);
+    m.x = g.x0 + g.cmW + desk.gap; m.y = g.y0 + g.cmH - h;
+    desk.mons.push(m); deskChanged();
+  };
+
+  // ---- desk export
+  function raster(svg, w, h, fill) {
+    return new Promise((ok, no) => {
+      const img = new Image(), url = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml" }));
+      img.onload = () => {
+        const c = document.createElement("canvas"), x = c.getContext("2d");
+        c.width = w; c.height = h;
+        if (fill) { x.fillStyle = fill; x.fillRect(0, 0, w, h); }
+        x.drawImage(img, 0, 0, w, h); URL.revokeObjectURL(url); ok(c);
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); no(new Error("render failed")); };
+      img.src = url;
+    });
+  }
+  const blobOf = (c, type = "image/png", q) => new Promise((ok) => c.toBlob(ok, type, q));
+  const screens = (g) => { const body = deskBody(g); return Promise.all(g.order.map((s) => raster(screenSvg(g, s, body), s.m.w, s.m.h))); };
+  const deskBase = () => `${fileBase()}-desk`;
+  const slug = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "screen";
+  // Exports take a moment on big desks; one at a time.
+  const busy = (fn) => async () => {
+    const btns = $("deskActions").querySelectorAll("button");
+    if (btns[0].disabled) return;
+    btns.forEach((b) => (b.disabled = true)); $("toast").textContent = "Rendering…";
+    try { await fn(); } catch (err) { toast("Export failed: " + err.message); }
+    btns.forEach((b) => (b.disabled = false));
+  };
+  $("dlSpan").onclick = busy(async () => {
+    const g = geom(), cs = await screens(g), c = document.createElement("canvas"), x = c.getContext("2d");
+    c.width = g.vw; c.height = g.vh;
+    x.fillStyle = "#000"; x.fillRect(0, 0, g.vw, g.vh);
+    g.order.forEach((s, i) => x.drawImage(cs[i], s.wx, 0));
+    save(await blobOf(c), `${deskBase()}-span-${g.vw}x${g.vh}.png`);
+    toast(`Saved ${g.vw}×${g.vh} Span PNG`);
+  });
+  $("dlScreens").onclick = busy(async () => {
+    const g = geom(), cs = await screens(g);
+    const files = await Promise.all(g.order.map(async (s, i) => ({
+      name: `${i + 1}-${slug(s.m.name)}-${s.m.w}x${s.m.h}.png`,
+      data: new Uint8Array(await (await blobOf(cs[i])).arrayBuffer()),
+    })));
+    save(zip(files), `${deskBase()}-screens.zip`);
+    toast(`Saved ${files.length} screens (zip)`);
+  });
+  $("dlDesk").onclick = busy(async () => {
+    const g = geom(), svg = deskPreview(g, deskBody(g)), vb = svg.match(/viewBox="([^"]+)"/)[1].split(" ").map(Number);
+    const w = 2400, h = Math.round(w * vb[3] / vb[2]);
+    save(await blobOf(await raster(svg, w, h, DESK_BG), "image/jpeg", 0.92), `${deskBase()}-preview.jpg`);
+    toast(`Saved ${w}×${h} preview`);
+  });
+
+  // Minimal stored (uncompressed) zip: PNGs are already compressed.
+  const CRC = Array.from({ length: 256 }, (_, n) => { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; return c >>> 0; });
+  const crc32 = (d) => { let c = ~0; for (let i = 0; i < d.length; i++) c = CRC[(c ^ d[i]) & 255] ^ (c >>> 8); return ~c >>> 0; };
+  function zip(files) {
+    const now = new Date(), time = (now.getHours() << 11) | (now.getMinutes() << 5) | (now.getSeconds() >> 1);
+    const date = ((now.getFullYear() - 1980) << 9) | ((now.getMonth() + 1) << 5) | now.getDate();
+    const parts = [], dir = [];
+    let off = 0, dirLen = 0;
+    for (const f of files) {
+      const name = new TextEncoder().encode(f.name), crc = crc32(f.data), len = f.data.length;
+      const head = (sig, size) => { const v = new DataView(new ArrayBuffer(size)); v.setUint32(0, sig, true); return v; };
+      const lh = head(0x04034b50, 30);
+      lh.setUint16(4, 20, true); lh.setUint16(10, time, true); lh.setUint16(12, date, true);
+      lh.setUint32(14, crc, true); lh.setUint32(18, len, true); lh.setUint32(22, len, true); lh.setUint16(26, name.length, true);
+      const ch = head(0x02014b50, 46);
+      ch.setUint16(4, 20, true); ch.setUint16(6, 20, true); ch.setUint16(12, time, true); ch.setUint16(14, date, true);
+      ch.setUint32(16, crc, true); ch.setUint32(20, len, true); ch.setUint32(24, len, true); ch.setUint16(28, name.length, true); ch.setUint32(42, off, true);
+      parts.push(lh, name, f.data); dir.push(ch, name);
+      off += 30 + name.length + len; dirLen += 46 + name.length;
+    }
+    const end = new DataView(new ArrayBuffer(22));
+    end.setUint32(0, 0x06054b50, true); end.setUint16(8, files.length, true); end.setUint16(10, files.length, true);
+    end.setUint32(12, dirLen, true); end.setUint32(16, off, true);
+    return new Blob([...parts, ...dir, end], { type: "application/zip" });
+  }
 
   drawPalettes(); drawChips(); drawGallery(); route();
 })();
