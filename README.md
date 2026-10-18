@@ -8,6 +8,8 @@ Every browser-only tool runs straight from that link, with no clone and no build
 
 ![Studio Hub](docs/hub.png)
 
+> **Tip:** Merge, PDF, Mermaid and Regex Studio have a **?** button (bottom left) that starts a short guided tour. It is also offered once on your first visit.
+
 ## Why single files?
 
 Every tool here is one self-contained `.html` file: open it from disk, it works — even offline. That's not a gimmick, it's the point:
