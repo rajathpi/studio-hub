@@ -152,6 +152,13 @@ def safe_path(rel):
     return p
 
 
+def safe_mutable_path(rel):
+    p = safe_path(rel)
+    if p == ROOT:
+        raise ValueError('cannot modify the workspace root')
+    return p
+
+
 def tree():
     items = []
     for dirpath, dirnames, filenames in os.walk(ROOT):
@@ -193,6 +200,17 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def _host_ok(self):
+        # Defeat DNS rebinding: only our own loopback names may talk to us.
+        port = self.server.server_address[1]
+        allowed = {'127.0.0.1:%d' % port, 'localhost:%d' % port}
+        origin = self.headers.get('Origin')
+        if self.headers.get('Host') in allowed and (
+                origin is None or origin in {'http://' + a for a in allowed}):
+            return True
+        self._json({'error': 'forbidden host'}, 403)
+        return False
+
     def _authed(self):
         if self.headers.get('X-Token') == TOKEN:
             return True
@@ -204,6 +222,8 @@ class Handler(BaseHTTPRequestHandler):
         return json.loads(self.rfile.read(n) or b'{}')
 
     def do_GET(self):
+        if not self._host_ok():
+            return
         url = urlparse(self.path)
         if url.path == '/' or url.path == '/index.html':
             try:
@@ -239,7 +259,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         url = urlparse(self.path)
-        if not self._authed():
+        if not self._host_ok() or not self._authed():
             return
         try:
             p = self._payload()
@@ -255,12 +275,12 @@ class Handler(BaseHTTPRequestHandler):
                 os.makedirs(safe_path(p['path']), exist_ok=True)
                 self._json({'ok': True})
             elif url.path == '/api/rename':
-                src, dst = safe_path(p['from']), safe_path(p['to'])
+                src, dst = safe_mutable_path(p['from']), safe_mutable_path(p['to'])
                 os.makedirs(os.path.dirname(dst), exist_ok=True)
                 os.rename(src, dst)
                 self._json({'ok': True})
             elif url.path == '/api/delete':
-                target = safe_path(p['path'])
+                target = safe_mutable_path(p['path'])
                 if os.path.isdir(target):
                     shutil.rmtree(target)
                 else:
