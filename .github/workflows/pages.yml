@@ -1,0 +1,30 @@
+name: Test and deploy Pages
+on:
+  push: { branches: [main] }
+  pull_request:
+  workflow_dispatch:
+permissions: { contents: read }
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: npm install
+      - run: npx playwright install --with-deps chromium
+      - run: npx playwright test
+      - run: python3 -m unittest tests.test_code_studio
+  deploy:
+    needs: smoke
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions: { pages: write, id-token: write }
+    environment: { name: github-pages, url: '${{ steps.deployment.outputs.page_url }}' }
+    steps:
+      - uses: actions/checkout@v4
+      - run: mkdir _site && git ls-files -z -- '*.html' '*.png' '*.gif' 'vendor/*' '_libs/*' | xargs -0 -I{} cp --parents {} _site/
+      - uses: actions/upload-pages-artifact@v3
+        with: { path: _site }
+      - id: deployment
+        uses: actions/deploy-pages@v4

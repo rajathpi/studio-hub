@@ -457,20 +457,20 @@
 
 <div id="printArea"></div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<script src="https://unpkg.com/docx-preview@0.3.7/dist/docx-preview.min.js"></script>
+<script src="vendor/pdf-lib.min.js"></script>
+<script src="vendor/pdf.min.js"></script>
+<script src="vendor/mammoth.browser.min.js"></script>
+<script src="vendor/xlsx.full.min.js"></script>
+<script src="vendor/jszip.min.js"></script>
+<script src="vendor/jspdf.umd.min.js"></script>
+<script src="vendor/html2canvas.min.js"></script>
+<script src="vendor/docx-preview.min.js"></script>
 <script>
 'use strict';
 
 /* ================= libs ================= */
 if (window.pdfjsLib) {
-  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'vendor/pdf.worker.min.js';
 }
 const LS_THEME = 'hubTheme';
 const $ = id => document.getElementById(id);

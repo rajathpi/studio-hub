@@ -1,0 +1,40 @@
+import { test, expect } from '@playwright/test';
+
+// Hosts a page may contact. Everything else breaks the "nothing leaves your machine" claim.
+// jsdelivr serves the Hubot/Mona Sans web fonts (and Mermaid Studio's libraries).
+const ALLOWED_HOSTS = new Set(['127.0.0.1', 'cdn.jsdelivr.net']);
+// PDF Studio ships its libraries from vendor/, so it must not touch any third party at all.
+const NO_THIRD_PARTY_SCRIPTS = new Set(['pdf-studio.html']);
+
+const PAGES = [
+  'index.html', 'diff-studio.html', 'regex-studio.html', 'merge-studio.html', 'blob-studio.html',
+  'pattern-studio.html', 'mermaid-live.html', 'pdf-studio.html', 'markdown-studio.html', 'wallpaper-studio.html',
+];
+
+for (const page of PAGES) {
+  test(`${page} loads cleanly`, async ({ page: pg }) => {
+    const problems: string[] = [];
+    pg.on('pageerror', e => problems.push('exception: ' + e.message));
+    pg.on('console', m => {
+      if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) problems.push('console.error: ' + m.text());
+    });
+    pg.on('request', r => {
+      const u = new URL(r.url());
+      if (!/^https?:$/.test(u.protocol)) return;
+      const ok = ALLOWED_HOSTS.has(u.hostname) && (u.hostname === '127.0.0.1' || !NO_THIRD_PARTY_SCRIPTS.has(page) || r.resourceType() === 'font' || r.resourceType() === 'stylesheet');
+      if (!ok) problems.push('request to ' + u.hostname + ': ' + r.url());
+    });
+    await pg.goto('/' + page, { waitUntil: 'networkidle' });
+    expect(problems).toEqual([]);
+  });
+}
+
+test('PDF Studio libraries are all present', async ({ page }) => {
+  await page.goto('/pdf-studio.html', { waitUntil: 'networkidle' });
+  const libs = await page.evaluate(() => ({
+    PDFLib: typeof (window as any).PDFLib, pdfjs: typeof (window as any).pdfjsLib, mammoth: typeof (window as any).mammoth,
+    XLSX: typeof (window as any).XLSX, JSZip: typeof (window as any).JSZip, jspdf: typeof (window as any).jspdf,
+    html2canvas: typeof (window as any).html2canvas, docx: typeof (window as any).docx,
+  }));
+  for (const [k, v] of Object.entries(libs)) expect(v, k).not.toBe('undefined');
+});

@@ -9,3 +9,6 @@ _libs/
 
 # local test fixtures
 .testfiles/
+test-results/
+playwright-report/
+package-lock.json
