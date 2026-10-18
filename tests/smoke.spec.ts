@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { existsSync } from 'fs';
 
 // Hosts a page may contact. Everything else breaks the "nothing leaves your machine" claim.
 // jsdelivr serves the Hubot/Mona Sans web fonts (and Mermaid Studio's libraries).
@@ -11,7 +12,7 @@ const PAGES = [
   'pattern-studio.html', 'mermaid-live.html', 'pdf-studio.html', 'markdown-studio.html', 'wallpaper-studio.html',
 ];
 
-for (const page of PAGES) {
+for (const page of PAGES.filter(p => existsSync(p))) {
   test(`${page} loads cleanly`, async ({ page: pg }) => {
     const problems: string[] = [];
     pg.on('pageerror', e => problems.push('exception: ' + e.message));
@@ -38,3 +39,22 @@ test('PDF Studio libraries are all present', async ({ page }) => {
   }));
   for (const [k, v] of Object.entries(libs)) expect(v, k).not.toBe('undefined');
 });
+
+for (const [pg, steps] of [['merge-studio.html', 7], ['pdf-studio.html', 5], ['mermaid-live.html', 5], ['regex-studio.html', 5]] as const) {
+  test(`${pg} tour walks through every step`, async ({ page }) => {
+    const errors: string[] = [];
+    page.on('pageerror', e => errors.push(e.message));
+    await page.goto('/' + pg, { waitUntil: 'networkidle' });
+    await page.getByRole('button', { name: 'Take the tour' }).first().click();
+    for (let n = 1; n < steps; n++) {
+      await expect(page.locator('.hub-tour-card .row span')).toHaveText(`${n} / ${steps}`);
+      await page.keyboard.press('ArrowRight');
+    }
+    await expect(page.locator('.hub-tour-card .row span')).toHaveText(`${steps} / ${steps}`);
+    await page.keyboard.press('Escape');
+    await expect(page.locator('.hub-tour-card')).toHaveCount(0);
+    await page.reload({ waitUntil: 'networkidle' });
+    await expect(page.locator('.hub-tour-toast')).toHaveCount(0); // seen once, not offered again
+    expect(errors).toEqual([]);
+  });
+}

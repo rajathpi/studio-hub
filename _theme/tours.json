@@ -1,0 +1,32 @@
+{
+  "merge-studio.html": ["merge", [
+    {"sel": "#sampleBtn", "title": "Start with a sample", "text": "Click <b>Load sample</b> to fill in a spreadsheet and a template, then watch the preview change as you explore."},
+    {"sel": "#dataPane", "title": "Your data", "text": "Drop a CSV or Excel file here, or paste a table. Each row becomes one document. Untick rows to skip them, or type a filter like <code>Status = \"Active\"</code>."},
+    {"sel": "#tplEd", "title": "The template", "text": "Write your letter with <code>{{Column Name}}</code> wherever data should go. <b>? Syntax</b> lists tables (<code>{{#each}}</code>), conditions and filters."},
+    {"sel": "#previewPane", "title": "Live preview", "text": "Shows the record you are on. Step through records with the arrows, or <kbd>Ctrl</kbd>+<kbd>&larr;</kbd>/<kbd>&rarr;</kbd>."},
+    {"sel": "#valChip", "title": "Checks", "text": "Flags missing columns or empty values before you generate. Click it for details."},
+    {"sel": "#previewPane", "click": ".pvTab[data-pv=pvPdf]", "title": "PDF tab", "text": "The real PDF, exactly as it will download. Page size, fonts, logo, header and footer are under <b>Page setup</b>."},
+    {"sel": "#genBar", "title": "Download", "text": "One PDF for this record, a zip of all of them, one combined PDF, or <b>Email drafts</b> (.eml) with the PDF attached."}
+  ]],
+  "pdf-studio.html": ["pdf", [
+    {"sel": "#drop", "title": "Add files", "text": "Drop PDFs, images, Word, PowerPoint or Excel files here. Nothing is uploaded; it all runs in your browser."},
+    {"sel": "#fileList", "title": "Your files", "text": "Reorder, and remove files you do not need. Operations use this list."},
+    {"sel": "#opsGrid", "title": "Pick an operation", "text": "Merge, split, organize pages, watermark, convert and more. Choosing one opens its options below."},
+    {"sel": "#panel", "title": "Options and pages", "text": "In the page organizer you can drag pages to reorder, rotate them or remove them."},
+    {"sel": "#result", "title": "Save", "text": "When it finishes, the result appears here ready to download."}
+  ]],
+  "mermaid-live.html": ["mermaid", [
+    {"sel": "#code", "title": "Write the diagram", "text": "Type Mermaid syntax on the left; the diagram redraws as you type."},
+    {"sel": "#theme", "title": "Themes", "text": "Switch the look of the rendered diagram."},
+    {"sel": "#zoombar", "title": "Pan and zoom", "text": "Drag the diagram to pan and scroll to zoom. Double-click to fit it all."},
+    {"sel": "#filesBtn", "title": "Folders of diagrams", "text": "Open a folder to work on a set of <b>.mmd</b> files, saved to disk as real files."},
+    {"sel": "#pngBtn", "title": "Export", "text": "Save as PNG or SVG, or copy a PNG to the clipboard."}
+  ]],
+  "regex-studio.html": ["regex", [
+    {"sel": "#patternRow", "title": "Pattern and flags", "text": "Type your regular expression and toggle the flags (global, ignore case, multiline...)."},
+    {"sel": "#textWrap", "title": "Test text", "text": "Matches are highlighted live as you edit the pattern or the text."},
+    {"sel": "#explain", "title": "Explanation", "text": "A plain-English breakdown of what each part of the pattern does."},
+    {"sel": "#cases", "title": "Test cases", "text": "Add strings that should match or not, and see PASS / FAIL at a glance."},
+    {"sel": "#replRow", "title": "Replace", "text": "Try a replacement using <code>$1</code>, <code>$&lt;name&gt;</code> or <code>$&amp;</code> and see the result below."}
+  ]]
+}

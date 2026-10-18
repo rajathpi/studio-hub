@@ -8,6 +8,7 @@ each time, and colours already turned into var(--h-*) are not touched again.
 Only each page's own stylesheet (its first <style> that styles `body`) is
 remapped; colours inside scripts, SVG art and pattern palettes are left alone.
 """
+import json
 import pathlib
 import re
 import sys
@@ -38,6 +39,7 @@ DOCK = {"markdown-studio.html", "diff-studio.html", "regex-studio.html", "merge-
 SLOT = '<span data-hub-theme-slot></span>'
 
 KIT_RE = re.compile(r"<!-- studio-hub theme kit v\d.*?<!-- /studio-hub theme kit -->\n?", re.S)
+TOUR_RE = re.compile(r"<!-- studio-hub tour -->.*?<!-- /studio-hub tour -->\n?", re.S)
 SLIDER_RE = re.compile(r"<!-- studio-hub theme slider -->.*?<!-- /studio-hub theme slider -->\n?", re.S)
 
 
@@ -78,6 +80,7 @@ def apply(page: pathlib.Path) -> str:
     s = page.read_text(encoding="utf-8")
     s = KIT_RE.sub("", s)
     s = SLIDER_RE.sub("", s)
+    s = TOUR_RE.sub("", s)
     kit = (HERE / "kit.html").read_text(encoding="utf-8").rstrip() + "\n"
     slider = (HERE / "slider.html").read_text(encoding="utf-8").rstrip() + "\n"
 
@@ -100,6 +103,13 @@ def apply(page: pathlib.Path) -> str:
     s = s[:i] + kit + s[i:]
     j = s.rindex("</body>")
     s = s[:j] + slider + s[j:]
+    tours = json.loads((HERE / "tours.json").read_text(encoding="utf-8"))  # in-page walkthroughs
+    if page.name in tours:
+        key, steps = tours[page.name]
+        tour = (HERE / "tour.html").read_text(encoding="utf-8").rstrip()
+        call = "<script>hubTour(%s, %s);</script>\n" % (json.dumps(key), json.dumps(steps).replace("</", "<\\/"))
+        j = s.rindex("</body>")
+        s = s[:j] + tour.replace("<!-- /studio-hub tour -->", call + "<!-- /studio-hub tour -->") + "\n" + s[j:]
     page.write_text(s, encoding="utf-8", newline="\n")
     return f"{page.name}: {mapped} colours -> tokens"
 

@@ -1,0 +1,91 @@
+<!-- studio-hub tour -->
+<style>
+.hub-tour-btn{position:fixed;left:12px;bottom:12px;z-index:2147483000;width:28px;height:28px;border-radius:50%;border:1px solid var(--h-btn-border,#888);background:var(--h-panel,#fff);color:var(--h-text,#222);font:600 14px/1 var(--h-font,sans-serif);cursor:pointer;padding:0;opacity:.85}
+.hub-tour-btn:hover,.hub-tour-btn:focus-visible{opacity:1;border-color:var(--h-accent,#e0457b)}
+.hub-tour-ring{position:fixed;z-index:2147483001;border-radius:8px;box-shadow:0 0 0 9999px rgba(0,0,0,.55),0 0 0 2px var(--h-accent,#e0457b);pointer-events:none;transition:all .2s ease}
+.hub-tour-card{position:fixed;z-index:2147483002;width:min(320px,calc(100vw - 24px));box-sizing:border-box;background:var(--h-panel,#fff);color:var(--h-text,#222);border:1px solid var(--h-border,#ccc);border-radius:10px;padding:14px 16px;box-shadow:0 8px 30px rgba(0,0,0,.35);font:13px/1.5 var(--h-font,sans-serif)}
+.hub-tour-card h4{margin:0 0 4px;font-size:13px;color:var(--h-strong,inherit)}
+.hub-tour-card p{margin:0 0 12px}
+.hub-tour-card .row{display:flex;align-items:center;gap:8px}
+.hub-tour-card .row span{flex:1;font-size:11px;color:var(--h-muted,#888)}
+.hub-tour-card button,.hub-tour-toast button{font:inherit;font-size:12px;padding:5px 11px;border-radius:6px;border:1px solid var(--h-btn-border,#888);background:var(--h-btn,#eee);color:var(--h-text,#222);cursor:pointer}
+.hub-tour-card button.go,.hub-tour-toast button.go{background:var(--h-accent,#e0457b);border-color:var(--h-accent,#e0457b);color:var(--h-on-accent,#fff)}
+.hub-tour-card button.skip{border-color:transparent;background:none;color:var(--h-muted,#888)}
+.hub-tour-toast{position:fixed;left:48px;bottom:10px;z-index:2147483000;display:flex;align-items:center;gap:8px;background:var(--h-panel,#fff);color:var(--h-text,#222);border:1px solid var(--h-border,#ccc);border-radius:10px;padding:7px 10px;box-shadow:0 4px 18px rgba(0,0,0,.25);font:12px/1.4 var(--h-font,sans-serif)}
+@media (prefers-reduced-motion:reduce){.hub-tour-ring{transition:none}}
+</style>
+<script>
+/* hubTour(key, steps): steps = [{sel, title, text, click}] - click is a selector to click before the step shows. */
+function hubTour(key, steps) {
+  const LS = "hubTourSeen:" + key;
+  const seen = () => { try { return localStorage.getItem(LS) === "1"; } catch (e) { return false; } };
+  const mark = () => { try { localStorage.setItem(LS, "1"); } catch (e) {} };
+  const el = (tag, cls, html) => { const n = document.createElement(tag); if (cls) n.className = cls; if (html != null) n.innerHTML = html; return n; };
+  let ring, card, i = 0, onKey, onMove;
+  function close() {
+    ring && ring.remove(); card && card.remove(); ring = card = null;
+    document.removeEventListener("keydown", onKey, true); window.removeEventListener("resize", onMove); window.removeEventListener("scroll", onMove, true);
+    mark(); btn.focus();
+  }
+  function place() {
+    if (!card) return;
+    const s = steps[i], t = s.sel && document.querySelector(s.sel), r = t && t.getBoundingClientRect(), vw = innerWidth, vh = innerHeight;
+    const visible = r && r.width > 0 && r.height > 0;
+    if (visible) {
+      const pad = 6;
+      ring.style.cssText = "left:" + (r.left - pad) + "px;top:" + (r.top - pad) + "px;width:" + (r.width + pad * 2) + "px;height:" + (r.height + pad * 2) + "px";
+    } else ring.style.cssText = "left:50%;top:50%;width:0;height:0";
+    const cw = card.offsetWidth, ch = card.offsetHeight;
+    let x, y;
+    if (!visible) { x = (vw - cw) / 2; y = (vh - ch) / 2; }
+    else {
+      x = Math.min(Math.max(12, r.left), vw - cw - 12);
+      y = r.bottom + 14 + ch < vh ? r.bottom + 14 : r.top - ch - 14 > 0 ? r.top - ch - 14 : Math.max(12, vh - ch - 12);
+      if (y < r.bottom && y + ch > r.top) x = r.right + 14 + cw < vw ? r.right + 14 : Math.max(12, r.left - cw - 14);
+    }
+    card.style.left = Math.max(12, x) + "px"; card.style.top = Math.max(12, y) + "px";
+  }
+  function show() {
+    const s = steps[i];
+    if (s.click) { const c = document.querySelector(s.click); if (c) c.click(); }
+    const t = s.sel && document.querySelector(s.sel);
+    if (t && t.scrollIntoView) t.scrollIntoView({ block: "nearest", inline: "nearest" });
+    card.innerHTML = "";
+    if (s.title) card.append(el("h4", "", s.title));
+    card.append(el("p", "", s.text));
+    const row = el("div", "row"), count = el("span", "", (i + 1) + " / " + steps.length);
+    const skip = el("button", "skip", "Skip"), back = el("button", "", "Back"), next = el("button", "go", i === steps.length - 1 ? "Done" : "Next");
+    skip.onclick = close; back.onclick = () => { i--; show(); };
+    next.onclick = () => { if (i === steps.length - 1) close(); else { i++; show(); } };
+    back.disabled = i === 0; back.style.opacity = i === 0 ? ".4" : "";
+    row.append(skip, count, back, next); card.append(row);
+    place(); next.focus();
+    setTimeout(place, 400);  // after smooth scrolling settles
+  }
+  function start() {
+    if (ring) return;
+    const old = document.querySelector(".hub-tour-toast"); if (old) old.remove();
+    i = 0;
+    ring = el("div", "hub-tour-ring"); card = el("div", "hub-tour-card"); card.setAttribute("role", "dialog"); card.setAttribute("aria-label", "Tour");
+    document.body.append(ring, card);
+    onKey = (e) => {
+      if (e.key === "Escape") { e.preventDefault(); close(); }
+      else if (e.key === "ArrowRight" && i < steps.length - 1) { e.preventDefault(); i++; show(); }
+      else if (e.key === "ArrowLeft" && i > 0) { e.preventDefault(); i--; show(); }
+    };
+    onMove = () => place();
+    document.addEventListener("keydown", onKey, true); window.addEventListener("resize", onMove); window.addEventListener("scroll", onMove, true);
+    show();
+  }
+  const btn = el("button", "hub-tour-btn", "?"); btn.type = "button"; btn.title = "Take the tour"; btn.setAttribute("aria-label", "Take the tour");
+  btn.onclick = start; document.body.append(btn);
+  window.hubTourStart = start;
+  if (!seen()) {
+    const toast = el("div", "hub-tour-toast", "<span>New here?</span>");
+    const go = el("button", "go", "Take the tour"), no = el("button", "", "Not now");
+    go.onclick = start; no.onclick = () => { toast.remove(); mark(); };
+    toast.append(go, no); document.body.append(toast);
+  }
+}
+</script>
+<!-- /studio-hub tour -->
