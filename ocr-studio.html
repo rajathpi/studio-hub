@@ -4,7 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>OCR Studio</title>
-<meta name="description" content="Paste a screenshot and get its text back: plain text, or a table you can paste into Excel or Sheets. English and Swedish.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2318181b' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3M8 10h8M8 14h5'/%3E%3C/svg%3E">
+<meta name="description" content="Paste a screenshot and get its text back: plain text, or a table you can paste into Excel or Sheets. PaddleOCR in the browser, Tesseract as a fallback. English and Swedish.">
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { height: 100%; }
@@ -92,6 +93,17 @@
   #toast.show { opacity: 1; transform: translate(-50%, 0); }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js"></script>
+<!-- PaddleOCR.js runs in its own worker with OpenCV and onnxruntime bundled in, so the page-side
+     OpenCV import is never used: it maps to an empty module instead of a 10 MB download. -->
+<script type="importmap">
+{ "imports": {
+  "@paddleocr/paddleocr-js": "https://cdn.jsdelivr.net/npm/@paddleocr/paddleocr-js@0.4.2/dist/index.mjs",
+  "js-yaml": "https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/+esm",
+  "clipper-lib": "https://cdn.jsdelivr.net/npm/clipper-lib@6.4.2/+esm",
+  "onnxruntime-web": "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.24.3/dist/ort.bundle.min.mjs",
+  "@techstark/opencv-js": "data:text/javascript,export default {}"
+} }
+</script>
 <!-- studio-hub theme kit v1: fonts, light/dark tokens, title shadow, theme slider. Source: _theme/kit.html, inlined by _theme/apply.py -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource-variable/mona-sans@5.3.0/wdth.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource-variable/hubot-sans@5.3.0/wdth.css">
@@ -140,16 +152,15 @@
 </head>
 <body>
 <header>
-  <h1>OCR Studio</h1>
-  <div class="group" id="langs">
-    <span class="label">Language</span>
-    <button class="tool" data-lang="eng" title="English">English</button>
-    <button class="tool" data-lang="swe" title="Swedish">Swedish</button>
-    <button class="tool on" data-lang="swe+eng" title="English and Swedish">Both</button>
+  <h1>OCR Studio <span>v2</span></h1>
+  <div class="group" id="engines">
+    <span class="label">Engine</span>
+    <button class="tool" data-engine="paddle" title="PaddleOCR. Sharper on screenshots. About 47 MB the first time">PaddleOCR</button>
+    <button class="tool" data-engine="tesseract" title="Tesseract, English + Swedish. A smaller download">Tesseract</button>
   </div>
   <div class="sep"></div>
   <div class="group">
-    <button class="tool" id="boxes" title="Show the word boxes on the image (W)">Boxes <kbd>W</kbd></button>
+    <button class="tool" id="boxes" title="Show the text boxes on the image (W)">Boxes <kbd>W</kbd></button>
     <button id="whole" title="Read the whole image again (Esc)" disabled>Whole image</button>
   </div>
   <div class="spacer"></div>
@@ -163,7 +174,7 @@
     Take one with <span data-snip>Win Shift S</span>, then press
     <div><div class="keys"><span data-modkey>Ctrl</span><span>V</span></div></div>
     or drop an image here, or <a id="pick">open a file</a>.
-    <small>Runs in your browser. The language data downloads once, then it's cached.</small>
+    <small>Runs in your browser. The engine downloads once (PaddleOCR is about 47 MB), then it's cached.</small>
   </div>
   <section id="imgPane">
     <div id="stage"><canvas id="cv"></canvas><canvas id="ov"></canvas></div>
@@ -202,53 +213,140 @@
   document.querySelectorAll("[data-snip]").forEach(e => e.textContent = isMac ? "⌘ Ctrl Shift 4" : "Win Shift S");
 
   const $ = id => document.getElementById(id);
-  const LANG_NAME = { eng: "English", swe: "Swedish" };
   const cv = $("cv"), ctx = cv.getContext("2d");
   const ov = $("ov"), octx = ov.getContext("2d");
   const main = $("main");
+  const qs = new URLSearchParams(location.search);
 
   let img = null;          // the pasted image (ImageBitmap)
-  let lang = "swe+eng";
+  let engine = "paddle";   // "paddle" or "tesseract"
+  try { engine = qs.get("engine") || localStorage.getItem("ocrEngine") || "paddle"; } catch {}
+  if (engine !== "tesseract") engine = "paddle";
   let region = null;       // { x, y, w, h } in image pixels, or null for the whole image
   let drag = null;         // rectangle being dragged
-  let words = [];          // [{ text, conf, x0, y0, x1, y1 }] in image pixels
+  let words = [];          // [{ text, conf, x0, y0, x1, y1 }] in image pixels (Tesseract words, PaddleOCR lines)
   let grid = [];           // table cells, rows of strings
   let showBoxes = false;
   let runId = 0;
+  let lastRun = null;      // { engine, ms, backend }
 
-  // ---------- the worker ----------
-  // One worker is kept alive between runs. Switching language starts a new one
-  // and terminates the old one (which also cancels anything it was doing).
-  let workerP = null, workerLang = null, workerSeq = 0;
-  function getWorker(l) {
-    if (workerP && workerLang === l) return workerP;
-    const old = workerP, seq = ++workerSeq;
-    workerLang = l;
-    workerP = Tesseract.createWorker(l.split("+"), 1, {
-      logger: m => { if (seq === workerSeq) progress(m); },
-      errorHandler: () => {},
-    });
-    workerP.catch(() => { if (seq === workerSeq) { workerP = null; workerLang = null; } });
-    if (old) old.then(w => w.terminate()).catch(() => {});
-    return workerP;
+  // ---------- PaddleOCR ----------
+  // PP-OCRv5 mobile detection + the PP-OCRv5 Latin recognizer (it has å ä ö),
+  // run by the official PaddleOCR.js SDK in its own worker on onnxruntime-web.
+  // Every file is pinned, fetched once with progress, and kept in Cache Storage.
+  const HF = "https://huggingface.co/PaddlePaddle/";
+  const DET = HF + "PP-OCRv5_mobile_det_onnx/resolve/e6f4fa85f00e168c862bc462aebca69eef9b3d3d/";
+  const REC = HF + "latin_PP-OCRv5_mobile_rec_onnx/resolve/89d3a50e2c27e2e7cceeab0e944c25c807d5db4f/";
+  const PADDLE_FILES = {
+    worker: { url: "https://cdn.jsdelivr.net/npm/@paddleocr/paddleocr-js@0.4.2/dist/assets/worker-entry-C9UNuyOJ.js", size: 11341486, type: "text/javascript" },
+    wasm: { url: "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.24.3/dist/ort-wasm-simd-threaded.jsep.wasm", size: 25014754, type: "application/wasm" },
+    detOnnx: { url: DET + "inference.onnx", size: 4826518 },
+    detYml: { url: DET + "inference.yml", size: 903 },
+    recOnnx: { url: REC + "inference.onnx", size: 8042023 },
+    recYml: { url: REC + "inference.yml", size: 6817 },
+  };
+  const PADDLE_TOTAL = Object.values(PADDLE_FILES).reduce((a, f) => a + f.size, 0);
+  const MB = n => (n / 1048576).toFixed(n < 10485760 ? 1 : 0);
+  const CACHE = "ocr-studio-v2";
+
+  async function fetchCached(f, tick) {
+    let cache = null;
+    try { cache = await caches.open(CACHE); } catch {}
+    const hit = cache && await cache.match(f.url).catch(() => null);
+    if (hit) { const b = await hit.blob(); tick(f.size, true); return b; }
+    const r = await fetch(f.url);
+    if (!r.ok) throw new Error("HTTP " + r.status + " for " + f.url);
+    const parts = [], reader = r.body.getReader();
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      parts.push(value); tick(value.length);
+    }
+    const blob = new Blob(parts, { type: f.type || "application/octet-stream" });
+    if (cache) await cache.put(f.url, new Response(blob, { headers: { "content-type": blob.type } })).catch(() => {});
+    return blob;
+  }
+  // The SDK takes each model as an uncompressed tar holding inference.onnx + inference.yml.
+  function tarOf(entries) {
+    const enc = new TextEncoder(), parts = [];
+    for (const [name, blob] of entries) {
+      const h = new Uint8Array(512);
+      const put = (str, off, len) => h.set(enc.encode(str).subarray(0, len), off);
+      put(name, 0, 100); put("0000644\0", 100, 8); put("0000000\0", 108, 8); put("0000000\0", 116, 8);
+      put(blob.size.toString(8).padStart(11, "0") + "\0", 124, 12); put("00000000000\0", 136, 12);
+      put("        ", 148, 8); h[156] = 48; put("ustar\0", 257, 6); put("00", 263, 2);
+      put(h.reduce((a, b) => a + b, 0).toString(8).padStart(6, "0") + "\0 ", 148, 8);
+      parts.push(h, blob, new Uint8Array((512 - blob.size % 512) % 512));
+    }
+    parts.push(new Uint8Array(1024));
+    return new Blob(parts, { type: "application/x-tar" });
   }
 
-  // ---------- status ----------
-  function progress(m) {
+  let paddleP = null, paddleInfo = null;
+  function getPaddle() {
+    if (paddleP) return paddleP;
+    paddleP = (async () => {
+      let got = 0, fresh = false, shown = -1;
+      const tick = (n, cached) => {
+        got += n; if (!cached) fresh = true;
+        const p = Math.min(99, Math.floor(got / PADDLE_TOTAL * 100));
+        if (fresh && p !== shown) { shown = p; setStatus(`Getting PaddleOCR · ${MB(got)} of ${MB(PADDLE_TOTAL)} MB`, "Downloads once, then it's cached in this browser.", p); }
+      };
+      setStatus("Starting PaddleOCR", "", 0);
+      const sdkP = import("@paddleocr/paddleocr-js");
+      const keys = Object.keys(PADDLE_FILES);
+      const blobs = Object.fromEntries((await Promise.all(keys.map(k => fetchCached(PADDLE_FILES[k], tick)))).map((b, i) => [keys[i], b]));
+      setStatus("Starting PaddleOCR", "", 100);
+      const url = b => URL.createObjectURL(b);
+      // The SDK has no log switch, and onnxruntime prints harmless model-load warnings as console
+      // errors. Its sessions are created with log level "error" instead (this pinned file only).
+      const src = (await blobs.worker.text()).replace("executionProviders,\n        graphOptimizationLevel:", "executionProviders,\n        logSeverityLevel: 3,\n        graphOptimizationLevel:");
+      const workerURL = url(new Blob([src], { type: "text/javascript" }));
+      const wasmURL = url(new Blob([blobs.wasm], { type: "application/wasm" }));
+      const { PaddleOCR } = await sdkP;
+      const backend = ["wasm", "webgpu"].includes(qs.get("backend")) ? qs.get("backend") : "auto";
+      const ocr = await PaddleOCR.create({
+        textDetectionModelName: "PP-OCRv5_mobile_det",
+        textDetectionModelAsset: { url: url(tarOf([["inference.onnx", blobs.detOnnx], ["inference.yml", blobs.detYml]])) },
+        textRecognitionModelName: "latin_PP-OCRv5_mobile_rec",
+        textRecognitionModelAsset: { url: url(tarOf([["inference.onnx", blobs.recOnnx], ["inference.yml", blobs.recYml]])) },
+        worker: { createWorker: () => new Worker(workerURL, { type: "module", name: "paddleocr" }) },
+        ortOptions: { backend, wasmPaths: { wasm: wasmURL } },
+        pipelineWarnings: "ignore",
+      });
+      const sum = ocr.getInitializationSummary?.() || {};
+      paddleInfo = { backend: /webgpu/i.test(sum.recProvider || sum.detProvider || "") ? "WebGPU" : "WASM", downloaded: fresh ? got : 0, summary: sum };
+      return ocr;
+    })();
+    paddleP.catch(() => { paddleP = null; });
+    return paddleP;
+  }
+
+  // ---------- Tesseract (fallback) ----------
+  // One worker, English + Swedish, kept alive between runs.
+  let tessP = null;
+  function getTesseract() {
+    if (tessP) return tessP;
+    tessP = Tesseract.createWorker(["swe", "eng"], 1, { logger: tessProgress, errorHandler: () => {} });
+    tessP.catch(() => { tessP = null; });
+    return tessP;
+  }
+  function tessProgress(m) {
+    if (engine !== "tesseract") return;
     const p = Math.round((m.progress || 0) * 100);
-    const names = workerLang ? workerLang.split("+").map(k => LANG_NAME[k]).join(" + ") : "";
     let msg, sub = "";
     switch (m.status) {
-      case "loading tesseract core": msg = "Loading the OCR engine"; break;
-      case "initializing tesseract": msg = "Starting the OCR engine"; break;
-      case "loading language traineddata":
-        msg = "Getting " + names + " language data"; sub = "Downloads once, then it's cached in this browser."; break;
+      case "loading tesseract core": msg = "Loading Tesseract"; break;
+      case "initializing tesseract": msg = "Starting Tesseract"; break;
+      case "loading language traineddata": msg = "Getting English + Swedish data"; sub = "Downloads once, then it's cached in this browser."; break;
       case "initializing api": msg = "Getting ready"; break;
       case "recognizing text": msg = "Reading text"; break;
       default: msg = m.status ? m.status[0].toUpperCase() + m.status.slice(1) : "Working";
     }
     setStatus(msg + (p ? " · " + p + "%" : ""), sub, p);
   }
+
+  // ---------- status ----------
   function setStatus(msg, sub, p) {
     $("status").classList.toggle("show", !!msg);
     if (!msg) return;
@@ -267,7 +365,7 @@
     region = null; words = []; grid = [];
     main.classList.remove("blank");
     $("text").value = ""; renderTable(); drawOverlay();
-    run();
+    return run();
   }
   document.addEventListener("paste", e => {
     const item = [...(e.clipboardData?.items || [])].find(i => i.type.startsWith("image/"));
@@ -285,12 +383,12 @@
   $("file").onchange = e => { loadBlob(e.target.files[0]); e.target.value = ""; };
 
   // ---------- OCR ----------
-  // Screenshot text is small; Tesseract reads it far better scaled up. The
-  // region (or whole image) is copied onto white at 1-3x, and boxes are mapped back.
-  function prepare() {
+  // The region (or whole image) is copied onto white and scaled up when small:
+  // Tesseract wants 1-3x on screenshot text, PaddleOCR 1-2x. Boxes are mapped back.
+  function prepare(eng) {
     const r = region || { x: 0, y: 0, w: img.width, h: img.height };
     const big = Math.max(r.w, r.h);
-    const s = big <= 900 ? 3 : big <= 1800 ? 2 : 1;
+    const s = eng === "paddle" ? (big <= 1000 ? 2 : 1) : (big <= 900 ? 3 : big <= 1800 ? 2 : 1);
     const c = document.createElement("canvas");
     c.width = Math.round(r.w * s); c.height = Math.round(r.h * s);
     const g = c.getContext("2d");
@@ -299,7 +397,7 @@
     g.drawImage(img, r.x, r.y, r.w, r.h, 0, 0, c.width, c.height);
     return { c, s, ox: r.x, oy: r.y };
   }
-  function wordsOf(data) {
+  function tessWords(data) {
     let ws = data.words;
     if (!ws) {
       ws = [];
@@ -307,30 +405,55 @@
     }
     return ws;
   }
+  async function readTesseract({ c, s, ox, oy }) {
+    const w = await getTesseract();
+    const { data } = await w.recognize(c, {}, { text: true, blocks: true });
+    return {
+      words: tessWords(data).filter(w => w.text.trim()).map(w => ({ text: w.text.trim(), conf: w.confidence,
+        x0: ox + w.bbox.x0 / s, y0: oy + w.bbox.y0 / s, x1: ox + w.bbox.x1 / s, y1: oy + w.bbox.y1 / s })),
+      text: (data.text || "").replace(/\n{3,}/g, "\n\n").trim(),
+    };
+  }
+  async function readPaddle({ c, s, ox, oy }) {
+    const ocr = await getPaddle();
+    setStatus("Reading text", "", 100);
+    const [res] = await ocr.predict(c);
+    const ws = res.items.filter(it => it.text.trim()).map(it => {
+      const xs = it.poly.map(p => p[0] ?? p.x), ys = it.poly.map(p => p[1] ?? p.y);
+      return { text: it.text.trim(), conf: it.score * 100,
+        x0: ox + Math.min(...xs) / s, y0: oy + Math.min(...ys) / s, x1: ox + Math.max(...xs) / s, y1: oy + Math.max(...ys) / s };
+    });
+    return { words: ws, text: linesText(ws) };
+  }
   async function run() {
     if (!img) return;
-    const my = ++runId;
+    const my = ++runId, eng = engine;
     setBusy(true);
     setStatus("Starting", "", 0);
     try {
-      const w = await getWorker(lang);
+      const prep = prepare(eng);
+      if (eng === "paddle") await getPaddle(); else await getTesseract();   // time the reading, not the download
       if (my !== runId) return;
-      const { c, s, ox, oy } = prepare();
-      const { data } = await w.recognize(c, {}, { text: true, blocks: true });
+      const t0 = performance.now();
+      const out = eng === "paddle" ? await readPaddle(prep) : await readTesseract(prep);
       if (my !== runId) return;
-      words = wordsOf(data)
-        .filter(w => w.text.trim())
-        .map(w => ({ text: w.text.trim(), conf: w.confidence,
-          x0: ox + w.bbox.x0 / s, y0: oy + w.bbox.y0 / s, x1: ox + w.bbox.x1 / s, y1: oy + w.bbox.y1 / s }));
-      $("text").value = (data.text || "").replace(/\n{3,}/g, "\n\n").trim();
+      words = out.words;
+      $("text").value = out.text;
+      lastRun = { engine: eng, ms: Math.round(performance.now() - t0), backend: eng === "paddle" ? paddleInfo?.backend : "WASM" };
       const conf = words.length ? Math.round(words.reduce((a, w) => a + w.conf, 0) / words.length) : 0;
-      $("meta").textContent = words.length ? `${words.length} words · ${conf}% sure` : "No text found";
+      const unit = eng === "paddle" ? "lines" : "words";
+      $("meta").textContent = words.length ? `${words.length} ${unit} · ${conf}% sure · ${(lastRun.ms / 1000).toFixed(1)} s` : "No text found";
       renderTable(); drawOverlay();
       setStatus("");
     } catch (err) {
       if (my !== runId) return;
       console.warn(err);
-      setStatus("Couldn't run OCR", "Check the connection: the engine and language data load from the web the first time.", 0);
+      if (eng === "paddle") {
+        toast("PaddleOCR didn't start. Using Tesseract");
+        setEngine("tesseract");
+        return;
+      }
+      setStatus("Couldn't run OCR", "Check the connection: the engine loads from the web the first time.", 0);
     } finally {
       if (my === runId) setBusy(false);
     }
@@ -341,22 +464,35 @@
     if (b) $("meta").textContent = "";
   }
 
-  // ---------- table ----------
+  // ---------- rows, text, table ----------
   const median = a => { const s = [...a].sort((x, y) => x - y); return s.length ? s[s.length >> 1] : 0; };
-  // Rows: words whose vertical centres are close. Cells: runs of words split at
-  // wide gaps. Columns: x bands where cells of the multi-cell rows overlap.
-  function buildGrid() {
-    if (!words.length) return { rows: [], table: false };
-    const hm = median(words.map(w => w.y1 - w.y0)) || 10;
-    const sorted = [...words].sort((a, b) => (a.y0 + a.y1) - (b.y0 + b.y1));
+  // Rows: boxes whose vertical centres are close, sorted left to right.
+  function rowsOf(ws) {
+    const hm = median(ws.map(w => w.y1 - w.y0)) || 10;
     const rows = [];
-    for (const w of sorted) {
+    for (const w of [...ws].sort((a, b) => (a.y0 + a.y1) - (b.y0 + b.y1))) {
       const cy = (w.y0 + w.y1) / 2, last = rows[rows.length - 1];
       if (last && Math.abs(cy - last.cy) < hm * .6) { last.ws.push(w); last.cy += (cy - last.cy) / last.ws.length; }
       else rows.push({ cy, ws: [w] });
     }
     rows.forEach(r => {
       r.ws.sort((a, b) => a.x0 - b.x0);
+      r.y0 = Math.min(...r.ws.map(w => w.y0)); r.y1 = Math.max(...r.ws.map(w => w.y1));
+    });
+    return { rows, hm };
+  }
+  // PaddleOCR gives lines, not a page: one text line per row, a blank line at a big gap
+  // (well over a line's height, so evenly spaced UI rows stay together).
+  function linesText(ws) {
+    if (!ws.length) return "";
+    const { rows, hm } = rowsOf(ws);
+    return rows.map((r, i) => (i && r.y0 - rows[i - 1].y1 > hm * 1.6 ? "\n" : "") + r.ws.map(w => w.text).join(" ")).join("\n");
+  }
+  // Cells: runs of boxes split at wide gaps. Columns: x bands where cells of the multi-cell rows overlap.
+  function buildGrid() {
+    if (!words.length) return { rows: [], table: false };
+    const { rows, hm } = rowsOf(words);
+    rows.forEach(r => {
       r.cells = [];
       for (const w of r.ws) {
         const c = r.cells[r.cells.length - 1];
@@ -416,16 +552,19 @@
     document.querySelectorAll(".view").forEach(v => v.classList.toggle("on", v.id === "view-" + b.dataset.tab));
   });
 
-  // ---------- language ----------
-  function setLang(l) {
-    if (l === lang) return;
-    lang = l;
-    document.querySelectorAll("[data-lang]").forEach(b => b.classList.toggle("on", b.dataset.lang === l));
-    run();
+  // ---------- engine ----------
+  function showEngine() { document.querySelectorAll("[data-engine]").forEach(b => b.classList.toggle("on", b.dataset.engine === engine)); }
+  function setEngine(e) {
+    if (e === engine) return;
+    engine = e; showEngine();
+    try { localStorage.setItem("ocrEngine", e); } catch {}
+    words = []; drawOverlay();
+    return run();
   }
-  document.querySelectorAll("[data-lang]").forEach(b => b.onclick = () => setLang(b.dataset.lang));
+  document.querySelectorAll("[data-engine]").forEach(b => b.onclick = () => setEngine(b.dataset.engine));
+  showEngine();
 
-  // ---------- overlay: word boxes + region ----------
+  // ---------- overlay: boxes + region ----------
   const scale = () => ov.width / ov.getBoundingClientRect().width;
   function drawOverlay() {
     octx.clearRect(0, 0, ov.width, ov.height);
@@ -501,7 +640,13 @@
     else if (!mod && !e.altKey && k === "w" && img) toggleBoxes();
   });
 
-  window.addEventListener("beforeunload", () => { if (workerP) workerP.then(w => w.terminate()).catch(() => {}); });
+  // A small hook for scripted checks.
+  window.ocrStudio = {
+    load: loadBlob, setEngine,
+    state: () => ({ engine, text: $("text").value, grid, words, lastRun, paddle: paddleInfo }),
+  };
+
+  window.addEventListener("beforeunload", () => { if (tessP) tessP.then(w => w.terminate()).catch(() => {}); });
 })();
 </script>
 <!-- studio-hub theme slider -->

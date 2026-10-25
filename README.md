@@ -28,7 +28,7 @@ Take a screenshot (Win+Shift+S or ⌘⇧4), press Ctrl/⌘+V on the page, and ma
 
 ### OCR Studio — [`ocr-studio.html`](ocr-studio.html)
 
-Paste a screenshot and get selectable text back, in Swedish, English or both. Word boxes can be shown on the image, a dragged rectangle reads only that part, and a Table tab rebuilds rows and columns from the word positions so a screenshot of a table pastes into Excel or Sheets as cells (or as Markdown). Built on [Tesseract.js](https://github.com/naptha/tesseract.js) (Apache-2.0); the language data downloads once from jsDelivr and is cached.
+Paste a screenshot and get selectable text back. The engine is PaddleOCR (PP-OCRv5 detection and Latin recognition, ONNX) running in the browser through onnxruntime-web, on the GPU where the browser has WebGPU; it reads small grey UI text, dark themes and å ä ö where Tesseract stumbled, and in a side-by-side test found every word of a real screenshot where Tesseract found 89%. The models (about 20 MB) download once and are cached; Tesseract.js (English + Swedish) stays as the fallback and as a choice. Line boxes can be shown on the image, a dragged rectangle reads only that part, and a Table tab rebuilds rows and columns from the box positions so a screenshot of a table pastes into Excel or Sheets as cells (or as Markdown).
 
 ### Color Studio — [`color-studio.html`](color-studio.html)
 
