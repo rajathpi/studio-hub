@@ -122,6 +122,10 @@ The **Desk · multi-monitor** format turns any pattern into one wallpaper that r
 
 Fifty-eight patterns now, including Penrose rhombs, girih stars (Hankin's method on four tilings), Celtic knotwork with over-and-under crossings, Gray–Scott reaction–diffusion contours and diffusion-limited coral. Colours: nine house palettes, your own ink and paper, or **Random Wada colours** (press C): a pair pulled from Sanzo Wada's 348 combinations with enough contrast to read as a pattern, named under the button.
 
+### Duo Translate — [`translate-studio.html`](translate-studio.html)
+
+A browser extension, not a page: download the zip from the page and load it in Chrome, Brave, Edge or Firefox (Windows or Mac). It translates the page and shows the translation under each paragraph, like Immersive Translate. Short labels such as tabs and buttons are swapped in place. <kbd>Alt</kbd>+<kbd>A</kbd> or the right-click menu turns it on and off. The popup switches between both languages and translation only, sets the language, and can always translate a site. Only what's on screen is translated; the rest follows as you scroll. Unlike the other tools, page text leaves your machine: it goes to Google Translate's free endpoint, or stays local with Chrome's on-device model (Chrome 138+, downloaded from the popup). Source in [`extensions/duo-translate`](extensions/duo-translate).
+
 ### Time Studio — [`time-studio.html`](time-studio.html)
 
 The same instant in several cities, hour by hour. Rows for Gothenburg, Mangalore, New York and San Francisco by default (add any of ~175 cities or an IANA zone, rename them, mark each as work or family), aligned to the home row so one column is one moment, coloured for night, morning/evening and working hours. Hover to read every zone, click to pin a time, pick another date (DST-correct), and the board lists the hours that suit everyone. Copy puts a one-line summary on the clipboard; .ics downloads a meeting at the pinned time.

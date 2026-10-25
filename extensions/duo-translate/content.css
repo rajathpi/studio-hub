@@ -1,0 +1,17 @@
+duo-t {
+  display: block !important;
+  margin: .3em 0 0 !important;
+  padding: 0 !important;
+  font: inherit;
+  color: inherit;
+  opacity: .78;
+  white-space: normal;
+  text-decoration: none;
+  animation: duo-in .25s ease-out;
+}
+html[data-duo-mode="replace"] duo-t {
+  margin: 0 !important;
+  opacity: 1;
+}
+@keyframes duo-in { from { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { duo-t { animation: none; } }

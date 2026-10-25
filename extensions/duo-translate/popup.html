@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<title>Duo Translate</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource-variable/mona-sans@5.3.0/wdth.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource-variable/hubot-sans@5.3.0/wdth.css">
+<link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header>
+    <h1>Duo Translate</h1>
+    <div class="hub-theme"><button id="theme" aria-label="Switch theme"><i></i></button></div>
+  </header>
+
+  <button id="go" class="primary">Translate this page</button>
+  <p id="host" class="muted"></p>
+
+  <section>
+    <label class="row">Show
+      <span class="seg" id="mode">
+        <button data-v="dual">Both</button><button data-v="replace">Translation</button>
+      </span>
+    </label>
+    <label class="row">Into
+      <select id="target">
+        <option value="en">English</option>
+        <option value="sv">Svenska</option>
+        <option value="hi">Hindi</option>
+        <option value="kn">Kannada</option>
+        <option value="de">Deutsch</option>
+        <option value="fr">Français</option>
+        <option value="es">Español</option>
+        <option value="it">Italiano</option>
+        <option value="nl">Nederlands</option>
+        <option value="no">Norsk</option>
+        <option value="da">Dansk</option>
+        <option value="fi">Suomi</option>
+        <option value="pt">Português</option>
+        <option value="ja">日本語</option>
+        <option value="zh-CN">中文</option>
+      </select>
+    </label>
+    <label class="row">Engine
+      <select id="engine">
+        <option value="auto">Auto</option>
+        <option value="chrome">On-device only</option>
+        <option value="google">Google</option>
+      </select>
+    </label>
+    <label class="check"><input type="checkbox" id="always"> <span id="always-label">Always translate this site</span></label>
+  </section>
+
+  <section id="device">
+    <p id="device-status" class="muted"></p>
+    <button id="download" hidden>Download</button>
+  </section>
+
+  <footer class="muted"><span id="keys">Alt+A</span> turns it on and off.</footer>
+
+  <script src="popup.js"></script>
+</body>
+</html>

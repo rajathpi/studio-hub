@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Duo Translate</title>
+<meta name="description" content="A browser extension that shows the translation under each paragraph. Free, no account. Chrome, Brave, Edge and Firefox.">
+<link rel="icon" href="extensions/duo-translate/icons/32.png">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: var(--h-font); background: var(--h-bg); color: var(--h-text);
+    font-size: 15px; line-height: 1.55; -webkit-font-smoothing: antialiased;
+  }
+  a { color: inherit; }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 56px 20px 64px; }
+  .back { font-size: 13px; color: var(--h-muted); text-decoration: none; }
+  .back:hover { color: var(--h-text); }
+  h1 { font-size: clamp(34px, 6vw, 52px); line-height: 1.05; margin: 14px 0 12px; }
+  .lead { color: var(--h-text2); max-width: 600px; font-size: 16px; }
+  .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; align-items: center; }
+  .btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 10px; font: inherit; font-weight: 600;
+    text-decoration: none; border: 1px solid var(--h-btn-border); background: var(--h-btn); color: var(--h-text); cursor: pointer; }
+  .btn:hover { background: var(--h-btn-hover); }
+  .btn.primary { background: var(--h-accent); color: var(--h-on-accent); border-color: var(--h-accent); }
+  .btn.primary:hover { background: var(--h-accent-h); }
+  .btn svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+  .meta { font-size: 13px; color: var(--h-muted); }
+
+  h2 { font-family: var(--h-head); font-weight: 800; font-stretch: 125%; font-size: 20px; letter-spacing: -.01em; margin: 48px 0 14px; }
+  .panel { background: var(--h-panel); border: 1px solid var(--h-border); border-radius: 16px; }
+
+  /* preview: a small fake page that the three modes act on */
+  .demo { overflow: hidden; }
+  .demo-bar { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 14px;
+    border-bottom: 1px solid var(--h-border); background: var(--h-panel2); }
+  .dots { display: flex; gap: 6px; } .dots i { width: 9px; height: 9px; border-radius: 50%; background: var(--h-border2); }
+  .seg { display: inline-flex; border: 1px solid var(--h-btn-border); border-radius: 9px; overflow: hidden; }
+  .seg button { all: unset; cursor: pointer; padding: 5px 12px; font-size: 13px; background: var(--h-btn); }
+  .seg button + button { border-left: 1px solid var(--h-btn-border); }
+  .seg button[aria-pressed="true"] { background: var(--h-accent); color: var(--h-on-accent); }
+  .seg button:focus-visible { outline: 2px solid var(--h-text); outline-offset: -2px; }
+  .page { padding: 22px 24px 26px; }
+  .tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 18px; }
+  .tabs span { padding: 5px 11px; border-radius: 8px; background: var(--h-deep); font-size: 13px; font-weight: 600; }
+  .page h3 { font-family: var(--h-head); font-stretch: 112%; font-size: 22px; line-height: 1.2; }
+  .page p { margin-top: 10px; max-width: 620px; }
+  .tr { display: block; opacity: .72; margin-top: 4px; animation: fade .25s ease-out; }
+  .page h3 .tr { font-size: 22px; }
+  @keyframes fade { from { opacity: 0; } }
+  .demo[data-mode="replace"] .orig, .demo[data-mode="off"] .tr { display: none; }
+  .demo[data-mode="replace"] .tr { opacity: 1; margin-top: 0; }
+
+  /* install */
+  .browsers { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+  .browsers button { all: unset; cursor: pointer; padding: 7px 14px; border-radius: 9px; border: 1px solid var(--h-btn-border); background: var(--h-btn); font-weight: 600; font-size: 14px; }
+  .browsers button:hover { background: var(--h-btn-hover); }
+  .browsers button[aria-selected="true"] { background: var(--h-accent); color: var(--h-on-accent); border-color: var(--h-accent); }
+  .browsers button:focus-visible { outline: 2px solid var(--h-text); outline-offset: 2px; }
+  ol.steps { list-style: none; counter-reset: s; padding: 18px 20px; display: grid; gap: 12px; }
+  ol.steps li { counter-increment: s; display: grid; grid-template-columns: 28px 1fr; gap: 10px; align-items: start; }
+  ol.steps li::before { content: counter(s); width: 24px; height: 24px; border-radius: 50%; background: var(--h-deep); display: grid; place-items: center;
+    font-size: 12px; font-weight: 700; margin-top: 1px; }
+  code, .url { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; background: var(--h-deep); padding: 2px 6px; border-radius: 6px; }
+  .url { cursor: pointer; border: 1px dashed var(--h-border2); }
+  .url:hover { border-color: var(--h-text); }
+  .note { margin-top: 12px; font-size: 14px; color: var(--h-muted); }
+  kbd { font: 600 12px var(--h-font); padding: 2px 7px; border-radius: 6px; border: 1px solid var(--h-btn-border); border-bottom-width: 2px; background: var(--h-btn); }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+  .grid .panel { padding: 16px 18px; }
+  .grid b { display: block; margin-bottom: 4px; }
+  .grid p { color: var(--h-text2); font-size: 14px; }
+
+  .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--h-accent); color: var(--h-on-accent);
+    padding: 8px 14px; border-radius: 9px; font-size: 13px; opacity: 0; transition: opacity .2s; pointer-events: none; }
+  .toast.on { opacity: 1; }
+  footer { margin-top: 56px; font-size: 13px; color: var(--h-muted); }
+  @media (max-width: 560px) { .wrap { padding-top: 64px; } .page { padding: 18px 16px 20px; } }
+  @media (prefers-reduced-motion: reduce) { .tr { animation: none; } }
+</style>
+<!-- studio-hub theme kit v1: fonts, light/dark tokens, title shadow, theme slider. Source: _theme/kit.html, inlined by _theme/apply.py -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource-variable/mona-sans@5.3.0/wdth.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource-variable/hubot-sans@5.3.0/wdth.css">
+<script>(function(){var t=null;try{t=new URLSearchParams(location.search).get("theme")||localStorage.getItem("hubTheme")}catch(e){}document.documentElement.dataset.theme=t==="dark"?"dark":"light"})()</script>
+<style id="hub-kit">
+  :root {
+    color-scheme: light;
+    --h-font: "Mona Sans Variable", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --h-head: "Hubot Sans Variable", var(--h-font);
+    --h-bg: #f1efe9; --h-panel: #faf9f5; --h-panel2: #f4f2ec; --h-deep: #ebe8e1; --h-deep2: #e7e4dc;
+    --h-border: #dedad0; --h-border2: #d3cec2; --h-btn: #ffffff; --h-btn-border: #cfcabe; --h-btn-hover: #f1eee6;
+    --h-text: #18181b; --h-text2: #3f3f46; --h-muted: #6b675f; --h-muted2: #8f8a7f; --h-faint: #aaa59a; --h-code: #27272a;
+    --h-accent: #18181b; --h-accent-h: #3f3f46; --h-accent2: #8f8a7f; --h-accent-bg: #e4e0d6; --h-on-accent: #ffffff; --h-strong: #09090b;
+    --h-yellow: #8a5a00; --h-blue: #0b5cad; --h-blue2: #2f5597; --h-purple: #6b3fa0; --h-green2: #2e7d4f; --h-ok: #1a7f37;
+    --h-green: #1a7f37; --h-red: #cf222e; --h-amber: #9a6700; --h-err-bg: #fde2e4; --h-err-bg2: #f5b8be; --h-err-text: #8b1a2b;
+    --h-title-shadow: 0 2px 3px rgba(24, 24, 27, .16), 0 8px 22px rgba(24, 24, 27, .18);
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --h-bg: #1e1f24; --h-panel: #26272e; --h-panel2: #2e2f37; --h-deep: #1b1c21; --h-deep2: #22232a;
+    --h-border: #3a3b44; --h-border2: #3a3b46; --h-btn: #33343d; --h-btn-border: #4a4b55; --h-btn-hover: #41424d;
+    --h-text: #e6e6e6; --h-text2: #b9bac2; --h-muted: #8a8b94; --h-muted2: #6f7078; --h-faint: #565761; --h-code: #d8dee9;
+    --h-accent: #e6e6e6; --h-accent-h: #ffffff; --h-accent2: #8a8b94; --h-accent-bg: #3a3b44; --h-on-accent: #18181b; --h-strong: #ffffff;
+    --h-yellow: #e8d3a8; --h-blue: #9ecbff; --h-blue2: #9db3d8; --h-purple: #c4a7e7; --h-green2: #a8d5b5; --h-ok: #8fd19e;
+    --h-green: #3fb950; --h-red: #f85149; --h-amber: #e3b341; --h-err-bg: #5c1f2b; --h-err-bg2: #7a2938; --h-err-text: #ffb3c0;
+    --h-title-shadow: 0 2px 3px rgba(0, 0, 0, .45), 0 8px 22px rgba(0, 0, 0, .5);
+  }
+  h1 { font-family: var(--h-head); font-weight: 800; font-stretch: 125%; letter-spacing: -.02em; text-shadow: var(--h-title-shadow); }
+  h1 span, h1 em { text-shadow: inherit; color: var(--h-muted); }
+
+  /* the theme slider: fixed top-right, no labels */
+  .hub-theme { position: fixed; top: 14px; right: 16px; z-index: 9999; }
+  .hub-theme button { all: unset; box-sizing: border-box; position: relative; display: block; width: 52px; height: 22px; border-radius: 999px; cursor: pointer;
+    background: linear-gradient(90deg, #f1efe9, #c9c4b7 38%, #3f3f46 62%, #09090b); border: 1px solid var(--h-border2); touch-action: none; }
+  .hub-theme button:focus-visible { outline: 2px solid var(--h-text); outline-offset: 3px; }
+  .hub-theme i { position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff;
+    box-shadow: 0 1px 2px rgba(0,0,0,.35), 0 0 0 1px rgba(0,0,0,.08); transition: left .4s cubic-bezier(.65, 0, .35, 1); }
+  :root[data-theme="dark"] .hub-theme i { left: 32px; }
+  .hub-theme.dragging i { transition: none; }
+  .hub-theme.docked { position: static; flex: none; display: flex; align-items: center; margin-left: 6px; }
+  [data-hub-theme-slot] { display: contents; }
+  @media (prefers-reduced-motion: reduce) { .hub-theme i { transition: none; } }
+  @media print { .hub-theme { display: none; } }
+</style>
+<!-- /studio-hub theme kit -->
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="./index.html">&larr; Studio Hub</a>
+  <h1>Duo <span>Translate</span></h1>
+  <p class="lead">A browser extension that translates web pages and puts the translation under each paragraph, so you can read both. Free, no account. Works in Chrome, Brave, Edge and Firefox on Windows and Mac.</p>
+  <div class="actions">
+    <a class="btn primary" href="extensions/duo-translate.zip" download>
+      <svg viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 19h14"/></svg>Download extension
+    </a>
+    <a class="btn" href="https://github.com/rajathpi/studio-hub/tree/main/extensions/duo-translate">Source</a>
+    <span class="meta">v0.1 &middot; 21 KB zip</span>
+  </div>
+
+  <h2>What it looks like</h2>
+  <div class="panel demo" id="demo" data-mode="dual">
+    <div class="demo-bar">
+      <span class="dots"><i></i><i></i><i></i></span>
+      <span class="seg" role="group" aria-label="Preview mode">
+        <button type="button" data-m="dual" aria-pressed="true">Both</button><button type="button" data-m="replace" aria-pressed="false">Translation</button><button type="button" data-m="off" aria-pressed="false">Original</button>
+      </span>
+    </div>
+    <div class="page">
+      <div class="tabs">
+        <span><span class="orig">Aktuellt</span><span class="tr" style="display:none">Current</span></span>
+        <span><span class="orig">Sport</span></span>
+        <span><span class="orig">Hästsport</span><span class="tr" style="display:none">Horse racing</span></span>
+        <span><span class="orig">Spelpaus</span><span class="tr" style="display:none">Gambling break</span></span>
+      </div>
+      <h3><span class="orig">Heta matcher på Oddset</span><span class="tr">Hot matches on Oddset</span></h3>
+      <p><span class="orig">Vi vill ge dig en så bra upplevelse som möjligt på våra webbplatser. Du kan när som helst ändra ditt val längst ner på sidan.</span>
+        <span class="tr">We want to give you the best possible experience on our websites. You can change your choice at any time at the bottom of the page.</span></p>
+    </div>
+  </div>
+  <p class="note">Paragraphs get the translation underneath. Short labels like tabs and buttons are swapped in place so the layout doesn't break.</p>
+
+  <h2>Install</h2>
+  <div class="browsers" role="tablist" id="browsers">
+    <button role="tab" data-b="chrome">Chrome</button>
+    <button role="tab" data-b="brave">Brave</button>
+    <button role="tab" data-b="edge">Edge</button>
+    <button role="tab" data-b="firefox">Firefox</button>
+  </div>
+  <div class="panel">
+    <ol class="steps" id="steps"></ol>
+  </div>
+  <p class="note" id="os-note"></p>
+
+  <h2>Using it</h2>
+  <div class="grid">
+    <div class="panel"><b>Turn it on</b><p>Press <kbd>Alt</kbd> <kbd>A</kbd>, or right-click the page and pick <em>Translate page</em>. Same again to show the original.</p></div>
+    <div class="panel"><b>Both or translation only</b><p>Click the extension icon to switch between showing both languages and the translation alone, and to pick the language.</p></div>
+    <div class="panel"><b>Always translate a site</b><p>Tick <em>Always translate</em> in the popup and that site opens translated every time.</p></div>
+    <div class="panel"><b>Fast on long pages</b><p>Only what's on screen is translated. The rest follows as you scroll, and new content is picked up as it loads.</p></div>
+  </div>
+
+  <h2>Where the text goes</h2>
+  <div class="panel" style="padding:16px 18px">
+    <p>Unlike the other tools here, this one sends text off your machine. Page text goes to Google Translate's free endpoint, the same one Chrome's own translate menu uses. In Chrome 138 and later you can download Chrome's on-device model from the popup. Then pages in that language are translated on your computer and work offline. Brave, Edge and Firefox don't include that model, so they always use Google.</p>
+  </div>
+
+  <footer>Part of <a href="./index.html">Studio Hub</a> &middot; MIT licence</footer>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+(() => {
+  // ----- preview modes -----
+  const demo = document.getElementById("demo");
+  demo.querySelector(".seg").addEventListener("click", (e) => {
+    const m = e.target.dataset.m;
+    if (!m) return;
+    demo.dataset.mode = m;
+    for (const b of demo.querySelectorAll(".seg button")) b.setAttribute("aria-pressed", String(b.dataset.m === m));
+    // tabs are labels: swapped in place, never shown twice
+    for (const t of demo.querySelectorAll(".tabs > span")) {
+      const tr = t.querySelector(".tr"), orig = t.querySelector(".orig");
+      if (!tr) continue;
+      tr.style.display = m === "off" ? "none" : "";
+      orig.style.display = m === "off" ? "" : "none";
+    }
+  });
+
+  // ----- install steps per browser -----
+  const isMac = /Mac/.test(navigator.platform || navigator.userAgent);
+  const STEPS = {
+    chrome: { url: "chrome://extensions", shortcuts: "chrome://extensions/shortcuts" },
+    brave: { url: "brave://extensions", shortcuts: "brave://extensions/shortcuts" },
+    edge: { url: "edge://extensions", shortcuts: "edge://extensions/shortcuts" },
+  };
+  const url = (u) => `<span class="url" data-copy="${u}" title="Click to copy">${u}</span>`;
+  function render(b) {
+    for (const t of document.querySelectorAll("#browsers button")) t.setAttribute("aria-selected", String(t.dataset.b === b));
+    let html;
+    if (b === "firefox") {
+      html = [
+        "Download the zip above. You don't need to unzip it.",
+        `Open ${url("about:debugging#/runtime/this-firefox")} in a new tab. Browsers block these links, so click it to copy, then paste.`,
+        "Click <b>Load Temporary Add-on</b> and pick the zip.",
+        "When Firefox asks, allow access to all sites. This load lasts until Firefox restarts, so repeat it after a restart.",
+      ];
+    } else {
+      const s = STEPS[b];
+      html = [
+        `Download the zip above and unzip it. ${isMac ? "Double-click it in Finder" : "Right-click &rarr; Extract All"}. That gives you a <code>duo-translate</code> folder.`,
+        `Open ${url(s.url)} in a new tab. Browsers block these links, so click it to copy, then paste.`,
+        "Turn on <b>Developer mode</b>" + (b === "edge" ? " (left side)." : " (top right)."),
+        "Click <b>Load unpacked</b> and pick the <code>duo-translate</code> folder. Keep the folder where it is; the browser reads it from there.",
+        "Reload tabs that were already open. Then press <kbd>Alt</kbd> <kbd>A</kbd> on any page.",
+      ];
+    }
+    document.getElementById("steps").innerHTML = html.map((h) => `<li><span>${h}</span></li>`).join("");
+    const sc = b === "firefox" ? "about:addons &rarr; gear &rarr; Manage Extension Shortcuts" : url(STEPS[b].shortcuts);
+    document.getElementById("os-note").innerHTML = isMac
+      ? `On a Mac the shortcut is <kbd>Option</kbd> <kbd>A</kbd>, which normally types "å". If you need that, pick another key at ${sc}.`
+      : `If another extension already uses <kbd>Alt</kbd> <kbd>A</kbd>, the browser leaves it unset. Pick a key at ${sc}.`;
+  }
+  const guess = navigator.brave ? "brave" : /Firefox\//.test(navigator.userAgent) ? "firefox" : /Edg\//.test(navigator.userAgent) ? "edge" : "chrome";
+  document.getElementById("browsers").addEventListener("click", (e) => e.target.dataset.b && render(e.target.dataset.b));
+  render(guess);
+
+  // ----- copy browser-internal urls -----
+  const toast = document.getElementById("toast");
+  document.addEventListener("click", async (e) => {
+    const u = e.target.closest("[data-copy]");
+    if (!u) return;
+    try { await navigator.clipboard.writeText(u.dataset.copy); toast.textContent = "Copied. Paste it in the address bar."; }
+    catch (err) { toast.textContent = "Couldn't copy. Type it in the address bar."; }
+    toast.classList.add("on");
+    clearTimeout(toast.t); toast.t = setTimeout(() => toast.classList.remove("on"), 1800);
+  });
+})();
+</script>
+<!-- studio-hub theme slider -->
+<div class="hub-theme" title="Light / dark"><button type="button" role="switch" aria-label="Dark theme" aria-checked="false"><i></i></button></div>
+<script>
+(() => {
+  const root = document.documentElement, wrap = document.querySelector(".hub-theme"), btn = wrap.querySelector("button"), knob = btn.querySelector("i");
+  const slot = document.querySelector("[data-hub-theme-slot]");
+  if (slot) { slot.append(wrap); wrap.classList.add("docked"); }  // app pages: sit at the end of the toolbar
+  const sync = () => btn.setAttribute("aria-checked", String(root.dataset.theme === "dark"));
+  const set = (t) => {
+    root.dataset.theme = t; knob.style.left = ""; sync();
+    try { localStorage.setItem("hubTheme", t); } catch (e) {}
+    window.dispatchEvent(new CustomEvent("hubthemechange", { detail: t }));
+  };
+  // Click toggles; a drag snaps to whichever end it is released nearer.
+  let drag = null, skipClick = false;
+  const frac = (e) => { const r = btn.getBoundingClientRect(); return Math.min(1, Math.max(0, (e.clientX - r.left - 10) / (r.width - 20))); };
+  btn.addEventListener("pointerdown", (e) => { drag = { x: e.clientX, moved: false }; btn.setPointerCapture(e.pointerId); });
+  btn.addEventListener("pointermove", (e) => {
+    if (!drag) return;
+    if (Math.abs(e.clientX - drag.x) > 3) { drag.moved = true; wrap.classList.add("dragging"); }
+    if (drag.moved) knob.style.left = 2 + frac(e) * 30 + "px";
+  });
+  btn.addEventListener("pointerup", (e) => {
+    wrap.classList.remove("dragging");
+    if (drag && drag.moved) { set(frac(e) > 0.5 ? "dark" : "light"); skipClick = true; }
+    drag = null;
+  });
+  btn.addEventListener("click", () => { if (skipClick) { skipClick = false; return; } set(root.dataset.theme === "dark" ? "light" : "dark"); });
+  btn.addEventListener("keydown", (e) => { if (e.key === "ArrowLeft") set("light"); if (e.key === "ArrowRight") set("dark"); });
+  // Another tab changed it: follow along.
+  window.addEventListener("storage", (e) => { if (e.key === "hubTheme") { root.dataset.theme = e.newValue === "dark" ? "dark" : "light"; sync(); } });
+  sync();
+})();
+</script>
+<!-- /studio-hub theme slider -->
+</body>
+</html>

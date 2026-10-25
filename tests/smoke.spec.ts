@@ -11,7 +11,7 @@ const NO_THIRD_PARTY_SCRIPTS = new Set(['pdf-studio.html']);
 const PAGES = [
   'index.html', 'diff-studio.html', 'regex-studio.html', 'merge-studio.html', 'blob-studio.html',
   'pattern-studio.html', 'mermaid-live.html', 'pdf-studio.html', 'markdown-studio.html', 'wallpaper-studio.html',
-  'snap-studio.html', 'color-studio.html', 'qr-studio.html', 'time-studio.html', 'convert-studio.html',
+  'snap-studio.html', 'color-studio.html', 'qr-studio.html', 'time-studio.html', 'convert-studio.html', 'translate-studio.html',
   // ocr-studio and outfit-studio stream language data and figures from other hosts, so they sit outside this check
 ];
 

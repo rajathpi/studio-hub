@@ -1,0 +1,36 @@
+{
+  "manifest_version": 3,
+  "name": "Duo Translate",
+  "version": "0.1.0",
+  "description": "Translates web pages and shows the translation under each paragraph. Free, no account.",
+  "permissions": ["storage", "contextMenus"],
+  "host_permissions": ["https://clients5.google.com/*"],
+  "background": {
+    "service_worker": "background.js",
+    "scripts": ["background.js"]
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "css": ["content.css"],
+      "all_frames": true,
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Duo Translate (Alt+A)",
+    "default_icon": { "16": "icons/16.png", "32": "icons/32.png", "48": "icons/48.png" }
+  },
+  "icons": { "16": "icons/16.png", "32": "icons/32.png", "48": "icons/48.png", "128": "icons/128.png" },
+  "commands": {
+    "toggle": {
+      "suggested_key": { "default": "Alt+A", "mac": "Alt+A" },
+      "description": "Translate this page, or show the original again"
+    }
+  },
+  "browser_specific_settings": {
+    "gecko": { "id": "duo-translate@rajathpi", "strict_min_version": "121.0" }
+  }
+}
