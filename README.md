@@ -1,12 +1,14 @@
 # Studio Hub
 
-**Small tools that run in your browser.** PDFs, markdown, diagrams, diffs, regex, mail merge, generative art and avatars, each one a single file: no install, no accounts, no server, and nothing you open ever leaves your machine.
+**Small tools that run in your browser.** Screenshots, OCR, colours, QR codes, PDFs, markdown, diagrams, diffs, regex, mail merge, time zones, unit conversion, generative art, wallpapers, avatars and a dressed 3D figure, each one a single file: no install, no accounts, no server, and nothing you open ever leaves your machine.
 
 ### → [Open Studio Hub](https://rajathpi.github.io/studio-hub/)
 
 Every browser-only tool runs straight from that link, with no clone and no build step. Or download the files and open `index.html` from disk; they behave the same, offline included.
 
 ![Studio Hub](docs/hub.png)
+
+The hub shows the three tools reached for most as big cards with their line figures and the rest as a quiet grid; every tool is one line in [`_theme/tools.js`](_theme/tools.js).
 
 > **Tip:** Merge, PDF, Mermaid and Regex Studio have a **?** button (bottom left) that starts a short guided tour. It is also offered once on your first visit.
 
@@ -19,6 +21,22 @@ Every tool here is one self-contained `.html` file: open it from disk, it works 
 - **Trivially portable.** Email a tool to a colleague; it still works.
 
 ## The tools
+
+### Snap Studio — [`snap-studio.html`](snap-studio.html)
+
+Take a screenshot (Win+Shift+S or ⌘⇧4), press Ctrl/⌘+V on the page, and mark it up: pen, see-through marker, box (Shift for a square) and arrow, in six colours and three weights. Marks stay editable: pick the Move tool, drag a box or an arrow somewhere else, pull its corner dots to resize it, recolour or delete it; everything undoes. Ctrl/⌘+C puts the finished picture back on the clipboard at full resolution, Ctrl/⌘+S saves a PNG.
+
+### OCR Studio — [`ocr-studio.html`](ocr-studio.html)
+
+Paste a screenshot and get selectable text back, in Swedish, English or both. Word boxes can be shown on the image, a dragged rectangle reads only that part, and a Table tab rebuilds rows and columns from the word positions so a screenshot of a table pastes into Excel or Sheets as cells (or as Markdown). Built on [Tesseract.js](https://github.com/naptha/tesseract.js) (Apache-2.0); the language data downloads once from jsDelivr and is cached.
+
+### Color Studio — [`color-studio.html`](color-studio.html)
+
+Paste a screenshot, hover for a magnified pixel grid with the exact hex, click to keep a colour (hex, RGB, HSL, nearest CSS name, all click-to-copy), or pick from anywhere on screen with the eyedropper. An automatic palette pulls the dominant colours with their share of the image; two picked colours get a WCAG contrast check; palettes export as CSS variables, JSON, a Tailwind object or a PNG strip.
+
+### QR Studio — [`qr-studio.html`](qr-studio.html)
+
+Make a QR code for a link, Wi-Fi network, contact, email, SMS or phone number and see it in twelve styles at once, from classic to dots, gradients, captioned cards and a centre logo; every card is read back to confirm it still scans. Customise one and export it as a 1024 px PNG, an SVG, a clipboard image or a printable Wi-Fi card. The Scan tab reads a code from a pasted screenshot, a file or the camera and shows what it says, with copy buttons for Wi-Fi passwords. Rendering by [qr-code-styling](https://github.com/kozakdenys/qr-code-styling) (MIT), reading by [jsQR](https://github.com/cozmo/jsQR) (Apache-2.0).
 
 ### PDF Studio — [`pdf-studio.html`](pdf-studio.html)
 
@@ -102,6 +120,22 @@ Patterns built around a centre have a **Composition** setting for wide and multi
 
 The **Desk · multi-monitor** format turns any pattern into one wallpaper that runs across several screens. **Detect my screens** reads your monitors and exactly where Windows places them (Chrome and Edge ask permission once; other browsers see one screen, and you add the rest by hand). Then drag them into the order they stand on your desk and check each diagonal, since browsers can't read inches. The pattern is laid out in real centimetres over the whole desk, so a line keeps its size and carries on across the bezels even when the screens have different pixel densities. Export a Windows **Span** PNG placed exactly where Windows shows each screen, a zip with one PNG per screen (for macOS or per-monitor wallpapers), or a preview of the desk. After a Span export a short card walks through the last step: Settings › Personalization › Background, Picture, fit **Span**. Setting it from Photos or a right-click uses Fill instead, which squeezes the whole picture onto every screen.
 
+### Time Studio — [`time-studio.html`](time-studio.html)
+
+The same instant in several cities, hour by hour. Rows for Gothenburg, Mangalore, New York and San Francisco by default (add any of ~175 cities or an IANA zone, rename them, mark each as work or family), aligned to the home row so one column is one moment, coloured for night, morning/evening and working hours. Hover to read every zone, click to pin a time, pick another date (DST-correct), and the board lists the hours that suit everyone. Copy puts a one-line summary on the clipboard; .ics downloads a meeting at the pinned time.
+
+### Convert Studio — [`convert-studio.html`](convert-studio.html)
+
+Eighteen converter groups on one page: currency (SEK, INR, USD, EUR, GBP, NOK, DKK, CHF, JPY, AED, live ECB rates kept for offline use), big numbers with lakh and crore, length, height in feet and inches, area (with cent and gunta), volume, weight (with tola), temperature, speed, running pace, fuel economy, data, internet speed, time, energy, power, pressure and angle. Type in any box and the rest of its group updates; click a unit to copy; search finds a unit by name.
+
+### Wallpaper Studio — [`wallpaper-studio.html`](wallpaper-studio.html)
+
+One wallpaper across several screens. Detect your monitors (or add them by hand), drag them into the order they stand on your desk, and lay a pattern over the whole desk in real centimetres so lines carry on across the bezels. Export a Windows Span PNG, one PNG per screen for macOS, or a preview of the desk.
+
+### Outfit Studio — [`outfit-studio.html`](outfit-studio.html)
+
+Sanzo Wada's 348 colour combinations from *A Dictionary of Color Combinations* (1933), worn by real people. Pick one of 111 figures from Microsoft's [Rocketbox](https://github.com/microsoft/Microsoft-Rocketbox) library (MIT) — they stand, look around, talk, wave and dance on their own — then pick a combination and each garment is recoloured to it while skin and hair stay as they are; folds and shading survive because only the hue changes. Swap colours between garments, filter combinations by a colour, save a PNG. Figures and motions stream from GitHub, so this one needs a connection. Colour data from [dictionary-of-colour-combinations](https://github.com/mattdesl/dictionary-of-colour-combinations) (MIT).
+
 ### Blob Studio — [`blob-studio.html`](blob-studio.html)
 
 Type any string — a username, an email, a repo — and get a deterministic blob avatar: the same name always gives the same creature. Pick one of 14 moods, pin the shape, hue or tone, add a backdrop, and export a 512 px SVG or PNG. The big preview idles and follows your cursor; the crowd below shows variations on the name.
@@ -148,7 +182,8 @@ Each tool remembers its inputs between sessions (localStorage). Every tool excep
 
 - Everything works in any modern browser.
 - Mermaid Studio's **Open folder…** (real files on disk) uses the File System Access API: Chrome, Edge, and Arc have it enabled; **Brave** ships it disabled — enable `brave://flags/#file-system-access-api` and relaunch. Safari/Firefox fall back to an in-browser project.
-- PDF Studio loads its PDF, Office and rasterising libraries from a CDN on first open, so that one needs a connection the first time (the page is cached afterwards). Every other browser tool is fully self-contained.
+- PDF Studio loads its PDF, Office and rasterising libraries from a CDN on first open, so that one needs a connection the first time (the page is cached afterwards). OCR Studio fetches its language data once, QR Studio its two small libraries, and Outfit Studio streams its figures from GitHub every time. Every other browser tool is fully self-contained.
+- Time and Convert Studio fetch the day's exchange rates from the European Central Bank feed at api.frankfurter.dev when online, and keep the last rates for offline use. Nothing about you goes with the request.
 - Code Studio requires Python 3 (preinstalled on macOS and most Linux distros) for its local runner. It is the one tool the hosted hub can't run, since it needs a compiler on your machine.
 
 ## License

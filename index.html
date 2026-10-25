@@ -18,62 +18,42 @@
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { min-height: 100%; }
-  body {
-    font-family: var(--h-font); background: var(--bg); color: var(--text);
-    display: flex; flex-direction: column; align-items: center; padding: 11vh 24px 48px;
-    transition: background-color .4s, color .4s;
-  }
+  body { font-family: var(--h-font); background: var(--bg); color: var(--text); padding: 8vh 24px 48px; transition: background-color .4s, color .4s; --hairline-plate: var(--panel); }
   a { color: inherit; text-decoration: none; }
-  h1 { font-size: 44px; letter-spacing: -.02em; text-align: center; }
-  .sub { color: var(--muted); font-size: 14px; margin: 12px 0 46px; text-align: center; }
-  #grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; width: 100%; max-width: 980px; }
+  .wrap { max-width: 980px; margin: 0 auto; }
+  .head { display: flex; align-items: baseline; justify-content: space-between; gap: 20px; flex-wrap: wrap; margin-bottom: 26px; }
+  h1 { font-size: 40px; letter-spacing: -.02em; }
+  .sub { color: var(--muted); font-size: 14px; }
+  /* three big cards: the tools reached for daily, each with its line figure */
+  .big { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 14px; }
   .tile {
-    background: var(--panel); border: 1px solid var(--border); border-radius: 16px; padding: 24px 22px 20px; min-height: 172px;
-    display: flex; flex-direction: column; justify-content: space-between; gap: 26px;
-    transition: transform .15s ease, border-color .15s ease, background-color .15s ease;
-    --hairline-plate: var(--panel);
+    background: var(--panel); border: 1px solid var(--border); border-radius: 18px; padding: 24px 22px 20px; min-height: 230px;
+    display: flex; flex-direction: column; justify-content: space-between; gap: 22px;
+    transition: transform .15s ease, border-color .15s ease, background-color .15s ease; --hairline-plate: var(--panel);
   }
   .tile:hover { transform: translateY(-3px); border-color: var(--text); background: var(--panel-h); --hairline-plate: var(--panel-h); }
-  .tile:focus-visible { outline: 2px solid var(--text); outline-offset: 3px; }
-  .icon svg { display: block; width: 30px; height: 30px; }
-  .txt b { display: block; font-family: var(--h-head); font-stretch: 112%; font-weight: 700; font-size: 17px; }
-  .txt b em { font-style: normal; font-weight: 600; color: var(--muted); }
-  /* captions reserve two lines, so every name sits at the same height */
-  .txt small { display: block; color: var(--muted); font-size: 13px; line-height: 1.4; margin-top: 3px; min-height: 2.8em; }
-  .tile.dim { background: transparent; border-style: dashed; opacity: .6; --hairline-plate: var(--bg); }
-  .tile.dim:hover { opacity: .85; background: transparent; --hairline-plate: var(--bg); }
-  footer { margin-top: 54px; font-size: 12px; color: var(--muted2); text-align: center; }
-  footer a { color: var(--muted); text-decoration: underline; text-underline-offset: 2px; text-decoration-thickness: 1px; }
-  @media (max-width: 600px) { h1 { font-size: 34px; } body { padding-top: 8vh; } #grid { grid-template-columns: 1fr 1fr; gap: 10px; } .tile { min-height: 150px; padding: 18px 16px 16px; } .txt b em { display: none; } }
-
-  /* ---- line figures (Hairline): each tool's figure fills the top of its card, bled to the edges ---- */
-  body { --hairline-plate: var(--panel); }
+  .tile:focus-visible, .small a:focus-visible { outline: 2px solid var(--text); outline-offset: 3px; }
   .tile .fig { display: block; margin: -16px -18px -18px; }
   .fig svg :is(path, ellipse, polygon) { transition: stroke 260ms cubic-bezier(.5, 0, .1, 1), fill .15s ease; }
-  /* a card that keeps its plate icon: the plate sits centred in the same area a figure takes */
-  .tile .fig.keep { display: grid; place-items: center; aspect-ratio: 5 / 4; }
-  @media (max-width: 600px) { .tile { gap: 14px; } .tile .fig { margin: -14px -12px -8px; } .txt b { font-size: 16px; } .txt small { font-size: 12.5px; } }
-
-  /* ---- icons: alive line glyphs on raised 3D plates ---- */
-  :root { --plate-a: #ffffff; --plate-b: #e9e5dc; --plate-edge: #d6d0c3; --plate-glow: rgba(24,24,27,.16); }
-  :root[data-theme="dark"] { --plate-a: #2c2c32; --plate-b: #19191d; --plate-edge: #3a3a42; --plate-glow: rgba(0,0,0,.55); }
-  .icon { display: block; width: 54px; height: 54px; perspective: 300px; }
-  .plate { width: 52px; height: 52px; border-radius: 15px; display: grid; place-items: center; position: relative;
-    background: linear-gradient(160deg, var(--plate-a), var(--plate-b)); border: 1px solid var(--plate-edge);
-    box-shadow: 0 1px 0 rgba(255,255,255,.6) inset, 0 10px 18px -6px var(--plate-glow), 0 3px 5px -2px var(--plate-glow);
-    transform: rotateX(10deg) rotateY(-12deg); transition: transform .35s cubic-bezier(.2,.7,.2,1); }
-  :root[data-theme="dark"] .plate { box-shadow: 0 1px 0 rgba(255,255,255,.08) inset, 0 10px 18px -6px var(--plate-glow), 0 3px 5px -2px var(--plate-glow); }
-  .plate::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
-    background: radial-gradient(120% 80% at var(--gx, 30%) var(--gy, 0%), rgba(255,255,255,.5), transparent 55%); mix-blend-mode: soft-light; }
-  .tile:hover .plate { transition-duration: .12s; }
-  .plate svg { width: 26px !important; height: 26px !important; overflow: visible; }
-  .plate svg * { transform-box: fill-box; transform-origin: center; }
-  .cd .l { animation: ic-breathe-l 2s ease-in-out infinite; } .cd .r { animation: ic-breathe-r 2s ease-in-out infinite; }
-  .cd .cur { animation: ic-caret 1s steps(1) infinite; }
-  @keyframes ic-breathe-l { 50% { transform: translateX(-1.4px); } }
-  @keyframes ic-breathe-r { 50% { transform: translateX(1.4px); } }
-  @keyframes ic-caret { 50% { opacity: .15; } }
-  @media (prefers-reduced-motion: reduce) { .plate svg * { animation: none !important; } .plate { transition: none; } }
+  .txt b { display: block; font-family: var(--h-head); font-stretch: 112%; font-weight: 700; font-size: 18px; }
+  .txt b em { font-style: normal; font-weight: 600; color: var(--muted); }
+  .txt small { display: block; color: var(--muted); font-size: 13px; line-height: 1.4; margin-top: 3px; }
+  /* the rest: small, quiet, one line each */
+  .small { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+  .small a { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; display: flex; align-items: center; gap: 10px; transition: border-color .15s, background-color .15s; }
+  .small a:hover { border-color: var(--text); background: var(--panel-h); }
+  .small svg { width: 20px; height: 20px; flex: none; fill: none; stroke: var(--text); stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+  .small span { min-width: 0; }
+  .small b { font-family: var(--h-head); font-stretch: 112%; font-weight: 700; font-size: 14px; display: block; }
+  .small small { display: block; color: var(--muted); font-size: 11.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .small a.dim { opacity: .55; border-style: dashed; background: transparent; }
+  footer { margin-top: 48px; font-size: 12px; color: var(--muted2); }
+  footer a { color: var(--muted); text-decoration: underline; text-underline-offset: 2px; text-decoration-thickness: 1px; }
+  @media (max-width: 700px) {
+    body { padding-top: 6vh; } h1 { font-size: 34px; }
+    .big { grid-template-columns: 1fr; } .tile { min-height: 0; padding: 18px 16px 16px; gap: 10px; } .tile .fig { margin: -14px -12px -8px; }
+    .small { grid-template-columns: 1fr 1fr; }
+  }
 </style>
 <!-- studio-hub theme kit v1: fonts, light/dark tokens, title shadow, theme slider. Source: _theme/kit.html, inlined by _theme/apply.py -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource-variable/mona-sans@5.3.0/wdth.css">
@@ -122,68 +102,22 @@
 <!-- /studio-hub theme kit -->
 </head>
 <body>
-<h1>Studio <span>Hub</span></h1>
-<p class="sub">Small tools that run in your browser. Nothing leaves your machine.</p>
-<nav id="grid" aria-label="Tools">
-  <a class="tile" href="./pdf-studio.html">
-    <span class="fig" data-fig="pdf"></span>
-    <span class="txt"><b>PDF <em>Studio</em></b><small>Merge, split and convert PDFs</small></span>
-  </a>
-  <a class="tile" href="./markdown-studio.html">
-    <span class="fig" data-fig="markdown"></span>
-    <span class="txt"><b>Markdown <em>Studio</em></b><small>Write, preview, export a PDF</small></span>
-  </a>
-  <a class="tile" href="./mermaid-live.html">
-    <span class="fig" data-fig="mermaid"></span>
-    <span class="txt"><b>Mermaid <em>Studio</em></b><small>Diagrams from plain text</small></span>
-  </a>
-  <a class="tile" href="./diff-studio.html">
-    <span class="fig" data-fig="diff"></span>
-    <span class="txt"><b>Diff <em>Studio</em></b><small>See what changed between texts</small></span>
-  </a>
-  <a class="tile" href="./regex-studio.html">
-    <span class="fig" data-fig="regex"></span>
-    <span class="txt"><b>Regex <em>Studio</em></b><small>Test and explain patterns</small></span>
-  </a>
-  <a class="tile" href="./merge-studio.html">
-    <span class="fig" data-fig="merge"></span>
-    <span class="txt"><b>Merge <em>Studio</em></b><small>Mail merge, without the cloud</small></span>
-  </a>
-  <a class="tile" href="./pattern-studio.html">
-    <span class="fig" data-fig="pattern"></span>
-    <span class="txt"><b>Pattern <em>Studio</em></b><small>Generative art and wallpapers</small></span>
-  </a>
-  <a class="tile" href="./blob-studio.html">
-    <span class="fig" data-fig="blob"></span>
-    <span class="txt"><b>Blob <em>Studio</em></b><small>An avatar for any name</small></span>
-  </a>
-  <a class="tile dim" href="https://github.com/rajathpi/studio-hub#code-studio--code-studiopy--code-studiohtml" title="Needs a local Python runner: clone the repo and run code-studio.command">
-    <span class="fig keep"><span class="icon"><span class="plate"><svg class="cd" viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path class="l" d="M8 7.5 3.5 12 8 16.5"/><path class="r" d="M16 7.5l4.5 4.5-4.5 4.5"/><path class="cur" d="M14 4.5l-4 15"/></g></svg></span></span></span>
-    <span class="txt"><b>Code <em>Studio</em></b><small>Runs locally &middot; clone to use</small></span>
-  </a>
-</nav>
-<footer>Every tool is one file &middot; works offline &middot; <a href="https://github.com/rajathpi/studio-hub">GitHub</a></footer>
+<div class="wrap">
+  <div class="head"><h1>Studio <span>Hub</span></h1><p class="sub">Small tools that run in your browser. Nothing leaves your machine.</p></div>
+  <nav class="big" aria-label="Most used tools">
+    <a class="tile" href="./snap-studio.html"><span class="fig" data-fig="snap"></span><span class="txt"><b>Snap <em>Studio</em></b><small>Paste a screenshot, draw on it, copy it back</small></span></a>
+    <a class="tile" href="./pdf-studio.html"><span class="fig" data-fig="pdf"></span><span class="txt"><b>PDF <em>Studio</em></b><small>Merge, split and convert PDFs</small></span></a>
+    <a class="tile" href="./time-studio.html"><span class="fig" data-fig="time"></span><span class="txt"><b>Time <em>Studio</em></b><small>Gothenburg, Mangalore and the US on one board</small></span></a>
+  </nav>
+  <nav class="small" id="small" aria-label="All tools"></nav>
+  <footer>Every tool is one file &middot; works offline &middot; <a href="https://github.com/rajathpi/studio-hub">GitHub</a></footer>
+</div>
+<script src="_theme/tools.js"></script>
 <script>
-  // Plates lean toward the cursor while you point at a tile, then settle back.
-  // Each tile's loop also starts at a different point, so the grid ripples rather than moving in step.
-  (() => {
-    const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
-    document.querySelectorAll(".tile").forEach((t, i) => {
-      const plate = t.querySelector(".plate"); if (!plate) return;
-      plate.querySelectorAll("*").forEach((el) => {
-        const cs = getComputedStyle(el);
-        if (cs.animationName !== "none") el.style.animationDelay = `calc(${cs.animationDelay.split(",")[0]} - ${i * 0.37}s)`;
-      });
-      if (still) return;
-      t.addEventListener("pointermove", (e) => {
-        const r = plate.getBoundingClientRect();
-        const x = Math.max(-1, Math.min(1, (e.clientX - r.left) / r.width - .5)), y = Math.max(-1, Math.min(1, (e.clientY - r.top) / r.height - .5));
-        plate.style.transform = `rotateY(${x * 26}deg) rotateX(${-y * 26}deg) translateY(-2px)`;
-        plate.style.setProperty("--gx", `${(x + .5) * 100}%`); plate.style.setProperty("--gy", `${(y + .5) * 100}%`);
-      });
-      t.addEventListener("pointerleave", () => { plate.style.transform = ""; plate.style.removeProperty("--gx"); plate.style.removeProperty("--gy"); });
-    });
-  })();
+  // the rest of the tools, from the one shared list
+  const FEATURED = ["snap", "pdf", "time"];
+  document.getElementById("small").innerHTML = TOOLS.filter((t) => !FEATURED.includes(t.id)).map((t) =>
+    `<a href="${t.page}" class="${t.dim ? "dim" : ""}"${t.dim ? ' title="Needs a local Python runner: clone the repo and run code-studio.command"' : ""}><svg viewBox="0 0 24 24" aria-hidden="true">${t.glyph}</svg><span><b>${t.name}</b><small>${t.blurb}</small></span></a>`).join("");
 </script>
 <!-- line figures: the Hairline kernel (unchanged, @lucasmarkes/hairline), one module per tool, then the mount -->
 <script id="hl-kernel">
@@ -1019,757 +953,232 @@ hairline({
   mount,
 });
 </script>
-<script type="module" data-figure="markdown">
+<script type="module" data-figure="snap">
 /**
- * Markdown: a page of plain lines. Behind the pointer the page is rendered:
- * each line rises into a block, the heading the tallest and widest, a quote
- * set in with a bar, list items with a dot; ahead of it the lines stay flat
- * source. The rows rise one after another as the pointer passes. At rest the
- * heading is up and bright. The slider is how tall a rendered line stands.
+ * Snap: a screenshot lying on the table, a thin card with a title bar, a
+ * sidebar and a picture, and a marker pen standing beside it. The pointer's
+ * spot on the card is where the box goes: a rounded box grows round it, bright,
+ * and a short arrow from the far corner points at it, while the pen's nib moves
+ * to the box's corner as if it had just drawn it. Leaving shrinks the box away
+ * and the pen stands back on the table, bright. The slider is the box's width.
  *
- * The pattern: scrub. One spring per row, aimed by where the pointer sits on
- * the ground plane, which never moves.
+ * The pattern: a continuous answer. Springs for where the box is, its size, the
+ * arrow's foot and the nib, all aimed from the pointer's point on the card's
+ * top, which never moves.
  */
-const { Cam, clamp, fit, open, poly, proj, ringAt, rings, run, hull, seg, unproj, facing, spring, stepS, flatDot, place, mk, pointer, register, disposer } = HL;
+const { Cam, clamp, fit, hull, open, poly, proj, ringAt, rrect, run, seg, unproj, spring, stepS, flatDot, place, mk, pointer, register, disposer } = HL;
 
-const W = 54, D = 66, T = 1.6;
-// each row: y, x0, length, width, height share, kind
-const ROWS = [
-  { y: 7, x: 6, l: 34, w: 6, h: 1, k: "head" },
-  { y: 18, x: 6, l: 40, w: 3, h: 0.35 },
-  { y: 25, x: 6, l: 30, w: 3, h: 0.35 },
-  { y: 34, x: 11, l: 30, w: 3, h: 0.45, k: "quote" },
-  { y: 44, x: 11, l: 26, w: 3, h: 0.35, k: "item" },
-  { y: 51, x: 11, l: 32, w: 3, h: 0.35, k: "item" },
-  { y: 58, x: 11, l: 20, w: 3, h: 0.35, k: "item" },
-];
+const W = 64, D = 46, T = 1.6, PR = 2.6, AX = [9, -6, 26], ARROW = 22;
+const REST_TIP = [W + 10, 18, 0];
+const CORNERS = [[6, 11], [W - 6, 11], [6, D - 5], [W - 6, D - 5]];
+// the screenshot's own lines: title bar, sidebar, sidebar rows, text rows, a picture
+const LINES = [[[2, 7], [W - 2, 7]], [[17, 7], [17, D - 2]], [[4, 12], [13, 12]], [[4, 17], [11, 17]], [[4, 22], [13, 22]],
+  [[21, 13], [52, 13]], [[21, 19], [58, 19]], [[21, 25], [44, 25]]];
+
+const len = (v) => Math.hypot(...v), unit = (v) => { const l = len(v); return v.map((x) => x / l); };
+const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
 
 function mount({ stage, svg, read }, value) {
   const bag = disposer();
-  let TALL = value;
-  const C = Cam(45, 0.5, 3.7);
-  fit(C, [[0, 0, 0], [W, D, 0], [W, 0, 0], [0, D, 0], [0, 0, T + 10], [W, 0, T + 10]], 200, 166);
-  const P = proj(C), front = facing(C);
+  let SIZE = value;
+  const C = Cam(45, 0.5, 3.15);
+  // the card, the pen at its farthest reach on the card, and the pen at rest
+  fit(C, [[0, 0, 0], [W, 0, 0], [0, D, 0], [W, D, 0], [W - 2 + AX[0], 5 + AX[1], T + AX[2] + 2],
+    [REST_TIP[0] + AX[0] + 4, REST_TIP[1] + AX[1], AX[2] + 2], [REST_TIP[0] + 3, REST_TIP[1] + 3, 0]], 200, 166);
+  const P = proj(C);
+  const view = [Math.sin(C.az), Math.cos(C.az), C.k / Math.sqrt(1 - C.k * C.k)];
+
+  // the pen's axis and the two directions round it, fixed: the pen only slides
+  const a = unit(AX), L = len(AX), e1 = unit(cross(a, [0, 0, 1])), e2 = cross(a, e1);
+  const along = (tip, t, r, n = 40) => Array.from({ length: n }, (_, k) => {
+    const c = Math.cos((k / n) * Math.PI * 2), s = Math.sin((k / n) * Math.PI * 2);
+    const nv = [c * e1[0] + s * e2[0], c * e1[1] + s * e2[1], c * e1[2] + s * e2[2]];
+    return { p: P(tip[0] + a[0] * t + r * nv[0], tip[1] + a[1] * t + r * nv[1], tip[2] + a[2] * t + r * nv[2]), f: nv[0] * view[0] + nv[1] * view[1] + nv[2] * view[2] >= 0 };
+  });
+  const near = (ring) => open(run(ring, (q) => q.f).map((q) => q.p));
+  // the generator nearest the eye, where the cap's clip runs
+  const vd = a[0] * view[0] + a[1] * view[1] + a[2] * view[2];
+  const nf = unit(view.map((v, i) => v - vd * a[i]));
 
   const g = mk("g", {}, svg);
-  const [pr, pi] = rings(0, 0, W, D, 3, 1.1);
-  mk("path", { d: poly(hull(ringAt(P, pr, 0).concat(ringAt(P, pr, T)))), class: "sil" }, g);
-  mk("path", { d: open(ringAt(P, run(pi, front), T)), class: "nf lo" }, g);
+  const [cr, ci] = [rrect(0, 0, W, D, 3), rrect(1.1, 1.1, W - 1.1, D - 1.1, 1.9)];
+  mk("path", { d: poly(hull(ringAt(P, cr, 0).concat(ringAt(P, cr, T)))), class: "sil" }, g);
+  mk("path", { d: open(ringAt(P, run(ci, (q) => q.nu * view[0] + q.nv * view[1] >= 0), T)), class: "nf lo" }, g);
+  mk("path", { d: LINES.map(([p, q]) => seg(P(p[0], p[1], T), P(q[0], q[1], T))).join("") + poly(ringAt(P, rrect(21, 30, 46, 41, 1.6), T)), class: "nf lo" }, g);
+  [4.5, 8, 11.5].forEach((x) => place(flatDot(g, C, 0.9, "dot off"), P(x, 3.6, T)));
 
-  // rows from the far edge forward, so a nearer block covers a farther one
-  const rows = ROWS.map((r, i) => {
-    const grp = mk("g", {}, g);
-    const [ring, inner] = rings(r.x, r.y - r.w / 2, r.x + r.l, r.y + r.w / 2, r.w / 2, Math.min(0.8, r.w / 4));
-    const el = {
-      r, i, ring, inner, grp,
-      flat: mk("path", { class: "nf" }, grp),
-      sil: mk("path", { class: i === 0 ? "sil hi" : "sil" }, grp), cr: mk("path", { class: "nf lo" }, grp),
-      sp: spring(i === 0 ? 1 : 0), drawn: NaN,
-    };
-    if (r.k === "quote") el.bar = mk("path", { class: "nf" }, grp);
-    if (r.k === "item") el.dot = flatDot(grp, C, 1, "dot m");
-    return el;
-  });
+  const box = mk("path", { class: "nf hi" }, g), arrow = mk("path", { class: "nf hi" }, g);
+  const pen = mk("g", {}, g);
+  const body = mk("path", { class: "sil hi" }, pen), creases = mk("path", { class: "nf lo" }, pen), clip = mk("path", { class: "nf" }, pen);
 
-  function draw(el) {
-    const k = clamp(el.sp.x, 0, 1.2);
-    if (k === el.drawn) return;
-    el.drawn = k;
-    const { r } = el, h = Math.max(0.01, k * TALL * r.h);
-    const shown = k > 0.02;
-    el.flat.setAttribute("d", shown ? "" : seg(P(r.x, r.y, T), P(r.x + r.l, r.y, T)));
-    el.sil.setAttribute("d", shown ? poly(hull(ringAt(P, el.ring, T).concat(ringAt(P, el.ring, T + h)))) : "");
-    el.cr.setAttribute("d", shown ? open(ringAt(P, run(el.inner, front), T + h)) : "");
-    if (el.bar) el.bar.setAttribute("d", seg(P(6.5, r.y - 3, T), P(6.5, r.y + 3, T)) + (shown ? seg(P(6.5, r.y - 3, T + h), P(6.5, r.y + 3, T + h)) : ""));
-    if (el.dot) place(el.dot, P(7.5, r.y, T));
+  const S = { bx: spring(W / 2), by: spring(D / 2), sc: spring(0), ax: spring(6), ay: spring(11), tx: spring(REST_TIP[0]), ty: spring(REST_TIP[1]), tz: spring(0) };
+  let key = "";
+
+  function draw() {
+    const k = Object.values(S).map((s) => s.x.toFixed(3)).join(" ") + SIZE;
+    if (k === key) return;
+    key = k;
+    const sc = clamp(S.sc.x, 0, 1.1), hw = (SIZE / 2) * sc, hh = (SIZE / 3) * sc, cx = S.bx.x, cy = S.by.x;
+    box.setAttribute("d", sc < 0.04 ? "" : poly(ringAt(P, rrect(cx - hw, cy - hh, cx + hw, cy + hh, 2.4 * sc), T)));
+    // the arrow stops at the box's edge, and is never longer than ARROW
+    const u = unit([cx - S.ax.x, cy - S.ay.x]), t = Math.min(hw / Math.max(1e-6, Math.abs(u[0])), hh / Math.max(1e-6, Math.abs(u[1]))) + 1.6;
+    const e = [cx - u[0] * t, cy - u[1] * t], l = Math.min(ARROW, len([e[0] - S.ax.x, e[1] - S.ay.x]));
+    const s0 = [e[0] - u[0] * l, e[1] - u[1] * l], bk = [e[0] - u[0] * 3, e[1] - u[1] * 3], w = [-u[1] * 2, u[0] * 2];
+    const Q = (q) => P(q[0], q[1], T);
+    arrow.setAttribute("d", sc < 0.3 || l < 5 ? "" : seg(Q(s0), Q(e)) + seg(Q(e), Q([bk[0] + w[0], bk[1] + w[1]])) + seg(Q(e), Q([bk[0] - w[0], bk[1] - w[1]])));
+    // the pen: nib, cone, body, a slightly wider cap with its clip
+    const tip = [S.tx.x, S.ty.x, S.tz.x], cap = L - 10;
+    const secs = [along(tip, 0, 0.45), along(tip, 2.4, 1.1), along(tip, 6.5, PR), along(tip, cap, PR), along(tip, cap, PR + 0.4), along(tip, L, PR + 0.4)];
+    body.setAttribute("d", poly(hull(secs.flat().map((q) => q.p))));
+    creases.setAttribute("d", near(secs[2]) + near(secs[4]) + near(secs[5]));
+    const cp = (t) => P(...tip.map((v, i) => v + a[i] * t + nf[i] * (PR + 1.1)));
+    clip.setAttribute("d", open([cp(L - 1.5), cp(cap + 1.5)]));
   }
 
   const B = register(stage, (dt) => {
     let m = false;
-    for (const el of rows) { if (stepS(el.sp, dt)) m = true; draw(el); }
-    return m;
-  });
-  bag.add(B.unregister);
-
-  function wipe(y) {
-    rows.forEach((el) => { el.sp.t = y == null ? (el.i === 0 ? 1 : 0) : el.r.y < y ? 1 : 0; });
-    const n = y == null ? 0 : rows.filter((el) => el.r.y < y).length;
-    rows.forEach((el) => el.sil.classList.toggle("hi", y == null ? el.i === 0 : el.i === n - 1));
-    read.textContent = y == null ? "rest" : `line ${n}`;
-    B.wake();
-  }
-
-  bag.add(pointer(stage, {
-    move: (p) => wipe(clamp(unproj(C, p[0], p[1], T)[1], 0, D) + 3),
-    leave: () => wipe(null),
-  }));
-  bag.add(() => svg.replaceChildren());
-
-  return { set: (v) => { TALL = v; rows.forEach((el) => { el.drawn = NaN; }); B.wake(); }, destroy: bag.dispose };
-}
-
-hairline({
-  name: "markdown",
-  means: "A page of plain lines: where the pointer has passed, each line rises into its rendered block.",
-  rules: [1, 3, 5, 9],
-  range: [4, 7, 10],
-  tour: [[240, 130], [180, 170], [120, 220], null],
-  mount,
-});
-</script>
-<script type="module" data-figure="mermaid">
-/**
- * Mermaid: a small flowchart built as blocks on dashed links. A start block
- * splits into a box and a diamond, which join again at a round end. The block
- * under the pointer rises and its links draw in solid; the blocks it links to
- * rise a little after it. At rest the start block is up and bright. The
- * slider is how high a chosen block rises.
- *
- * The pattern: one of many. Tweens for the heights, staggered by hops along
- * the links, and a hit test on each block's resting top.
- */
-const { Cam, circ, fit, open, poly, proj, rad, ringAt, rings, run, hull, unproj, facing, tdone, tset, tval, tween, mk, pointer, register, disposer } = HL;
-
-const G = 40, H0 = 4;
-// the blocks: centre on the ground, shape, and what each links to
-const NODES = [
-  { x: 0, y: 0, k: "box" }, { x: G, y: 0, k: "box" }, { x: 0, y: G, k: "dia" }, { x: G, y: G, k: "round" },
-];
-const LINKS = [[0, 1], [0, 2], [1, 3], [2, 3]];
-const HOPS = [[0, 1, 1, 2], [1, 0, 2, 1], [1, 2, 0, 1], [2, 1, 1, 0]];
-
-/** The block's foot ring and its crease ring. */
-function shape(n) {
-  if (n.k === "round") {
-    const a = circ(10, 40), b = circ(9, 40);
-    const at = (q) => ({ u: q.u + n.x, v: q.v + n.y, nu: q.nu, nv: q.nv });
-    return [a.map(at), b.map(at)];
-  }
-  if (n.k === "dia") {
-    const [a, b] = rings(-8, -8, 8, 8, 2.4, 1);
-    const c = Math.cos(rad(45)), s = Math.sin(rad(45));
-    const at = (q) => ({ u: n.x + q.u * c - q.v * s, v: n.y + q.u * s + q.v * c, nu: q.nu * c - q.nv * s, nv: q.nu * s + q.nv * c });
-    return [a.map(at), b.map(at)];
-  }
-  return rings(n.x - 11, n.y - 8, n.x + 11, n.y + 8, 3, 1.1);
-}
-
-function mount({ stage, svg, read }, value) {
-  const bag = disposer();
-  let TOP = value;
-  const C = Cam(45, 0.5, 3.95);
-  fit(C, [[-12, -12, 0], [G + 12, G + 12, 0], [G + 12, -12, 0], [-12, G + 12, 0], [0, 0, 28], [G, 0, 28], [0, G, 28]], 200, 166);
-  const P = proj(C), front = facing(C);
-
-  const g = mk("g", {}, svg);
-  // links first, on the ground, behind every block
-  const links = LINKS.map(([a, b]) => {
-    const A = NODES[a], Bn = NODES[b];
-    return mk("path", { d: open([P(A.x, A.y, 0), P(Bn.x, Bn.y, 0)]), class: "nf dash" }, g);
-  });
-  // blocks in paint order: far corner first
-  const blocks = NODES.map((n, i) => {
-    const [ring, inner] = shape(n);
-    return { i, n, ring, inner, h: tween(i === 0 ? 10 : H0), grp: null, sil: null, cr: null };
-  });
-  blocks.slice().sort((a, b) => a.n.x + a.n.y - (b.n.x + b.n.y)).forEach((b) => {
-    b.grp = mk("g", {}, g);
-    b.sil = mk("path", { class: "sil" }, b.grp);
-    b.cr = mk("path", { class: "nf lo" }, b.grp);
-  });
-
-  let act = -1;
-  const drawnH = new Array(NODES.length).fill(NaN);
-  function draw(b, h) {
-    if (h === drawnH[b.i]) return;
-    drawnH[b.i] = h;
-    b.sil.setAttribute("d", poly(hull(ringAt(P, b.ring, 0).concat(ringAt(P, b.ring, h)))));
-    b.cr.setAttribute("d", open(ringAt(P, run(b.inner, front), h)));
-  }
-
-  const B = register(stage, (_dt, now) => {
-    let moving = false;
-    for (const b of blocks) { draw(b, tval(b.h, now)); if (!tdone(b.h, now)) moving = true; }
-    return moving;
-  });
-  bag.add(B.unregister);
-
-  function setActive(a) {
-    if (a === act) return;
-    act = a;
-    const now = performance.now(), from = a < 0 ? 0 : a;
-    blocks.forEach((b) => {
-      const d = HOPS[from][b.i];
-      const h = a < 0 ? (b.i === 0 ? 10 : H0) : d === 0 ? TOP : d === 1 ? H0 + (TOP - H0) * 0.35 : H0;
-      tset(b.h, h, now, d * 60);
-      b.sil.classList.toggle("hi", b.i === (a < 0 ? 0 : a));
-    });
-    LINKS.forEach(([x, y], k) => links[k].classList.toggle("dash", !(a >= 0 && (x === a || y === a))));
-    read.textContent = a < 0 ? "rest" : `step ${a + 1}`;
-    B.wake();
-  }
-  blocks[0].sil.classList.add("hi");
-
-  /** The block whose resting top the pointer lands nearest, within reach; -1 off the chart. */
-  function hit([sx, sy]) {
-    let best = -1, bd = 15;
-    blocks.forEach((b) => {
-      const [x, y] = unproj(C, sx, sy, b.i === 0 ? 10 : H0);
-      const d = Math.hypot(x - b.n.x, y - b.n.y);
-      if (d < bd) { bd = d; best = b.i; }
-    });
-    return best;
-  }
-
-  bag.add(pointer(stage, { move: (p) => setActive(hit(p)), leave: () => setActive(-1) }));
-  bag.add(() => svg.replaceChildren());
-
-  return {
-    set: (v) => { TOP = v; const a = act; act = -2; setActive(a); },
-    destroy: bag.dispose,
-  };
-}
-
-hairline({
-  name: "mermaid",
-  means: "A small flowchart of blocks on dashed links: the block under the pointer rises and its links draw in.",
-  rules: [1, 2, 4, 5],
-  range: [12, 18, 26],
-  tour: [[290, 150], [110, 150], [200, 210], null],
-  mount,
-});
-</script>
-<script type="module" data-figure="diff">
-/**
- * Diff: two sheets of text lie one on the other. The pointer slides the top
- * sheet off along the ground, and the lines of the sheet under it come out row
- * by row; the lines that changed are the bright ones. At rest the top sheet is
- * a little off, and one changed line shows. The slider is how far it can go.
- *
- * The pattern: scrub. One spring for the slide, set from the pointer's point
- * on the ground plane, which never moves.
- */
-const { Cam, clamp, facing, fit, prism, proj, rings, seg, unproj, spring, stepS, mk, pointer, put, register, disposer, solid } = HL;
-
-const W = 46, D = 52, T = 1.6, LIFT = 2.4, ROWS = [8, 17, 26, 35, 44], REST = 22;
-const OLD = [30, 24, 33, 14, 27], NEW = [30, 31, 33, 22, 27], CHANGED = [1, 3];
-
-function mount({ stage, svg, read }, value) {
-  const bag = disposer();
-  let MAX = value;
-  const C = Cam(45, 0.5, 3.3);
-  fit(C, [[0, 0, 0], [W, 0, 0], [0, D + 46, 0], [W, D + 46, LIFT + T], [0, 0, LIFT + T]], 200, 166);
-  const P = proj(C), front = facing(C);
-
-  const g = mk("g", {}, svg);
-  const [ar, ai] = rings(0, 0, W, D, 3, 1.1);
-  put(solid(g), prism(P, front, ar, ai, 0, T));
-  // the old sheet's lines; the changed ones take the bright stroke
-  ROWS.forEach((y, i) => mk("path", { d: seg(P(5, y, T), P(5 + OLD[i], y, T)), class: CHANGED.includes(i) ? "nf hi" : "nf" }, g));
-
-  const top = solid(g), lines = mk("path", { class: "nf" }, g), edge = mk("path", { class: "nf lo" }, g);
-  const sp = spring(REST);
-  let drawn = NaN;
-
-  function draw() {
-    const s = sp.x;
-    if (s === drawn) return;
-    drawn = s;
-    const [br, bi] = rings(0, s, W, s + D, 3, 1.1);
-    put(top, prism(P, front, br, bi, LIFT, LIFT + T));
-    lines.setAttribute("d", ROWS.map((y, i) => seg(P(5, s + y, LIFT + T), P(5 + NEW[i], s + y, LIFT + T))).join(""));
-    // a fold line along the top sheet's far edge, where a hand would hold it
-    edge.setAttribute("d", seg(P(4, s + 3.5, LIFT + T), P(W - 4, s + 3.5, LIFT + T)));
-  }
-
-  const B = register(stage, (dt) => { const m = stepS(sp, dt); draw(); return m; });
-  bag.add(B.unregister);
-
-  /** How many changed lines the top sheet leaves bare when it rests at s: its far edge, raised, hides about 10 units more. */
-  const bare = (s) => CHANGED.filter((i) => ROWS[i] + 2 < s - 10).length;
-
-  function to(t, over) {
-    sp.t = t;
-    read.textContent = over ? `changed ${bare(t)}` : "rest";
-    B.wake();
-  }
-
-  bag.add(pointer(stage, {
-    move: (p) => { const gy = unproj(C, p[0], p[1], 0)[1]; to(clamp(gy - 4, 8, MAX), true); },
-    leave: () => to(REST, false),
-  }));
-  bag.add(() => svg.replaceChildren());
-
-  return {
-    set: (v) => { MAX = v; if (sp.t > MAX) to(MAX, true); },
-    destroy: bag.dispose,
-  };
-}
-
-hairline({
-  name: "diff",
-  means: "Two sheets of text, one on the other: the pointer slides the top one off and the changed lines show.",
-  rules: [1, 4, 5, 8],
-  range: [28, 38, 46],
-  tour: [[150, 120], [120, 200], [90, 250], null],
-  mount,
-});
-</script>
-<script type="module" data-figure="regex">
-/**
- * Regex: a sieve over a pan. Two big balls sit on the mesh; three small ones
- * have fallen through into the pan. The pointer's height lifts the sieve, the
- * big balls ride up with it, and the small ones, the matches, come into view
- * below. They are the bright ones. The slider is how high the sieve can go.
- *
- * The pattern: a continuous answer. One spring for the lift, read from the
- * pointer's height on the stage.
- */
-const { Cam, circ, clamp, fit, hull, open, poly, proj, ringAt, run, facing, spring, stepS, mk, pointer, register, disposer } = HL;
-
-const R = 30, WALL = 2.4, PAN = 7, SV = 9, FL = 2, REST = 10, CH = [-18, -9, 0, 9, 18];
-const SMALL = [[-12, 6, 3.6], [4, 12, 3.6], [12, -6, 3.6]], BIG = [[-10, 7, 6.6], [9, -9, 6.2], [9, 12, 4.8]];
-
-/** A ring's samples ordered left to right on screen. */
-const LR = (pts) => (pts[0][0] <= pts[pts.length - 1][0] ? pts : pts.slice().reverse());
-
-/** A round tub from z0 to z1: `far` before what it holds, `near` after. */
-function tub(P, front, outer, inner, z0, z1) {
-  const iF = LR(ringAt(P, run(inner, front), z1)), oT = LR(ringAt(P, run(outer, front), z1)), oB = LR(ringAt(P, run(outer, front), z0));
-  return {
-    far: [[poly(hull(ringAt(P, outer, z0).concat(ringAt(P, outer, z1)))), "sil"], [poly(ringAt(P, inner, z1)), "nf"]],
-    near: [
-      [poly([...iF, oT[oT.length - 1], ...oB.slice().reverse(), oT[0]]), "fo"],
-      [open(oT), "nf lo"], [open(iF), "nf"], [open([oT[0], ...oB, oT[oT.length - 1]]), "nf sil"],
-    ],
-  };
-}
-
-function mount({ stage, svg, read }, value) {
-  const bag = disposer();
-  let MAX = value;
-  const C = Cam(45, 0.5, 3.3);
-  const ext = [];
-  for (const [x, y] of [[-R, 0], [R, 0], [0, -R], [0, R]]) ext.push([x, y, 0], [x, y, PAN + 40 + SV + 8]);
-  fit(C, ext, 200, 150);
-  const P = proj(C), front = facing(C);
-  const outer = circ(R, 72), inner = circ(R - WALL, 72);
-
-  const g = mk("g", {}, svg);
-  // the pan and the matches lying in it never move
-  const pan = tub(P, front, outer, inner, 0, PAN);
-  for (const [d, cls] of pan.far) mk("path", { d, class: cls }, g);
-  for (const [x, y, r] of SMALL) {
-    const c = P(x, y, 1 + r);
-    mk("ellipse", { cx: c[0], cy: c[1], rx: r * C.S, ry: r * C.S, class: "hi" }, g);
-  }
-  for (const [d, cls] of pan.near) mk("path", { d, class: cls }, g);
-
-  // the sieve, rebuilt each frame it moves: body, mesh, the balls it keeps, its near wall
-  const sv = mk("g", {}, g);
-  const sp = spring(REST);
-  let drawn = NaN;
-
-  function chords(z) {
-    const r = R - WALL - 0.4, out = [];
-    for (const c of CH) {
-      const h = Math.sqrt(r * r - c * c);
-      out.push(open([P(c, -h, z), P(c, h, z)]), open([P(-h, c, z), P(h, c, z)]));
-    }
-    return out.join("");
-  }
-
-  function draw() {
-    const L = sp.x;
-    if (L === drawn) return;
-    drawn = L;
-    sv.replaceChildren();
-    const z0 = PAN + 1 + L, s = tub(P, front, outer, inner, z0, z0 + SV);
-    for (const [d, cls] of s.far) mk("path", { d, class: cls }, sv);
-    mk("path", { d: chords(z0 + FL), class: "nf lo" }, sv);
-    for (const [x, y, r] of BIG) {
-      const c = P(x, y, z0 + FL + r);
-      mk("ellipse", { cx: c[0], cy: c[1], rx: r * C.S, ry: r * C.S }, sv);
-    }
-    for (const [d, cls] of s.near) mk("path", { d, class: cls }, sv);
-  }
-
-  const B = register(stage, (dt) => { const m = stepS(sp, dt); draw(); return m; });
-  bag.add(B.unregister);
-
-  function to(t, over) {
-    sp.t = t;
-    read.textContent = over ? `lift ${Math.round(t)}` : "rest";
-    B.wake();
-  }
-
-  bag.add(pointer(stage, {
-    move: (p) => to(clamp((250 - p[1]) / 170, 0, 1) * MAX, true),
-    leave: () => to(REST, false),
-  }));
-  bag.add(() => svg.replaceChildren());
-
-  return {
-    set: (v) => { MAX = v; if (sp.t > MAX) to(MAX, true); },
-    destroy: bag.dispose,
-  };
-}
-
-hairline({
-  name: "regex",
-  means: "A sieve over a pan: lifting it shows the small balls that fell through, and the big ones stay in the mesh.",
-  rules: [3, 4, 5, 6],
-  range: [20, 30, 40],
-  tour: [[200, 220], [200, 120], [200, 80], null],
-  mount,
-});
-</script>
-<script type="module" data-figure="merge">
-/**
- * Merge: five envelopes standing in a mail tray, leaning back. The envelope
- * under the pointer stands up, lifts, and its letter slides half out; the ones
- * in front lean forward and the ones behind lean back, staggered outwards.
- * At rest the middle one shows the top of its letter. The slider is the
- * stagger, in ms.
- *
- * The pattern: one of many, after Riffle. Tweens, a stagger by distance, and a
- * hit test on fixed bands along the resting top edges.
- */
-const { Cam, clamp, facing, fit, hull, open, poly, proj, rad, ringAt, rrect, run, seg, tdone, tset, tval, tween, disposer, mk, pointer, register } = HL;
-
-const N = 5, W = 64, H = 40, G = 15, TK = 1.4, REST = -14, BACK = -26, FWD = 18, LIFT = 12, OUT = 16;
-const X0 = -5, X1 = W + 5, Y0 = -9, Y1 = (N - 1) * G + 9, WH = 16, WR = 6, WT = 2.4;
-
-const LR = (pts) => (pts[0][0] <= pts[pts.length - 1][0] ? pts : pts.slice().reverse());
-
-/** The tray: `far` before the envelopes, `near` after them. */
-function tray(P, front, outer, inner) {
-  const far = [[poly(hull(ringAt(P, outer, 0).concat(ringAt(P, outer, WH)))), "sil"], [poly(ringAt(P, inner, WH)), "nf"]];
-  const iF = LR(ringAt(P, run(inner, front), WH)), oT = LR(ringAt(P, run(outer, front), WH)), oB = LR(ringAt(P, run(outer, front), 0));
-  const near = [
-    [poly([...iF, oT[oT.length - 1], ...oB.slice().reverse(), oT[0]]), "fo"],
-    [open(oT), "nf lo"], [open(iF), "nf"], [open([oT[0], ...oB, oT[oT.length - 1]]), "nf sil"],
-  ];
-  return { far, near };
-}
-
-/** Envelope i leaning th degrees and lifted, with its letter out by `out`. */
-function pose(P, i, th, lift, out) {
-  const yb = i * G, s = Math.sin(rad(th)), c = Math.cos(rad(th));
-  const w = (u, v) => P(u, yb + v * s, v * c + lift);
-  const wb = (u, v) => P(u, yb + v * s - TK * c, v * c + TK * s + lift);
-  const wl = (u, v) => P(u, yb + v * s - (TK / 2) * c, v * c + (TK / 2) * s + lift);
-  const env = [[0, 0], [W, 0], [W, H], [0, H]];
-  const R = (pts, f) => poly(pts.map((p) => f(p[0], p[1])));
-  const round = (x0, y0, x1, y1, r) => rrect(x0, y0, x1, y1, r, 3).map((q) => [q.u, q.v]);
-  return {
-    back: R(round(0, 0, W, H, 2.5), wb),
-    letter: R(round(5, 6 + out, W - 5, H - 2 + out, 1.5), wl),
-    face: R(round(0, 0, W, H, 2.5), w),
-    flap: open([w(1.5, H - 1.5), w(W / 2, H * 0.42), w(W - 1.5, H - 1.5)]),
-    addr: seg(w(W * 0.36, 15), w(W * 0.7, 15)) + seg(w(W * 0.36, 10), w(W * 0.6, 10)),
-    env,
-  };
-}
-
-function mount({ stage, svg, read }, value) {
-  const bag = disposer();
-  let stag = value;
-  const C = Cam(45, 0.5, 2.65);
-  fit(C, [[X0, Y0, 0], [X1, Y1, -6], [X1, Y0, 0], [X0, Y1, 0], [X0, Y0, H + LIFT + OUT], [X1, Y0, H + LIFT + OUT]], 200, 158);
-  const P = proj(C), front = facing(C);
-  const outer = rrect(X0, Y0, X1, Y1, WR, 6), inner = rrect(X0 + WT, Y0 + WT, X1 - WT, Y1 - WT, WR - WT, 6);
-  const paths = tray(P, front, outer, inner);
-
-  const g = mk("g", {}, svg);
-  for (const [d, cls] of paths.far) mk("path", { d, class: cls }, g);
-  const envs = [];
-  for (let i = 0; i < N; i++) {
-    const grp = mk("g", {}, g);
-    envs.push({
-      back: mk("path", { class: "lo" }, grp), letter: mk("path", { class: "sil" }, grp),
-      face: mk("path", { class: "sil" }, grp), flap: mk("path", { class: "nf" }, grp), addr: mk("path", { class: "nf lo" }, grp),
-      a: tween(REST), z: tween(0), o: tween(i === 2 ? 9 : 0),
-    });
-  }
-  for (const [d, cls] of paths.near) mk("path", { d, class: cls }, g);
-  envs[2].letter.classList.add("hi");
-
-  // hit bands along the RESTING top edges: they never move, and nothing draws them
-  const top = (i) => P(W / 2, i * G + H * Math.sin(rad(REST)), H * Math.cos(rad(REST)));
-  const c0 = top(0), c1 = top(1), d = [c1[0] - c0[0], c1[1] - c0[1]];
-  const px0 = P(0, 0, 0), px1 = P(1, 0, 0), ex = [px1[0] - px0[0], px1[1] - px0[1]];
-  const HALF = W / 2 + 6, det = d[0] * ex[1] - d[1] * ex[0];
-  function hit([x, y]) {
-    const qx = x - c0[0], qy = y - c0[1];
-    const s = (qx * ex[1] - qy * ex[0]) / det, r = (d[0] * qy - d[1] * qx) / det;
-    if (Math.abs(r) > HALF || s < -0.6 || s > N + 0.6) return -1;
-    return clamp(Math.round(s), 0, N - 1);
-  }
-
-  const last = envs.map(() => "");
-  function draw(i, th, lift, out) {
-    const key = th.toFixed(3) + lift.toFixed(3) + out.toFixed(3);
-    if (key === last[i]) return;
-    last[i] = key;
-    const e = envs[i], q = pose(P, i, th, lift, out);
-    for (const k of ["back", "letter", "face", "flap", "addr"]) e[k].setAttribute("d", q[k]);
-  }
-
-  const B = register(stage, (_dt, now) => {
-    let moving = false;
-    envs.forEach((e, i) => {
-      draw(i, tval(e.a, now), tval(e.z, now), tval(e.o, now));
-      if (!tdone(e.a, now) || !tdone(e.z, now) || !tdone(e.o, now)) moving = true;
-    });
-    return moving;
-  });
-  bag.add(B.unregister);
-
-  let act = -1;
-  function setActive(a) {
-    if (a === act) return;
-    const now = performance.now(), from = a >= 0 ? a : act;
-    act = a;
-    envs.forEach((e, i) => {
-      const delay = Math.abs(i - from) * stag;
-      tset(e.a, a < 0 ? REST : i < a ? BACK : i > a ? FWD : 0, now, delay);
-      tset(e.z, a === i ? LIFT : 0, now, delay);
-      tset(e.o, a === i ? OUT : a < 0 && i === 2 ? 9 : 0, now, delay + (a === i ? 120 : 0));
-      e.letter.classList.toggle("hi", i === (a < 0 ? 2 : a));
-    });
-    read.textContent = a < 0 ? "rest" : `letter ${a + 1}`;
-    B.wake();
-  }
-
-  bag.add(pointer(stage, { move: (p) => setActive(hit(p)), leave: () => setActive(-1) }));
-  bag.add(() => svg.replaceChildren());
-
-  return { set: (v) => { stag = v; }, destroy: bag.dispose };
-}
-
-hairline({
-  name: "merge",
-  means: "Envelopes in a mail tray: the one under the pointer stands up and its letter slides out.",
-  rules: [1, 2, 4, 5],
-  range: [0, 40, 80],
-  tour: [[150, 120], [215, 110], [260, 140], null],
-  mount,
-});
-</script>
-<script type="module" data-figure="pattern">
-/**
- * Pattern: a board of sixteen Truchet tiles, each a square with two quarter
- * arcs, so the arcs join into one winding line across the board. The tiles
- * near the pointer lift and turn a quarter, staggered outwards, and the line
- * re-forms; the tile under the pointer has the bright arcs. The slider is how
- * far the turn reaches, in tiles.
- *
- * The pattern: a field of discrete tiles. Tweens for each tile's turn and
- * lift, a stagger by distance, and a hit test on the ground plane.
- */
-const { Cam, clamp, fit, open, poly, proj, rad, ringAt, rings, run, hull, unproj, facing, tdone, tset, tval, tween, mk, pointer, register, disposer } = HL;
-
-const N = 4, PITCH = 18, T = 17.2, H = 3, UP = 5, BASE = 3, STEP = 45;
-const ORIENT = [0, 1, 1, 0, 1, 0, 0, 1, 1, 1, 0, 0, 0, 1, 0, 1];
-
-/** Points of the quarter arcs on a tile's top, in its own frame, centred on the tile. */
-function arcs(o) {
-  const h = T / 2, r = T / 2, out = [];
-  const corners = o ? [[h, -h, 90, 180], [-h, h, 270, 360]] : [[-h, -h, 0, 90], [h, h, 180, 270]];
-  for (const [cx, cy, a0, a1] of corners) {
-    const pts = [];
-    for (let k = 0; k <= 10; k++) { const a = rad(a0 + ((a1 - a0) * k) / 10); pts.push([cx + r * Math.cos(a), cy + r * Math.sin(a)]); }
-    out.push(pts);
-  }
-  return out;
-}
-
-function mount({ stage, svg, read }, value) {
-  const bag = disposer();
-  let reach = value;
-  const E = N * PITCH;
-  const C = Cam(45, 0.5, 2.75);
-  fit(C, [[-4, -4, -BASE], [E + 4, E + 4, -BASE], [E + 4, -4, -BASE], [-4, E + 4, -BASE], [0, 0, H + UP], [E, 0, H + UP], [0, E, H + UP]], 200, 166);
-  const P = proj(C), front = facing(C);
-
-  const g = mk("g", {}, svg);
-  const [br, bi] = rings(-4, -4, E + 4, E + 4, 7, 1.8);
-  const bs = mk("g", {}, g);
-  mk("path", { d: poly(hull(ringAt(P, br, -BASE).concat(ringAt(P, br, 0)))), class: "sil" }, bs);
-  mk("path", { d: open(ringAt(P, run(bi, front), 0)), class: "nf lo" }, bs);
-
-  const [ring0, inner0] = rings(-T / 2, -T / 2, T / 2, T / 2, 2.2, 0.8);
-  const tiles = [];
-  // diagonal by diagonal from the far corner: appending is painting back to front
-  for (let s = 0; s <= 2 * (N - 1); s++) for (let i = 0; i < N; i++) {
-    const j = s - i;
-    if (j < 0 || j >= N) continue;
-    const grp = mk("g", {}, g);
-    tiles.push({
-      i, j, cx: (i + 0.5) * PITCH, cy: (j + 0.5) * PITCH, arc: arcs(ORIENT[j * N + i]),
-      sil: mk("path", { class: "sil" }, grp), cr: mk("path", { class: "nf lo" }, grp), ln: mk("path", { class: "nf" }, grp),
-      t: tween(0), drawn: NaN,
-    });
-  }
-  const restTile = tiles.find((t) => t.i === 1 && t.j === 2);
-
-  function draw(t, k) {
-    if (k === t.drawn) return;
-    t.drawn = k;
-    const th = rad(90 * k), c = Math.cos(th), s = Math.sin(th), z = H + UP * Math.sin(Math.PI * Math.min(1, k)) * 0.8 + (k > 0.5 ? 1.2 : 0);
-    const at = (u, v) => [t.cx + u * c - v * s, t.cy + u * s + v * c];
-    const ring = ring0.map((q) => { const [u, v] = at(q.u, q.v); return { u, v, nu: q.nu * c - q.nv * s, nv: q.nu * s + q.nv * c }; });
-    const inner = inner0.map((q) => { const [u, v] = at(q.u, q.v); return { u, v, nu: q.nu * c - q.nv * s, nv: q.nu * s + q.nv * c }; });
-    t.sil.setAttribute("d", poly(hull(ringAt(P, ring, 0).concat(ringAt(P, ring, z)))));
-    t.cr.setAttribute("d", open(ringAt(P, run(inner, front), z)));
-    t.ln.setAttribute("d", t.arc.map((pts) => open(pts.map(([u, v]) => { const [x, y] = at(u, v); return P(x, y, z); }))).join(""));
-  }
-
-  const B = register(stage, (_dt, now) => {
-    let moving = false;
-    for (const t of tiles) { draw(t, tval(t.t, now)); if (!tdone(t.t, now)) moving = true; }
-    return moving;
-  });
-  bag.add(B.unregister);
-
-  let cur = null;
-  function aim(cell) {
-    const key = cell ? cell.join(",") : "";
-    if (key === cur) return;
-    cur = key;
-    const now = performance.now();
-    for (const t of tiles) {
-      const d = cell ? Math.hypot(t.i - cell[0], t.j - cell[1]) : 0;
-      tset(t.t, cell && d <= reach ? 1 : 0, now, d * STEP);
-      t.ln.classList.toggle("hi", cell ? d === 0 : t === restTile);
-    }
-    read.textContent = cell ? `tile ${cell[0] + 1}·${cell[1] + 1}` : "rest";
-    B.wake();
-  }
-  restTile.ln.classList.add("hi");
-
-  bag.add(pointer(stage, {
-    move: (p) => {
-      const [x, y] = unproj(C, p[0], p[1], H);
-      if (x < -4 || y < -4 || x > E + 4 || y > E + 4) return aim(null);
-      aim([clamp(Math.floor(x / PITCH), 0, N - 1), clamp(Math.floor(y / PITCH), 0, N - 1)]);
-    },
-    leave: () => aim(null),
-  }));
-  bag.add(() => svg.replaceChildren());
-
-  return { set: (v) => { reach = v; const c = cur; cur = "?"; aim(c ? c.split(",").map(Number) : null); }, destroy: bag.dispose };
-}
-
-hairline({
-  name: "pattern",
-  means: "Sixteen Truchet tiles whose arcs join into one line: the tiles near the pointer turn a quarter and the line re-forms.",
-  rules: [1, 2, 3, 4],
-  range: [0, 1.1, 2.1],
-  tour: [[140, 150], [250, 140], [200, 210], null],
-  mount,
-});
-</script>
-<script type="module" data-figure="blob">
-/**
- * Blob: a soft gumdrop with two eyes, sitting on a round mat. The eyes turn
- * to follow the pointer round the body and up and down, and the top of the
- * body leans after them. At rest it looks a little to the left and up. The
- * eyes are the bright marks. The slider is how far the body leans.
- *
- * The pattern: a continuous answer. Springs for where it looks and how far it
- * leans, set from the pointer's point on the ground plane.
- */
-const { Cam, circ, clamp, fit, hull, open, poly, proj, ringAt, run, facing, unproj, spring, stepS, mk, pointer, register, disposer } = HL;
-
-// the body's profile: radius at each height, foot to crown
-const PROFILE = [[0, 15], [3, 19], [10, 21], [22, 20.5], [31, 17], [37, 11], [39.5, 4]];
-const FACE = Math.PI / 4, REST_A = FACE + 0.38, REST_E = 24, EYE = 0.3;
-
-function mount({ stage, svg, read }, value) {
-  const bag = disposer();
-  let LEAN = value;
-  const C = Cam(45, 0.5, 4.4);
-  fit(C, [[-30, -30, 0], [30, 30, 0], [30, -30, 0], [-30, 30, 0], [-8, -8, 46], [8, 8, 46]], 200, 170);
-  const P = proj(C), front = facing(C);
-  const rings = PROFILE.map(([, r]) => circ(r, 56));
-  const mat = circ(28, 72), matIn = circ(26.2, 72);
-
-  const g = mk("g", {}, svg);
-  mk("path", { d: poly(hull(ringAt(P, mat, -1.5).concat(ringAt(P, mat, 0)))), class: "sil" }, g);
-  mk("path", { d: open(ringAt(P, run(matIn, front), 0)), class: "nf lo" }, g);
-  const body = mk("path", { class: "sil" }, g), belt = mk("path", { class: "nf lo" }, g);
-  const eyes = [0, 1].map(() => mk("ellipse", { rx: 4.6, ry: 8.4, class: "dot" }, g));
-
-  const ang = spring(REST_A), hgt = spring(REST_E), lx = spring(-1.5), ly = spring(1.5);
-  let drawn = "";
-
-  /** A point on the body's skin at angle a and height z, leaned with the body. */
-  function skin(a, z) {
-    let k = 0;
-    while (k < PROFILE.length - 2 && PROFILE[k + 1][0] < z) k++;
-    const [z0, r0] = PROFILE[k], [z1, r1] = PROFILE[k + 1], t = clamp((z - z0) / (z1 - z0), 0, 1);
-    const r = r0 + (r1 - r0) * t, w = (z / 40) ** 2;
-    return P(Math.cos(a) * r + lx.x * w, Math.sin(a) * r + ly.x * w, z);
-  }
-
-  function draw() {
-    const key = [ang.x, hgt.x, lx.x, ly.x].map((v) => v.toFixed(3)).join();
-    if (key === drawn) return;
-    drawn = key;
-    const pts = [];
-    PROFILE.forEach(([z], k) => {
-      const w = (z / 40) ** 2;
-      for (const q of rings[k]) pts.push(P(q.u + lx.x * w, q.v + ly.x * w, z));
-    });
-    body.setAttribute("d", poly(hull(pts)));
-    // one crease round the waist, on the side that faces us
-    const zc = 10, wc = (zc / 40) ** 2;
-    belt.setAttribute("d", open(run(circ(19.6, 56), front).map((q) => P(q.u + lx.x * wc, q.v + ly.x * wc, zc))));
-    [-1, 1].forEach((s, k) => {
-      const p = skin(ang.x + s * EYE, hgt.x);
-      eyes[k].setAttribute("cx", p[0].toFixed(2));
-      eyes[k].setAttribute("cy", p[1].toFixed(2));
-    });
-  }
-
-  const B = register(stage, (dt) => {
-    let m = false;
-    for (const sp of [ang, hgt, lx, ly]) if (stepS(sp, dt)) m = true;
+    for (const s of Object.values(S)) if (stepS(s, dt)) m = true;
     draw();
     return m;
   });
   bag.add(B.unregister);
 
-  function look(p) {
-    if (!p) {
-      ang.t = REST_A; hgt.t = REST_E; lx.t = -1.5; ly.t = 1.5;
-      read.textContent = "rest";
-    } else {
-      const [x, y] = unproj(C, p[0], p[1], 20);
-      const a = Math.atan2(y, x), off = clamp(((a - FACE + 3 * Math.PI) % (2 * Math.PI)) - Math.PI, -0.95, 0.95);
-      ang.t = FACE + off;
-      hgt.t = clamp(30 - (p[1] - 120) * 0.09, 18, 31);
-      const d = Math.min(1, Math.hypot(x, y) / 60);
-      lx.t = Math.cos(a) * LEAN * d; ly.t = Math.sin(a) * LEAN * d;
-      read.textContent = off < -0.25 ? "look right" : off > 0.25 ? "look left" : "look here";
-    }
+  let over = false;
+  function aim(p) {
+    const [x, y] = unproj(C, p[0], p[1], T), hw = SIZE / 2, hh = SIZE / 3;
+    const cx = clamp(x, hw + 3, W - hw - 3), cy = clamp(y, hh + 9, D - hh - 3);
+    const far = CORNERS.reduce((b, c) => (len([c[0] - cx, c[1] - cy]) > len([b[0] - cx, b[1] - cy]) ? c : b));
+    // from rest, the box grows where the pointer is rather than sliding in
+    if (S.sc.x < 0.05) { S.bx.x = cx; S.by.x = cy; S.ax.x = far[0]; S.ay.x = far[1]; }
+    S.bx.t = cx; S.by.t = cy; S.sc.t = 1; S.ax.t = far[0]; S.ay.t = far[1];
+    S.tx.t = cx + hw + 0.8; S.ty.t = cy - hh - 0.8; S.tz.t = T;
+    over = p;
+    body.classList.remove("hi");
+    read.textContent = `box ${SIZE}×${Math.round((SIZE * 2) / 3)}`;
+    B.wake();
+  }
+  function rest() {
+    over = false;
+    S.sc.t = 0; S.tx.t = REST_TIP[0]; S.ty.t = REST_TIP[1]; S.tz.t = 0;
+    body.classList.add("hi");
+    read.textContent = "rest";
     B.wake();
   }
 
-  bag.add(pointer(stage, { move: (p) => look(p), leave: () => look(null) }));
+  bag.add(pointer(stage, { move: aim, leave: rest }));
   bag.add(() => svg.replaceChildren());
+  read.textContent = "rest";
 
-  return { set: (v) => { LEAN = v; }, destroy: bag.dispose };
+  return {
+    set: (v) => { SIZE = v; if (over) aim(over); else B.wake(); },
+    destroy: bag.dispose,
+  };
 }
 
 hairline({
-  name: "blob",
-  means: "A soft blob with two eyes: it turns to look at the pointer and leans toward it.",
-  rules: [3, 5, 8, 10],
-  range: [2, 6, 10],
-  tour: [[100, 150], [300, 150], [200, 60], null],
+  name: "snap",
+  means: "A screenshot on the table and a marker: the pointer's spot gets a bright box and an arrow pointing at it.",
+  rules: [1, 3, 4, 5],
+  range: [16, 24, 32],
+  tour: [[170, 140], [140, 190], [240, 170], null],
+  mount,
+});
+</script>
+<script type="module" data-figure="time">
+/**
+ * Time: three desk clocks standing in a row on a rail, each a short round
+ * body on a little foot, with a dial of ticks and two hands. They show the same
+ * instant in three places, Gothenburg, Mangalore (+4:30) and New York (−5), so
+ * the hands sit at three different angles. The pointer's x sets the first
+ * clock's hour and all three hands turn together. Leaving winds them back to
+ * 16:00. The first clock is the bright one. The slider is how many hours one
+ * sweep of the pointer across the stage covers.
+ *
+ * The pattern: a continuous answer. One spring for the hour, read from the
+ * pointer's x on the stage, which never moves.
+ */
+const { Cam, fit, hull, open, poly, proj, rings, prism, facing, run, seg, spring, stepS, mk, pointer, put, register, disposer, solid } = HL;
+
+const R = 11, TH = 4, GAP = 30, RAIL = 3, FOOT = 2, REST = 16, N = 64, TAU = Math.PI * 2;
+const CLOCKS = [{ x: 0, off: 0 }, { x: GAP, off: 4.5 }, { x: 2 * GAP, off: -5 }];
+
+/** h as HH:MM, to the nearest five minutes, wrapped into one day. */
+const hhmm = (h) => {
+  const m = ((Math.round((h * 60) / 5) * 5) % 1440 + 1440) % 1440;
+  return String(Math.floor(m / 60)).padStart(2, "0") + ":" + String(m % 60).padStart(2, "0");
+};
+
+function mount({ stage, svg, read }, value) {
+  const bag = disposer();
+  let SWEEP = value;
+  const C = Cam(45, 0.5, 3.6);
+  const cz = RAIL + FOOT + R - 1, x1 = 2 * GAP + 16;
+  fit(C, [[-16, -6, 0], [x1, -6, 0], [-16, 6, 0], [x1, 6, 0], [0, -TH / 2, cz + R], [2 * GAP, -TH / 2, cz + R], [-R, TH / 2, cz], [2 * GAP + R, TH / 2, cz]], 200, 170);
+  const P = proj(C), front = facing(C);
+
+  const g = mk("g", {}, svg);
+  const [rr, ri] = rings(-16, -6, x1, 6, 3, 1.1);
+  put(solid(g), prism(P, front, rr, ri, 0, RAIL));
+
+  // far clock first: along the rail, a larger x is nearer the eye
+  const clocks = CLOCKS.map((c, i) => {
+    const grp = mk("g", {}, g), yf = TH / 2;
+    const [fr, fi] = rings(c.x - 5, -TH / 2, c.x + 5, TH / 2, 1.6, 0.8);
+    put(solid(grp), prism(P, front, fr, fi, RAIL, RAIL + FOOT));
+    // a point on the face plane: r from the centre, a clockwise from twelve
+    const at = (r, a, y = yf) => P(c.x + r * Math.sin(a), y, cz + r * Math.cos(a));
+    const ring = (r, y) => Array.from({ length: N }, (_, k) => at(r, (k / N) * TAU, y));
+    const sil = mk("path", { d: poly(hull(ring(R, yf).concat(ring(R, -yf)))), class: i === 0 ? "sil hi" : "sil" }, grp);
+    // the crease: the face's rim on the side the body runs back to
+    const o = at(0, 0), b = at(0, 0, -yf), bv = [b[0] - o[0], b[1] - o[1]];
+    const rim = ring(R, yf).map((p) => ({ p, k: (p[0] - o[0]) * bv[0] + (p[1] - o[1]) * bv[1] > 0 }));
+    mk("path", { d: open(run(rim, (q) => q.k).map((q) => q.p)), class: "nf lo" }, grp);
+    // twelve ticks, the one at twelve longer
+    mk("path", { d: Array.from({ length: 12 }, (_, k) => seg(at(k ? R - 2.8 : R - 4, (k / 12) * TAU), at(R - 1.6, (k / 12) * TAU))).join(""), class: "nf lo" }, grp);
+    const hands = mk("path", { class: i === 0 ? "nf hi" : "nf" }, grp);
+    const hub = at(0, 0, yf + 0.2);
+    mk("ellipse", { cx: hub[0], cy: hub[1], rx: 1.3, ry: 1.3, class: i === 0 ? "dot" : "dot m" }, grp);
+    return { c, at, hands, sil };
+  });
+
+  const sp = spring(REST);
+  let drawn = NaN;
+  function draw() {
+    if (sp.x === drawn) return;
+    drawn = sp.x;
+    for (const k of clocks) {
+      const t = sp.x + k.c.off, am = (t % 1) * TAU, ah = ((t % 12) / 12) * TAU, z = TH / 2 + 0.3;
+      k.hands.setAttribute("d", seg(k.at(0, 0, z), k.at(5.4, ah, z)) + seg(k.at(0, 0, z), k.at(8.4, am, z)));
+    }
+  }
+
+  const B = register(stage, (dt) => { const m = stepS(sp, dt); draw(); return m; });
+  bag.add(B.unregister);
+
+  let px = null;
+  function to(x) {
+    px = x;
+    sp.t = x == null ? REST : REST + (x / 400 - 0.5) * SWEEP;
+    read.textContent = x == null ? "rest" : CLOCKS.map((c) => hhmm(sp.t + c.off)).join(" · ");
+    B.wake();
+  }
+
+  bag.add(pointer(stage, { move: (p) => to(p[0]), leave: () => to(null) }));
+  bag.add(() => svg.replaceChildren());
+  read.textContent = "rest";
+
+  return {
+    set: (v) => { SWEEP = v; if (px != null) to(px); },
+    destroy: bag.dispose,
+  };
+}
+
+hairline({
+  name: "time",
+  means: "Three desk clocks on a rail, one instant in three cities: the pointer turns the hour and all the hands follow.",
+  rules: [1, 4, 5, 8],
+  range: [6, 12, 24],
+  tour: [[90, 160], [330, 160], [230, 160], null],
   mount,
 });
 </script>

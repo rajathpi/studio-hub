@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Outfit Studio</title>
+<meta name="description" content="Realistic 3D people who move, with their clothes recoloured by the 348 combinations from Sanzo Wada's A Dictionary of Color Combinations.">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body { font-family: var(--h-font); background: var(--h-bg); color: var(--h-text); display: flex; flex-direction: column; }
+  header { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 14px; background: var(--h-panel); border-bottom: 1px solid var(--h-border); }
+  header h1 { font-size: 15px; font-weight: 600; margin-right: 6px; }
+  header .sub { font-size: 12px; color: var(--h-muted); }
+  .spacer { flex: 1; }
+  button { font: inherit; color: var(--h-text); font-size: 13px; padding: 6px 12px; border-radius: 6px; border: 1px solid var(--h-btn-border); background: var(--h-btn); cursor: pointer; }
+  button:hover { background: var(--h-btn-hover); }
+  button.primary, .chip.on { background: var(--h-accent); border-color: var(--h-accent); color: var(--h-on-accent); font-weight: 600; }
+  .chip { font-size: 12px; padding: 4px 10px; border-radius: 999px; font-weight: 400; }
+
+  .wrap { flex: 1; min-height: 0; display: flex; }
+  aside { flex: none; overflow: auto; background: var(--h-panel); padding: 4px 14px 20px; }
+  #people { width: 300px; border-right: 1px solid var(--h-border); }
+  #colours { width: 340px; border-left: 1px solid var(--h-border); }
+  h2 { font-size: 11px; font-weight: 600; color: var(--h-muted); text-transform: uppercase; letter-spacing: .06em; margin: 14px 0 7px; display: flex; justify-content: space-between; align-items: center; }
+  h2 button { font-size: 11px; padding: 2px 8px; text-transform: none; letter-spacing: 0; font-weight: 500; }
+  .count { font-weight: 400; text-transform: none; letter-spacing: 0; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(78px, 1fr)); gap: 6px; }
+  .card { padding: 0; border-radius: 8px; overflow: hidden; background: #fff; display: flex; flex-direction: column; border: 1px solid var(--h-border); }
+  .card:hover { background: #fff; border-color: var(--h-text2); }
+  .card img { width: 100%; height: 118px; object-fit: cover; object-position: 50% 28%; display: block; }
+  .card span { font-size: 10px; color: #3f3f46; padding: 3px 4px 4px; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; background: #f4f2ec; }
+  .card.on { outline: 2px solid var(--h-text); outline-offset: 1px; }
+  .filters { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 8px; }
+
+  main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  #view { flex: 1; min-height: 0; position: relative; background: var(--h-deep); }
+  #view canvas { display: block; width: 100%; height: 100%; outline: none; }
+  #status { position: absolute; left: 16px; top: 14px; font-size: 12px; color: var(--h-muted); line-height: 1.6; max-width: 60%; }
+  #status b { display: block; font-family: var(--h-head); font-size: 20px; color: var(--h-text); }
+  .viewbtns { position: absolute; top: 12px; right: 12px; display: flex; gap: 6px; }
+  #bar { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 240px; text-align: center; font-size: 12px; color: var(--h-muted); display: none; }
+  #bar.show { display: block; }
+  #bar i { display: block; height: 4px; border-radius: 2px; background: var(--h-border); margin-top: 8px; overflow: hidden; }
+  #bar i b { display: block; height: 100%; width: 0; background: var(--h-text); transition: width .2s; }
+  #moves { padding: 10px 14px 12px; background: var(--h-panel); border-top: 1px solid var(--h-border); display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
+  #moves .lab { font-size: 11px; font-weight: 600; color: var(--h-muted); text-transform: uppercase; letter-spacing: .06em; margin-right: 6px; }
+
+  .now { display: flex; height: 54px; border-radius: 8px; overflow: hidden; box-shadow: inset 0 0 0 1px rgba(0,0,0,.08); }
+  .now i { flex: 1; cursor: pointer; }
+  .names { font-size: 12px; color: var(--h-text2); margin-top: 7px; line-height: 1.55; }
+  .names em { font-style: normal; color: var(--h-muted); }
+  .stepper { display: flex; gap: 5px; margin-top: 9px; }
+  .stepper button { flex: 1; }
+  .has { display: none; align-items: center; gap: 5px; font-size: 12px; color: var(--h-text2); }
+  .has.show { display: inline-flex; }
+  .has i { width: 14px; height: 14px; border-radius: 3px; display: inline-block; }
+  #cgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(60px, 1fr)); gap: 6px; }
+  .combo { padding: 0; border: 0; background: none; border-radius: 6px; overflow: hidden; }
+  .combo .bar { display: flex; height: 28px; }
+  .combo .bar i { flex: 1; }
+  .combo small { display: block; font-size: 10px; color: var(--h-muted); padding: 2px 0 0; text-align: left; }
+  .combo.on { box-shadow: 0 0 0 2px var(--h-text); }
+  .combo:hover { background: none; }
+  .parts { display: grid; gap: 5px; margin-top: 8px; }
+  .part { display: grid; grid-template-columns: 26px 1fr 26px; align-items: center; gap: 8px; font-size: 12px; color: var(--h-text2); }
+  .part i { display: block; height: 22px; border-radius: 5px; box-shadow: inset 0 0 0 1px rgba(0,0,0,.1); }
+  .part span { text-align: center; color: var(--h-muted); }
+  .hint { font-size: 12px; color: var(--h-muted); line-height: 1.5; margin-top: 6px; }
+  @media (max-width: 1100px) { .wrap { flex-wrap: wrap; } #people, #colours { width: 50%; height: 40vh; border: 0; border-top: 1px solid var(--h-border); } main { width: 100%; flex: none; height: 60vh; order: -1; } }
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+} }
+</script>
+<!-- studio-hub theme kit v1: fonts, light/dark tokens, title shadow, theme slider. Source: _theme/kit.html, inlined by _theme/apply.py -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource-variable/mona-sans@5.3.0/wdth.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource-variable/hubot-sans@5.3.0/wdth.css">
+<script>(function(){var t=null;try{t=new URLSearchParams(location.search).get("theme")||localStorage.getItem("hubTheme")}catch(e){}document.documentElement.dataset.theme=t==="dark"?"dark":"light"})()</script>
+<style id="hub-kit">
+  :root {
+    color-scheme: light;
+    --h-font: "Mona Sans Variable", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --h-head: "Hubot Sans Variable", var(--h-font);
+    --h-bg: #f1efe9; --h-panel: #faf9f5; --h-panel2: #f4f2ec; --h-deep: #ebe8e1; --h-deep2: #e7e4dc;
+    --h-border: #dedad0; --h-border2: #d3cec2; --h-btn: #ffffff; --h-btn-border: #cfcabe; --h-btn-hover: #f1eee6;
+    --h-text: #18181b; --h-text2: #3f3f46; --h-muted: #6b675f; --h-muted2: #8f8a7f; --h-faint: #aaa59a; --h-code: #27272a;
+    --h-accent: #18181b; --h-accent-h: #3f3f46; --h-accent2: #8f8a7f; --h-accent-bg: #e4e0d6; --h-on-accent: #ffffff; --h-strong: #09090b;
+    --h-yellow: #8a5a00; --h-blue: #0b5cad; --h-blue2: #2f5597; --h-purple: #6b3fa0; --h-green2: #2e7d4f; --h-ok: #1a7f37;
+    --h-green: #1a7f37; --h-red: #cf222e; --h-amber: #9a6700; --h-err-bg: #fde2e4; --h-err-bg2: #f5b8be; --h-err-text: #8b1a2b;
+    --h-title-shadow: 0 2px 3px rgba(24, 24, 27, .16), 0 8px 22px rgba(24, 24, 27, .18);
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --h-bg: #1e1f24; --h-panel: #26272e; --h-panel2: #2e2f37; --h-deep: #1b1c21; --h-deep2: #22232a;
+    --h-border: #3a3b44; --h-border2: #3a3b46; --h-btn: #33343d; --h-btn-border: #4a4b55; --h-btn-hover: #41424d;
+    --h-text: #e6e6e6; --h-text2: #b9bac2; --h-muted: #8a8b94; --h-muted2: #6f7078; --h-faint: #565761; --h-code: #d8dee9;
+    --h-accent: #e6e6e6; --h-accent-h: #ffffff; --h-accent2: #8a8b94; --h-accent-bg: #3a3b44; --h-on-accent: #18181b; --h-strong: #ffffff;
+    --h-yellow: #e8d3a8; --h-blue: #9ecbff; --h-blue2: #9db3d8; --h-purple: #c4a7e7; --h-green2: #a8d5b5; --h-ok: #8fd19e;
+    --h-green: #3fb950; --h-red: #f85149; --h-amber: #e3b341; --h-err-bg: #5c1f2b; --h-err-bg2: #7a2938; --h-err-text: #ffb3c0;
+    --h-title-shadow: 0 2px 3px rgba(0, 0, 0, .45), 0 8px 22px rgba(0, 0, 0, .5);
+  }
+  h1 { font-family: var(--h-head); font-weight: 800; font-stretch: 125%; letter-spacing: -.02em; text-shadow: var(--h-title-shadow); }
+  h1 span, h1 em { text-shadow: inherit; color: var(--h-muted); }
+
+  /* the theme slider: fixed top-right, no labels */
+  .hub-theme { position: fixed; top: 14px; right: 16px; z-index: 9999; }
+  .hub-theme button { all: unset; box-sizing: border-box; position: relative; display: block; width: 52px; height: 22px; border-radius: 999px; cursor: pointer;
+    background: linear-gradient(90deg, #f1efe9, #c9c4b7 38%, #3f3f46 62%, #09090b); border: 1px solid var(--h-border2); touch-action: none; }
+  .hub-theme button:focus-visible { outline: 2px solid var(--h-text); outline-offset: 3px; }
+  .hub-theme i { position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff;
+    box-shadow: 0 1px 2px rgba(0,0,0,.35), 0 0 0 1px rgba(0,0,0,.08); transition: left .4s cubic-bezier(.65, 0, .35, 1); }
+  :root[data-theme="dark"] .hub-theme i { left: 32px; }
+  .hub-theme.dragging i { transition: none; }
+  .hub-theme.docked { position: static; flex: none; display: flex; align-items: center; margin-left: 6px; }
+  [data-hub-theme-slot] { display: contents; }
+  @media (prefers-reduced-motion: reduce) { .hub-theme i { transition: none; } }
+  @media print { .hub-theme { display: none; } }
+</style>
+<!-- /studio-hub theme kit -->
+</head>
+<body>
+<header>
+  <h1>Outfit Studio</h1>
+  <span class="sub">Colours from Sanzo Wada, A Dictionary of Color Combinations (1933) · people from Microsoft Rocketbox</span>
+  <div class="spacer"></div>
+  <button id="shot" title="Save a picture">Save PNG</button>
+  <button id="random" class="primary" title="Random combination (R)">Surprise me</button>
+  <span data-hub-theme-slot></span>
+</header>
+<div class="wrap">
+  <aside id="people">
+    <h2>People <span class="count" id="pcount"></span></h2>
+    <div class="filters" id="pfilters"></div>
+    <div class="grid" id="pgrid"></div>
+  </aside>
+  <main>
+    <div id="view">
+      <div id="status"></div>
+      <div class="viewbtns">
+        <button id="orig" class="chip" title="Show the person's own colours (O)">Original colours</button>
+        <button id="front" class="chip" title="Face front">Front</button>
+      </div>
+      <div id="bar"><span id="barText">Loading</span><i><b id="barFill"></b></i></div>
+    </div>
+    <div id="moves"></div>
+  </main>
+  <aside id="colours">
+    <h2>Combination <span class="count" id="cnum"></span></h2>
+    <div class="now" id="now"></div>
+    <div class="names" id="names"></div>
+    <div class="stepper"><button id="prev" title="Previous (Left arrow)">Previous</button><button id="next" title="Next (Right arrow)">Next</button></div>
+    <h2>On the clothes <button id="swap" title="Hand the colours to different garments (S)">Swap colours</button></h2>
+    <div class="parts" id="parts"></div>
+    <p class="hint">Skin and hair stay as they are. Each garment keeps its folds and shading, only its colour changes.</p>
+    <h2>All combinations <span class="count" id="shown"></span></h2>
+    <div class="filters">
+      <div class="filters" id="counts" style="margin:0"></div>
+      <span class="has" id="has"><i></i><span></span><button class="chip" id="hasx">Clear</button></span>
+    </div>
+    <div id="cgrid"></div>
+  </aside>
+</div>
+
+<script>window.WADA = {"colors":[["Hermosa Pink","#f9c1ce"],["Corinthian Pink","#f8b6ba"],["Cameo Pink","#e0b3b6"],["Fawn","#d1b0a7"],["Light Brown Drab","#b59392"],["Coral Red","#f58e84"],["Fresh Color","#f6917e"],["Grenadine Pink","#f48067"],["Eosine Pink","#f37f94"],["Spinel Red","#f27291"],["Old Rose","#d46d7a"],["Eugenia Red | A","#e2625e"],["Eugenia Red | B","#da525d"],["Raw Sienna","#bb7125"],["Vinaceous Tawny","#c56127"],["Jasper Red","#eb5324"],["Spectrum Red","#e31f26"],["Red Orange","#dd4027"],["Etruscan Red","#c55347"],["Burnt Sienna","#ae5224"],["Ochre Red","#ab544d"],["Scarlet","#cb2f43"],["Carmine","#cc1236"],["Indian Lake","#c53c69"],["Rosolanc Purple","#b73f74"],["Pomegranite Purple","#b71f57"],["Hydrangea Red","#a94151"],["Brick Red","#a84222"],["Carmine Red","#a62c37"],["Pompeian Red","#ab2439"],["Red","#a72144"],["Brown","#7c4226"],["Hay's Russet","#793327"],["Vandyke Red","#82241f"],["Pansy Purple","#7d133a"],["Pale Burnt Lake","#802626"],["Violet Red","#642d5e"],["Vistoris Lake","#6d4145"],["Sulpher Yellow","#f5ecc2"],["Pale Lemon Yellow","#ffefae"],["Naples Yellow","#fbe6a0"],["Ivory Buff","#ebd3a2"],["Seashell Pink","#fdd4bd"],["Light Pinkish Cinnamon","#fcc79b"],["Pinkish Cinnamon","#eeb480"],["Cinnamon Buff","#fdc57e"],["Cream Yellow","#fdbf68"],["Golden Yellow","#f3a257"],["Vinaceous Cinnamon","#eea78c"],["Ochraceous Salmon","#d8a37b"],["Isabella Color","#c5a56e"],["Maple","#c59f6b"],["Olive Buff","#c1c494"],["Ecru","#c2ae93"],["Yellow","#fff200"],["Lemon Yellow","#f8ed43"],["Apricot Yellow","#ffdd00"],["Pyrite Yellow","#cab356"],["Olive Ocher","#d6b43e"],["Yellow Ocher","#e2b540"],["Orange Yellow","#fcb315"],["Yellow Orange","#f99d1b"],["Apricot Orange","#f68c50"],["Orange","#f37420"],["Peach Red","#f15a30"],["English Red","#d96629"],["Cinnamon Rufous","#c27544"],["Orange Rufous","#c16b27"],["Sulphine Yellow","#c19f2c"],["Khaki","#bc892b"],["Citron Yellow","#b2b73e"],["Citrine","#b09f36"],["Buffy Citrine","#96874d"],["Dark Citrine","#8b835b"],["Light Grayish Olive","#848061"],["Krongbergs Green","#84875e"],["Olive","#837e31"],["Orange Citrine","#986f2d"],["Sudan Brown","#a36752"],["Olive Green","#6b7140"],["Light Brownish Olive","#806e4b"],["Deep Grayish Olive","#635a3a"],["Pale Raw Umber","#71502f"],["Sepia","#644b1e"],["Madder Brown","#762c19"],["Mars Brown Tobacco","#653514"],["Vandyke Brown","#4b3317"],["Turquoise Green","#b5decc"],["Glaucous Green","#b4cdc2"],["Dark Greenish Glaucous","#b7c2a9"],["Yellow Green","#afd472"],["Light Green Yellow","#c7d14f"],["Night Green","#87c540"],["Olive Yellow","#a6a159"],["Artemesia Green","#709390"],["Andover Green","#6d7e77"],["Rainette Green","#8fa071"],["Chromium Green","#719470"],["Pistachio Green","#648f7b"],["Sea Green","#00b49b"],["Benzol Green","#00978d"],["Light Porcelain Green","#00908a"],["Green","#489b6e"],["Dull Viridian Green","#009465"],["Oil Green","#819238"],["Diamine Green","#1a7444"],["Cossack Green","#437742"],["Lincoln Green","#555832"],["Blackish Olive","#42533e"],["Deep Slate Olive","#253122"],["Nile Blue","#bce4e5"],["Pale King's Blue","#a7d4e4"],["Light Glaucous Blue","#a5c8d1"],["Salvia Blue","#97acc8"],["Cobalt Green","#96d1aa"],["Calamine BLue","#78cdd0"],["Venice Green","#62c6bf"],["Cerulian Blue","#0093a5"],["Peacock Blue","#00939b"],["Green Blue","#099197"],["Olympic Blue","#5a82b3"],["Blue","#006eb8"],["Antwarp Blue","#007190"],["Helvetia Blue","#005b8d"],["Dark Medici Blue","#547076"],["Dusky Green","#004f46"],["Deep Lyons Blue","#1c4286"],["Violet Blue","#40456a"],["Vandar Poel's Blue","#064f6e"],["Dark Tyrian Blue","#12354e"],["Dull Violet Black","#1e0e3f"],["Deep Indigo","#051230"],["Deep Slate Green","#112f2c"],["Grayish Lavender - A","#b5b1d8"],["Grayish Lavender - B","#c0a9b3"],["Laelia Pink","#ca92a8"],["Lilac","#b984af"],["Eupatorium Purple","#bf5892"],["Light Mauve","#9a72aa"],["Aconite Violet","#a36aa5"],["Dull Blue Violet","#80719e"],["Dark Soft Violet","#66629c"],["Blue Violet","#6450a1"],["Purple Drab","#84565b"],["Deep Violet / Plumbeous","#70727c"],["Veronia Purple","#8c4c62"],["Dark Slate Purple","#704357"],["Taupe Brown","#7a4456"],["Violet Carmine","#713b4c"],["Violet","#4f4086"],["Red Violet","#59256a"],["Cotinga Purple","#501345"],["Dusky Madder Violet","#4e1d4c"],["White","#ffffff"],["Neutral Gray","#b6bfc1"],["Mineral Gray","#a2b0ad"],["Warm Gray","#a1a39a"],["Slate Color","#34454c"],["Black","#111314"]],"combos":[[1,[65,117]],[2,[61,129]],[3,[13,39]],[4,[50,150]],[5,[106,128]],[6,[7,131]],[7,[63,88]],[8,[66,133]],[9,[36,140]],[10,[66,73]],[11,[41,155]],[12,[50,119]],[13,[13,145]],[14,[9,40]],[15,[100,133]],[16,[33,111]],[17,[12,99]],[18,[3,152]],[19,[85,92]],[20,[115,135]],[21,[7,99]],[22,[54,126]],[23,[45,138]],[24,[83,145]],[25,[18,110]],[26,[47,82]],[27,[1,157]],[28,[84,131]],[29,[75,113]],[30,[29,155]],[31,[17,39]],[32,[49,92]],[33,[13,157]],[34,[8,154]],[35,[4,28]],[36,[68,87]],[37,[27,150]],[38,[105,126]],[39,[22,123]],[40,[14,70]],[41,[73,115]],[42,[59,149]],[43,[1,139]],[44,[101,120]],[45,[42,55]],[46,[63,158]],[47,[18,134]],[48,[24,123]],[49,[111,121]],[50,[41,152]],[51,[28,121]],[52,[38,158]],[53,[61,152]],[54,[100,112]],[55,[10,153]],[56,[134,149]],[57,[147,157]],[58,[32,99]],[59,[8,71]],[60,[39,129]],[61,[91,151]],[62,[54,158]],[63,[37,117]],[64,[139,141]],[65,[68,115]],[66,[58,79]],[67,[120,129]],[68,[4,54]],[69,[156,158]],[70,[13,107]],[71,[29,49]],[72,[38,111]],[73,[82,96]],[74,[87,119]],[75,[111,127]],[76,[39,156]],[77,[12,128]],[78,[44,116]],[79,[84,119]],[80,[38,138]],[81,[47,156]],[82,[32,152]],[83,[52,127]],[84,[42,132]],[85,[14,122]],[86,[13,99]],[87,[1,70]],[88,[42,121]],[89,[61,127]],[90,[8,139]],[91,[37,67]],[92,[5,100]],[93,[71,112]],[94,[41,125]],[95,[32,130]],[96,[59,76]],[97,[1,18]],[98,[84,127]],[99,[39,117]],[100,[72,140]],[101,[2,126]],[102,[41,67]],[103,[66,152]],[104,[28,38]],[105,[2,97]],[106,[122,130]],[107,[56,74]],[108,[8,27]],[109,[39,108]],[110,[31,86]],[111,[39,90]],[112,[7,158]],[113,[42,86]],[114,[60,122]],[115,[40,64]],[116,[2,142]],[117,[22,158]],[118,[59,86]],[119,[112,129]],[120,[2,29]],[121,[31,49,107]],[122,[22,46,100]],[123,[5,55,147]],[124,[35,59,93]],[125,[3,117,127]],[126,[41,59,126]],[127,[45,98,141]],[128,[1,116,138]],[129,[56,69,113]],[130,[13,28,149]],[131,[13,65,118]],[132,[38,47,71]],[133,[33,71,99]],[134,[8,138,150]],[135,[38,106,113]],[136,[21,103,150]],[137,[18,45,98]],[138,[47,55,116]],[139,[113,131,154]],[140,[47,122,157]],[141,[63,90,129]],[142,[26,68,113]],[143,[121,136,156]],[144,[24,63,158]],[145,[31,70,130]],[146,[69,81,105]],[147,[9,33,87]],[148,[58,60,117]],[149,[58,63,132]],[150,[42,70,88]],[151,[38,61,128]],[152,[18,32,112]],[153,[8,60,70]],[154,[22,54,121]],[155,[15,100,131]],[156,[58,114,149]],[157,[34,58,120]],[158,[55,66,92]],[159,[69,115,133]],[160,[68,82,124]],[161,[31,44,123]],[162,[10,96,136]],[163,[56,87,122]],[164,[17,60,149]],[165,[2,9,37]],[166,[7,40,132]],[167,[53,111,128]],[168,[55,128,145]],[169,[1,39,156]],[170,[24,60,150]],[171,[35,61,88]],[172,[66,122,150]],[173,[55,84,87]],[174,[1,134,147]],[175,[44,52,142]],[176,[0,42,115]],[177,[35,72,133]],[178,[41,112,119]],[179,[17,47,126]],[180,[45,138,154]],[181,[28,149,151]],[182,[13,86,131]],[183,[144,145,150]],[184,[9,41,74]],[185,[4,18,39]],[186,[32,49,121]],[187,[123,134,139]],[188,[96,113,114]],[189,[55,109,116]],[190,[41,65,158]],[191,[4,59,121]],[192,[46,86,144]],[193,[7,40,101]],[194,[15,42,120]],[195,[9,39,154]],[196,[70,111,142]],[197,[8,141,154]],[198,[19,56,102]],[199,[20,80,126]],[200,[28,52,97]],[201,[7,76,114]],[202,[87,114,157]],[203,[39,48,107]],[204,[24,66,112]],[205,[35,48,149]],[206,[1,47,66]],[207,[78,88,158]],[208,[38,119,122]],[209,[41,61,113]],[210,[45,55,107]],[211,[62,93,131]],[212,[29,77,113]],[213,[48,56,111]],[214,[41,78,149]],[215,[46,121,137]],[216,[15,102,158]],[217,[35,49,105]],[218,[123,133,144]],[219,[15,97,125]],[220,[25,49,139]],[221,[28,154,158]],[222,[59,61,67]],[223,[4,49,87]],[224,[9,124,147]],[225,[22,125,146]],[226,[37,46,149]],[227,[0,112,117]],[228,[28,39,154]],[229,[47,109,154]],[230,[7,87,114]],[231,[2,32,120]],[232,[22,44,131]],[233,[28,72,127]],[234,[45,82,111]],[235,[41,61,134]],[236,[69,126,143]],[237,[28,84,113]],[238,[49,151,156]],[239,[4,57,88]],[240,[6,54,117]],[241,[17,39,50,124]],[242,[8,19,105,158]],[243,[13,41,79,157]],[244,[4,14,95,122]],[245,[28,104,129,157]],[246,[1,27,38,45]],[247,[13,56,100,126]],[248,[8,69,133,146]],[249,[32,53,58,124]],[250,[57,64,99,110]],[251,[30,54,105,157]],[252,[12,13,68,119]],[253,[55,62,151,157]],[254,[1,38,76,135]],[255,[13,57,115,158]],[256,[48,63,103,158]],[257,[16,60,121,139]],[258,[35,44,76,122]],[259,[55,119,123,156]],[260,[10,48,88,99]],[261,[30,39,115,156]],[262,[12,41,71,106]],[263,[19,44,87,157]],[264,[1,17,89,117]],[265,[10,56,93,130]],[266,[16,41,96,100]],[267,[46,61,100,121]],[268,[4,13,109,110]],[269,[13,35,139,158]],[270,[12,38,79,106]],[271,[25,114,119,132]],[272,[39,63,87,113]],[273,[0,34,78,154]],[274,[64,73,120,138]],[275,[18,53,84,147]],[276,[8,42,90,158]],[277,[9,24,76,130]],[278,[46,58,106,125]],[279,[13,48,53,129]],[280,[12,107,135,147]],[281,[39,100,114,122]],[282,[12,51,114,136]],[283,[20,35,97,116]],[284,[11,56,99,125]],[285,[4,19,64,87]],[286,[19,60,118,127]],[287,[8,57,111,115]],[288,[61,83,147,158]],[289,[55,91,127,130]],[290,[37,39,107,114]],[291,[91,99,114,115]],[292,[39,44,50,53]],[293,[13,87,94,102]],[294,[38,46,106,113]],[295,[46,54,121,130]],[296,[38,49,82,157]],[297,[19,61,79,127]],[298,[13,55,64,158]],[299,[23,48,104,122]],[300,[7,46,87,115]],[301,[16,41,96,139]],[302,[46,53,110,122]],[303,[40,64,109,154]],[304,[32,46,73,100]],[305,[44,56,70,87]],[306,[55,100,103,110]],[307,[22,133,139,151]],[308,[3,21,65,114]],[309,[47,62,127,128]],[310,[38,44,76,109]],[311,[29,46,89,91]],[312,[19,61,94,123]],[313,[22,54,105,158]],[314,[8,32,126,152]],[315,[7,38,47,137]],[316,[33,103,149,150]],[317,[43,53,55,87]],[318,[80,108,125,132]],[319,[13,56,61,106]],[320,[5,38,104,112]],[321,[4,38,109,113]],[322,[16,27,137,142]],[323,[45,70,84,158]],[324,[29,120,139,154]],[325,[12,40,59,132]],[326,[38,64,90,92]],[327,[8,13,53,134]],[328,[27,62,86,101]],[329,[46,134,151,157]],[330,[52,110,113,119]],[331,[23,130,138,149]],[332,[5,21,109,125]],[333,[19,55,114,121]],[334,[42,76,90,122]],[335,[33,61,149,157]],[336,[8,32,39,108]],[337,[37,135,148,158]],[338,[28,60,125,134]],[339,[49,65,112,127]],[340,[64,99,154,158]],[341,[7,106,109,112]],[342,[1,46,77,109]],[343,[19,41,81,128]],[344,[45,126,139,158]],[345,[32,110,116,142]],[346,[24,87,91,95]],[347,[93,99,123,136]],[348,[52,106,109,151]]]}; window.PEOPLE = {"Adults":["Female_Adult_01","Female_Adult_02","Female_Adult_03","Female_Adult_04","Female_Adult_05","Female_Adult_06","Female_Adult_07","Female_Adult_08","Female_Adult_09","Female_Adult_10","Female_Adult_11","Female_Adult_12","Female_Adult_13","Female_Adult_14","Female_Adult_15","Female_Adult_16","Female_Adult_17","Female_Party_01","Female_Party_02","Male_Adult_01","Male_Adult_02","Male_Adult_03","Male_Adult_04","Male_Adult_05","Male_Adult_06","Male_Adult_07","Male_Adult_08","Male_Adult_09","Male_Adult_10","Male_Adult_11","Male_Adult_12","Male_Adult_13","Male_Adult_14","Male_Adult_15","Male_Adult_16","Male_Adult_17","Male_Adult_18","Male_Adult_19","Male_Adult_20","Male_Adult_21"],"Professions":["Business_Female_01","Business_Female_02","Business_Female_03","Business_Female_04","Business_Male_01","Business_Male_02","Business_Male_03","Business_Male_04","Business_Male_05","Business_Male_06","Business_Male_07","Chef_Female_01","Construction_Female_01","Construction_Male_01","Construction_Male_02","Construction_Male_03","Construction_Male_04","Construction_Male_05","Construction_Male_06","Construction_Male_07","Construction_Male_08","Delivery_Male_01","Fire_Female_01","Fire_Female_02","Fire_Female_03","Fire_Male_01","Fire_Male_02","Fire_Male_03","Fire_Male_04","Fire_Male_05","Fire_Male_06","Fire_Male_07","Gardener_Male_01","Medical_Female_01","Medical_Female_02","Medical_Female_03","Medical_Male_01","Medical_Male_02","Medical_Male_03","Medical_Male_04","Medical_Male_05","Military_Female_01","Military_Female_02","Military_Male_01","Military_Male_02","Military_Male_03","Military_Male_04","Military_Male_05","Military_Male_06","Pilot_Female_01","Pilot_Female_02","Pilot_Male_01","Pilot_Male_02","Pilot_Male_03","Police_Female_01","Police_Male_01","Police_Male_02","Police_Male_03","Police_Male_04","Police_Male_05","Police_Male_06","Police_Male_07","Security_Female_01","Security_Male_01","Sports_Female_01","Sports_Female_02","Sports_Male_01","Sports_Male_02","Sports_Male_03","Sports_Male_04","Wood_Male_01"]}
+;</script>
+<script type="module">
+import * as THREE from "three";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { FBXLoader } from "three/addons/loaders/FBXLoader.js";
+import { TGALoader } from "three/addons/loaders/TGALoader.js";
+
+const $ = id => document.getElementById(id);
+const { colors: COLORS, combos: COMBOS } = window.WADA;
+const RB = "https://raw.githubusercontent.com/microsoft/Microsoft-Rocketbox/master/Assets/";
+const ANIM = RB + "Animations/all_animations_max_motextr_static/";
+const KEY = "outfitStudio";
+const MOVES = [
+  ["Stand", "idle_breathe_01"], ["Look around", "idle_look_around_01"], ["Stretch", "idle_stretch_arms_01"], ["Wait", "idle_waiting_01"],
+  ["Talk", "gestic_talk_relaxed_01"], ["Shrug", "gestic_shrug_01"], ["Laugh", "gestic_laugh_loud"], ["Wave", "wave_01"],
+  ["Clap", "claphands_01"], ["Cheer", "cheer_01"], ["Phone", "cell_phone_textmessage"], ["Photo", "take_picture"],
+  ["Dance", "dancing_cool"], ["Dance 2", "dancing_silly"], ["Dance 3", "dancing_neutral"], ["Crouch", "crouch_idle"],
+];
+let S = { group: "Adults", person: "Female_Adult_03", combo: 0, perm: 0, count: 0, has: null, orig: false, auto: true, filter: "all" };
+let first = true;
+try { const s = JSON.parse(localStorage.getItem(KEY)); if (s) { Object.assign(S, s); first = false; } } catch {}
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch {} };
+
+// ---------- colour maths ----------
+const hexRgb = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+const lumOf = (r, g, b) => (.2126 * r + .7152 * g + .0722 * b) / 255;
+const comboCols = () => COMBOS[S.combo][1].map(i => COLORS[i][1]);
+
+// ---------- people gallery ----------
+const people = [...window.PEOPLE.Adults.map(n => ["Adults", n]), ...window.PEOPLE.Professions.map(n => ["Professions", n])];
+const FILTERS = [["all", "All"], ["women", "Women"], ["men", "Men"], ["everyday", "Everyday"], ["work", "Work"]];
+function drawPeople() {
+  const f = $("pfilters"); f.innerHTML = "";
+  FILTERS.forEach(([k, t]) => { const b = document.createElement("button"); b.className = "chip" + (S.filter === k ? " on" : ""); b.textContent = t; b.onclick = () => { S.filter = k; save(); drawPeople(); }; f.append(b); });
+  const list = people.filter(([g, n]) => S.filter === "all" || (S.filter === "women" && /female/i.test(n)) || (S.filter === "men" && !/female/i.test(n)) || (S.filter === "everyday" && g === "Adults") || (S.filter === "work" && g === "Professions"));
+  $("pcount").textContent = list.length;
+  const grid = $("pgrid"); grid.innerHTML = "";
+  list.forEach(([g, n]) => {
+    const b = document.createElement("button"); b.className = "card" + (n === S.person ? " on" : ""); b.title = n.replace(/_/g, " ");
+    b.innerHTML = `<img loading="lazy" alt="" src="${RB}Avatars/${g}/${n}/${n}.png"><span>${n.replace(/_/g, " ")}</span>`;
+    b.onclick = () => { S.group = g; S.person = n; save(); drawPeople(); loadPerson(); };
+    grid.append(b);
+  });
+}
+
+// ---------- three.js ----------
+const view = $("view");
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+view.prepend(renderer.domElement);
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(30, 1, .05, 100);
+camera.position.set(0, 1.15, 4.6);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.target.set(0, .95, 0); controls.enableDamping = true; controls.minDistance = 1; controls.maxDistance = 10; controls.maxPolarAngle = Math.PI * .58;
+scene.add(new THREE.HemisphereLight(0xfffaf2, 0x8a8170, 1.6));
+const key = new THREE.DirectionalLight(0xffffff, 2.2);
+key.position.set(2, 4, 3); key.castShadow = true; key.shadow.mapSize.set(2048, 2048); key.shadow.bias = -.0004;
+Object.assign(key.shadow.camera, { left: -1.5, right: 1.5, top: 2.4, bottom: -.2 });
+scene.add(key);
+const fill = new THREE.DirectionalLight(0xfff2e6, .8); fill.position.set(-3, 2, -2); scene.add(fill);
+const floor = new THREE.Mesh(new THREE.CircleGeometry(4, 64), new THREE.ShadowMaterial({ opacity: .16 }));
+floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor);
+function resize() { const w = view.clientWidth, h = view.clientHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); }
+new ResizeObserver(resize).observe(view);
+const clock = new THREE.Clock();
+let mixer = null, actor = null, current = null, autoAt = 0;
+renderer.setAnimationLoop(() => {
+  const dt = clock.getDelta();
+  if (mixer) mixer.update(dt);
+  if (S.auto && actor && clock.elapsedTime > autoAt) nextAuto();
+  controls.update(); renderer.render(scene, camera);
+});
+const bar = $("bar");
+function progress(text, f) { bar.classList.add("show"); $("barText").textContent = text; $("barFill").style.width = Math.round(f * 100) + "%"; }
+const done = () => bar.classList.remove("show");
+
+// Rocketbox FBX files point at textures by an old Windows path; serve them from the
+// avatar's Textures folder. Normal and specular maps are skipped (12 MB each).
+const FLAT = "data:image/x-tga;base64,AAACAAAAAAAAAAAAAQABABgAgICA";
+let token = 0, body = null;   // body = { tex, orig (Uint8 RGBA), w, h, groups, skin }
+async function loadPerson() {
+  const my = ++token, name = S.person, base = `${RB}Avatars/${S.group}/${name}/`;
+  const manager = new THREE.LoadingManager();
+  manager.setURLModifier(url => {
+    if (/\.tga$/i.test(url)) { const file = url.split(/[\\/]/).pop(); return /_(normal|specular)|wrinkle/i.test(file) ? FLAT : base + "Textures/" + file; }
+    return url;
+  });
+  manager.addHandler(/\.tga$/i, new TGALoader(manager));
+  manager.onProgress = (u, a, b) => progress(`Loading ${name.replace(/_/g, " ")} · ${a} of ${b} files`, a / b);
+  progress(`Loading ${name.replace(/_/g, " ")}`, 0);
+  const fbx = await new FBXLoader(manager).loadAsync(base + `Export/${name}.fbx`).catch(e => { console.error(e); return null; });
+  if (my !== token) return;
+  if (!fbx) { progress("Could not load that one", 0); return; }
+  await new Promise(r => { if (manager.itemsLoaded >= manager.itemsTotal) r(); else manager.onLoad = r; setTimeout(r, 90000); });
+  if (my !== token) return;
+  let bodyMat = null, headMat = null;
+  fbx.traverse(o => {
+    if (!o.isMesh) return;
+    o.castShadow = o.receiveShadow = true; o.frustumCulled = false;
+    [].concat(o.material).forEach(m => {
+      m.normalMap = null; m.specularMap = null; m.shininess = 8;
+      if (m.map) { m.color.set(0xffffff); m.map.colorSpace = THREE.SRGBColorSpace; }
+      if (m.alphaMap || m.map?.format === THREE.RGBAFormat) { m.transparent = false; m.alphaTest = .45; m.side = THREE.DoubleSide; }
+      if (/_body$/i.test(m.name)) bodyMat = m; else if (/_head$/i.test(m.name)) headMat = m;
+      m.needsUpdate = true;
+    });
+  });
+  if (actor) { scene.remove(actor); actor.traverse(o => { if (o.isMesh) { o.geometry.dispose(); [].concat(o.material).forEach(m => { m.map?.dispose(); m.dispose(); }); } }); }
+  mixer && mixer.stopAllAction();
+  actor = fbx; actor.userData.sex = /female/i.test(name) ? "f" : "m";
+  const b = new THREE.Box3().setFromObject(fbx), h = b.max.y - b.min.y;
+  fbx.scale.multiplyScalar(1.75 / h);
+  const b2 = new THREE.Box3().setFromObject(fbx); fbx.position.y -= b2.min.y; fbx.position.x -= (b2.min.x + b2.max.x) / 2; fbx.position.z -= (b2.min.z + b2.max.z) / 2;
+  scene.add(fbx);
+  mixer = new THREE.AnimationMixer(fbx); current = null;
+  body = bodyMat && bodyMat.map?.image?.data ? segment(bodyMat.map, headMat?.map) : null;
+  recolour(); status();
+  play(MOVES[0][1]);
+  done();
+  window.actor = actor;
+}
+
+// ---------- telling clothes from skin, and garments from each other ----------
+// The body texture holds clothes AND bare skin (hands, arms, legs). Skin is found by
+// its closeness to the face colour from the head texture; what remains is grouped into
+// up to four garments by colour (k-means on a small copy), dark to light.
+function segment(tex, headTex) {
+  const { data, width: w, height: h } = tex.image;
+  const orig = new Uint8ClampedArray(data);
+  // face colour: median of the brighter head pixels
+  let skin = [200, 150, 120];
+  if (headTex?.image?.data) {
+    const d = headTex.image.data, W = headTex.image.width, H = headTex.image.height, rs = [], gs = [], bs = [];
+    for (let y = H * .3; y < H * .7; y += 4) for (let x = W * .3; x < W * .7; x += 4) { const i = ((y | 0) * W + (x | 0)) * 4; if (d[i] + d[i + 1] + d[i + 2] > 150) { rs.push(d[i]); gs.push(d[i + 1]); bs.push(d[i + 2]); } }
+    const med = a => { a.sort((p, q) => p - q); return a[a.length >> 1] || 0; };
+    if (rs.length > 50) skin = [med(rs), med(gs), med(bs)];
+  }
+  const sh = hueOf(skin), ss = satOf(skin);
+  const isSkin = (r, g, b) => {
+    if (r + g + b < 90) return false;
+    const dh = Math.abs(((hueOf([r, g, b]) - sh + 540) % 360) - 180);
+    const s = satOf([r, g, b]);
+    return dh < 16 && s > ss * .45 && s < ss * 1.7 && r > g && g >= b * .9;
+  };
+  // small sample for clustering
+  const step = Math.max(1, (w / 256) | 0), pts = [];
+  for (let y = 0; y < h; y += step) for (let x = 0; x < w; x += step) {
+    const i = (y * w + x) * 4; if (data[i + 3] < 10) continue;
+    const r = data[i], g = data[i + 1], b = data[i + 2];
+    if (r + g + b < 24 || isSkin(r, g, b)) continue;
+    pts.push([r, g, b]);
+  }
+  let centres = kmeans(pts, 5, 12);
+  // merge centres that are nearly the same colour
+  centres.sort((a, b) => lumOf(...a) - lumOf(...b));
+  const merged = [];
+  centres.forEach(c => { const near = merged.find(m => dist(m, c) < 42); if (!near) merged.push(c); });
+  // per-pixel garment index (255 = skin / none)
+  const idx = new Uint8Array(w * h), sums = merged.map(() => [0, 0]);
+  for (let p = 0; p < w * h; p++) {
+    const i = p * 4, r = data[i], g = data[i + 1], b = data[i + 2];
+    if (data[i + 3] < 10 || r + g + b < 24 || isSkin(r, g, b)) { idx[p] = 255; continue; }
+    let best = 0, bd = Infinity;
+    merged.forEach((c, k) => { const d = dist(c, [r, g, b]); if (d < bd) { bd = d; best = k; } });
+    idx[p] = best; sums[best][0] += lumOf(r, g, b); sums[best][1]++;
+  }
+  const groups = merged.map((c, k) => ({ centre: c, lum: sums[k][1] ? sums[k][0] / sums[k][1] : lumOf(...c), share: sums[k][1] / (w * h) })).filter(g => g.share > .004);
+  // reindex after dropping tiny groups
+  const map = new Uint8Array(merged.length).fill(255); groups.forEach((g, n) => map[merged.indexOf(g.centre)] = n);
+  for (let p = 0; p < w * h; p++) if (idx[p] !== 255) idx[p] = map[idx[p]];
+  return { tex, orig, w, h, idx, groups, skin };
+}
+const hueOf = ([r, g, b]) => { const M = Math.max(r, g, b), m = Math.min(r, g, b), d = M - m; if (!d) return 0; let hh = M === r ? (g - b) / d : M === g ? 2 + (b - r) / d : 4 + (r - g) / d; return ((hh * 60) + 360) % 360; };
+const satOf = ([r, g, b]) => { const M = Math.max(r, g, b), m = Math.min(r, g, b); return M ? (M - m) / M : 0; };
+const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+function kmeans(pts, k, iters) {
+  if (!pts.length) return [];
+  k = Math.min(k, pts.length);
+  let c = [pts[0]];
+  while (c.length < k) {   // k-means++ seeding
+    let best = null, bd = -1;
+    for (let i = 0; i < pts.length; i += 7) { const d = Math.min(...c.map(x => dist(x, pts[i]))); if (d > bd) { bd = d; best = pts[i]; } }
+    c.push(best);
+  }
+  for (let it = 0; it < iters; it++) {
+    const acc = c.map(() => [0, 0, 0, 0]);
+    pts.forEach(p => { let bi = 0, bd = Infinity; c.forEach((x, i) => { const d = dist(x, p); if (d < bd) { bd = d; bi = i; } }); const a = acc[bi]; a[0] += p[0]; a[1] += p[1]; a[2] += p[2]; a[3]++; });
+    c = acc.map((a, i) => a[3] ? [a[0] / a[3], a[1] / a[3], a[2] / a[3]] : c[i]);
+  }
+  return c;
+}
+
+// Which Wada colour each garment gets: garments dark→light take colours dark→light,
+// `perm` rotates the hand-out. Returns hex per garment group.
+function plan() {
+  if (!body) return [];
+  const cols = [...comboCols()].sort((a, b) => lumOf(...hexRgb(a)) - lumOf(...hexRgb(b)));
+  const n = body.groups.length, out = [];
+  for (let g = 0; g < n; g++) {
+    const rank = Math.round(g * (cols.length - 1) / Math.max(1, n - 1));
+    out.push(cols[(rank + S.perm) % cols.length]);
+  }
+  return out;
+}
+// Repaint the body texture: every garment pixel takes its colour's hue and saturation
+// and keeps its own light and dark, so folds, seams and buttons survive.
+function recolour() {
+  if (!body) return;
+  const { tex, orig, w, h, idx, groups } = body, d = tex.image.data;
+  if (S.orig) { d.set(orig); tex.needsUpdate = true; drawParts([]); return; }
+  const cols = plan().map(hexRgb);
+  const target = cols.map((c, k) => { const [tr, tg, tb] = c; const tl = lumOf(tr, tg, tb); return { c, tl, gl: groups[k].lum }; });
+  for (let p = 0; p < w * h; p++) {
+    const k = idx[p], i = p * 4;
+    if (k === 255) { d[i] = orig[i]; d[i + 1] = orig[i + 1]; d[i + 2] = orig[i + 2]; continue; }
+    const t = target[k], L = lumOf(orig[i], orig[i + 1], orig[i + 2]);
+    // shade factor relative to the garment's average, applied to the new colour
+    const f = Math.min(2.2, L / Math.max(.03, t.gl));
+    const lift = t.tl < .12 ? .12 : 0;   // near-black colours still need visible folds
+    d[i] = Math.min(255, (t.c[0] + lift * 255) * f); d[i + 1] = Math.min(255, (t.c[1] + lift * 255) * f); d[i + 2] = Math.min(255, (t.c[2] + lift * 255) * f);
+  }
+  tex.needsUpdate = true;
+  drawParts(plan());
+}
+const nameOf = hex => (COLORS.find(c => c[1] === hex) || [hex])[0];
+function drawParts(cols) {
+  const box = $("parts"); box.innerHTML = "";
+  if (!body) return;
+  body.groups.forEach((g, k) => {
+    const row = document.createElement("div"); row.className = "part";
+    const c = `rgb(${g.centre.map(Math.round).join(",")})`;
+    row.innerHTML = `<i style="background:${c}" title="This garment's own colour"></i><div>${cols[k] ? nameOf(cols[k]) : "own colour"} <em style="color:var(--h-muted)">· ${Math.round(g.share * 100)}% of the texture</em></div><i style="background:${cols[k] || c}"></i>`;
+    box.append(row);
+  });
+}
+function status() {
+  const [n] = COMBOS[S.combo];
+  $("status").innerHTML = `<b>${S.person.replace(/_/g, " ")}</b>${S.orig ? "Own colours" : "Wada No. " + n}`;
+}
+
+// ---------- motions ----------
+const animCache = new Map();
+function rbClip(move, sex) {
+  const file = `${sex}_${move}.max.fbx`;
+  if (!animCache.has(file)) animCache.set(file, new FBXLoader().loadAsync(ANIM + encodeURI(file)).then(a => a.animations[0]).catch(() => null));
+  return animCache.get(file);
+}
+async function play(move) {
+  if (!actor) return;
+  const who = actor; markMove(move);
+  const clip = await rbClip(move, who.userData.sex);
+  if (who !== actor || !clip) return;
+  const a = mixer.clipAction(clip);
+  a.reset().setEffectiveWeight(1).fadeIn(.5).play();
+  if (current && current !== a) current.fadeOut(.5);
+  current = a;
+  autoAt = clock.elapsedTime + Math.min(Math.max(clip.duration, 5), 12);
+}
+function nextAuto() { const pool = MOVES.filter(m => m[1] !== actor.userData.move); play(pool[Math.floor(Math.random() * pool.length)][1]); autoAt = clock.elapsedTime + 30; }
+function markMove(m) { actor.userData.move = m; document.querySelectorAll("#moves .mv").forEach(b => b.classList.toggle("on", b.dataset.m === m)); }
+function drawMoves() {
+  const box = $("moves"); box.innerHTML = "";
+  const lab = document.createElement("span"); lab.className = "lab"; lab.textContent = "Moves"; box.append(lab);
+  const a = document.createElement("button"); a.className = "chip" + (S.auto ? " on" : ""); a.textContent = "On its own"; a.title = "Switch to a new motion every few seconds";
+  a.onclick = () => { S.auto = !S.auto; a.classList.toggle("on", S.auto); if (S.auto) autoAt = 0; save(); };
+  box.append(a);
+  MOVES.forEach(([t, m]) => { const b = document.createElement("button"); b.className = "chip mv"; b.dataset.m = m; b.textContent = t; b.onclick = () => { S.auto = false; a.classList.remove("on"); save(); play(m); }; box.append(b); });
+}
+
+// ---------- combinations panel ----------
+function chip(text, on, fn) { const b = document.createElement("button"); b.className = "chip" + (on ? " on" : ""); b.textContent = text; b.onclick = fn; return b; }
+function drawCombo() {
+  const [n, ids] = COMBOS[S.combo];
+  $("cnum").textContent = `No. ${n} of 348`;
+  const now = $("now"); now.innerHTML = "";
+  ids.forEach(i => { const el = document.createElement("i"); el.style.background = COLORS[i][1]; el.title = COLORS[i][0] + " — show combinations with it"; el.onclick = () => { S.has = i; drawGrid(); save(); }; now.append(el); });
+  $("names").innerHTML = ids.map(i => `${COLORS[i][0]} <em>${COLORS[i][1]}</em>`).join("<br>");
+  status();
+}
+function visible() { return COMBOS.map((c, i) => i).filter(i => (!S.count || COMBOS[i][1].length === S.count) && (S.has == null || COMBOS[i][1].includes(S.has))); }
+function drawGrid() {
+  const cx = $("counts"); cx.innerHTML = "";
+  [[0, "All"], [2, "2 colours"], [3, "3"], [4, "4"]].forEach(([n, t]) => cx.append(chip(t, S.count === n, () => { S.count = n; drawGrid(); save(); })));
+  const has = $("has"); has.classList.toggle("show", S.has != null);
+  if (S.has != null) { has.querySelector("i").style.background = COLORS[S.has][1]; has.querySelector("span").textContent = "With " + COLORS[S.has][0]; }
+  const grid = $("cgrid"); grid.innerHTML = "";
+  const list = visible(); $("shown").textContent = list.length + " shown";
+  list.forEach(i => {
+    const [n, ids] = COMBOS[i];
+    const b = document.createElement("button"); b.className = "combo" + (i === S.combo ? " on" : ""); b.title = ids.map(j => COLORS[j][0]).join(", ");
+    b.innerHTML = `<div class="bar">${ids.map(j => `<i style="background:${COLORS[j][1]}"></i>`).join("")}</div><small>${n}</small>`;
+    b.onclick = () => pick(i); grid.append(b);
+  });
+}
+$("hasx").onclick = () => { S.has = null; drawGrid(); save(); };
+function pick(i) { S.combo = i; S.perm = 0; S.orig = false; $("orig").classList.remove("on"); save(); drawCombo(); drawGrid(); recolour(); $("cgrid").querySelector(".combo.on")?.scrollIntoView({ block: "nearest" }); }
+function step(d) { const list = visible(); if (!list.length) return; const at = list.indexOf(S.combo); pick(list[((at < 0 ? 0 : at + d) + list.length) % list.length]); }
+$("prev").onclick = () => step(-1); $("next").onclick = () => step(1);
+$("random").onclick = () => { const list = visible(); pick(list[Math.floor(Math.random() * list.length)]); };
+$("swap").onclick = () => { S.perm++; save(); recolour(); };
+$("orig").onclick = () => { S.orig = !S.orig; $("orig").classList.toggle("on", S.orig); save(); recolour(); status(); };
+$("front").onclick = () => { const r = Math.hypot(camera.position.x, camera.position.z); camera.position.set(0, camera.position.y, r); };
+$("shot").onclick = () => { renderer.render(scene, camera); const a = document.createElement("a"); a.href = renderer.domElement.toDataURL("image/png"); a.download = `outfit-${S.person}-wada-${COMBOS[S.combo][0]}.png`; a.click(); };
+document.addEventListener("keydown", e => {
+  if (e.target.closest?.("input, select, textarea") || e.ctrlKey || e.metaKey || e.altKey) return;
+  if (e.key === "ArrowRight") step(1); else if (e.key === "ArrowLeft") step(-1);
+  else if (e.key.toLowerCase() === "r") $("random").click();
+  else if (e.key.toLowerCase() === "s") $("swap").click();
+  else if (e.key.toLowerCase() === "o") $("orig").click();
+});
+
+if (!(S.combo >= 0 && S.combo < COMBOS.length)) S.combo = 0;
+if (first) { const three = COMBOS.map((c, i) => i).filter(i => COMBOS[i][1].length === 3); S.combo = three[Math.floor(Math.random() * three.length)]; }
+$("orig").classList.toggle("on", S.orig);
+resize(); drawPeople(); drawMoves(); drawCombo(); drawGrid(); loadPerson();
+window.outfit = { S, recolour, pick, get body() { return body; } };
+</script>
+<!-- studio-hub theme slider -->
+<div class="hub-theme" title="Light / dark"><button type="button" role="switch" aria-label="Dark theme" aria-checked="false"><i></i></button></div>
+<script>
+(() => {
+  const root = document.documentElement, wrap = document.querySelector(".hub-theme"), btn = wrap.querySelector("button"), knob = btn.querySelector("i");
+  const slot = document.querySelector("[data-hub-theme-slot]");
+  if (slot) { slot.append(wrap); wrap.classList.add("docked"); }  // app pages: sit at the end of the toolbar
+  const sync = () => btn.setAttribute("aria-checked", String(root.dataset.theme === "dark"));
+  const set = (t) => {
+    root.dataset.theme = t; knob.style.left = ""; sync();
+    try { localStorage.setItem("hubTheme", t); } catch (e) {}
+    window.dispatchEvent(new CustomEvent("hubthemechange", { detail: t }));
+  };
+  // Click toggles; a drag snaps to whichever end it is released nearer.
+  let drag = null, skipClick = false;
+  const frac = (e) => { const r = btn.getBoundingClientRect(); return Math.min(1, Math.max(0, (e.clientX - r.left - 10) / (r.width - 20))); };
+  btn.addEventListener("pointerdown", (e) => { drag = { x: e.clientX, moved: false }; btn.setPointerCapture(e.pointerId); });
+  btn.addEventListener("pointermove", (e) => {
+    if (!drag) return;
+    if (Math.abs(e.clientX - drag.x) > 3) { drag.moved = true; wrap.classList.add("dragging"); }
+    if (drag.moved) knob.style.left = 2 + frac(e) * 30 + "px";
+  });
+  btn.addEventListener("pointerup", (e) => {
+    wrap.classList.remove("dragging");
+    if (drag && drag.moved) { set(frac(e) > 0.5 ? "dark" : "light"); skipClick = true; }
+    drag = null;
+  });
+  btn.addEventListener("click", () => { if (skipClick) { skipClick = false; return; } set(root.dataset.theme === "dark" ? "light" : "dark"); });
+  btn.addEventListener("keydown", (e) => { if (e.key === "ArrowLeft") set("light"); if (e.key === "ArrowRight") set("dark"); });
+  // Another tab changed it: follow along.
+  window.addEventListener("storage", (e) => { if (e.key === "hubTheme") { root.dataset.theme = e.newValue === "dark" ? "dark" : "light"; sync(); } });
+  sync();
+})();
+</script>
+<!-- /studio-hub theme slider -->
+</body>
+</html>

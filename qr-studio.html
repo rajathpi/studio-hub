@@ -1,0 +1,911 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>QR Studio</title>
+<meta name="description" content="Make QR codes for links, Wi-Fi, contacts and more in a dozen styles, each checked to scan. Or paste a screenshot to read one.">
+<script src="https://cdn.jsdelivr.net/npm/qr-code-styling@1.9.2/lib/qr-code-styling.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  [hidden] { display: none !important; }
+  html, body { height: 100%; }
+  body {
+    font-family: var(--h-font);
+    background: var(--h-bg); color: var(--h-text);
+    display: flex; flex-direction: column;
+  }
+  header {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    padding: 10px 14px; background: var(--h-panel); border-bottom: 1px solid var(--h-border);
+  }
+  header h1 { font-size: 15px; font-weight: 600; margin-right: 6px; }
+  .group { display: flex; align-items: center; gap: 4px; }
+  .spacer { flex: 1; }
+  button, .btn {
+    font: inherit; font-size: 13px; padding: 6px 12px; border-radius: 6px;
+    border: 1px solid var(--h-btn-border); background: var(--h-btn); color: var(--h-text); cursor: pointer;
+    display: inline-flex; align-items: center; gap: 6px; text-decoration: none;
+  }
+  button:hover, .btn:hover { background: var(--h-btn-hover); }
+  button:disabled { opacity: .4; cursor: default; }
+  button.primary, .btn.primary { background: var(--h-accent); border-color: var(--h-accent); color: var(--h-on-accent); font-weight: 600; }
+  button.primary:hover, .btn.primary:hover { background: var(--h-accent-h); }
+  button.tool.on { background: var(--h-accent); border-color: var(--h-accent); color: var(--h-on-accent); }
+  button svg, .btn svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+  button.small { font-size: 12px; padding: 3px 8px; }
+  kbd { font: 10px "SF Mono", Menlo, Consolas, monospace; opacity: .6; }
+  body[data-mode="make"] [data-for="scan"], body[data-mode="scan"] [data-for="make"] { display: none !important; }
+
+  /* ---------- make ---------- */
+  #make { flex: 1; min-height: 0; display: flex; }
+  aside { width: 320px; flex: none; overflow: auto; background: var(--h-panel); border-right: 1px solid var(--h-border); padding: 16px; }
+  aside h2 { font-family: var(--h-head); font-size: 13px; font-weight: 700; letter-spacing: .01em; margin: 2px 0 10px; display: flex; align-items: center; gap: 8px; }
+  aside h2 span { color: var(--h-muted); font-weight: 500; }
+  aside h2 button { margin-left: auto; }
+  .types { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 14px; }
+  .types button { padding: 5px 10px; }
+  .field { display: block; margin-bottom: 10px; font-size: 12px; color: var(--h-muted); }
+  .field > span { display: block; margin-bottom: 4px; }
+  input[type=text], input[type=email], input[type=tel], input[type=password], textarea, select {
+    font: inherit; font-size: 13px; width: 100%; padding: 7px 9px; border-radius: 6px;
+    border: 1px solid var(--h-btn-border); background: var(--h-btn); color: var(--h-text);
+  }
+  textarea { resize: vertical; min-height: 64px; }
+  input:focus, textarea:focus, select:focus { outline: 2px solid var(--h-accent2); outline-offset: -1px; }
+  .check { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--h-text2); margin-bottom: 10px; cursor: pointer; }
+  .pw { display: flex; gap: 4px; }
+  .pw input { flex: 1; }
+  .rule { height: 1px; background: var(--h-border); margin: 16px 0; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .colors { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 10px; }
+  .colors label { font-size: 12px; color: var(--h-muted); display: flex; flex-direction: column; gap: 4px; }
+  input[type=color] { width: 44px; height: 30px; padding: 2px; border-radius: 6px; border: 1px solid var(--h-btn-border); background: var(--h-btn); cursor: pointer; }
+  input[type=color]:disabled { opacity: .35; cursor: default; }
+  input[type=range] { width: 100%; accent-color: var(--h-accent); }
+  .hint { font-size: 12px; color: var(--h-muted); line-height: 1.5; }
+
+  #gridWrap { flex: 1; min-width: 0; overflow: auto; background: var(--h-deep); padding: 20px; }
+  #grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(196px, 1fr)); gap: 14px; }
+  .card { background: var(--h-panel); border: 1px solid var(--h-border); border-radius: 10px; padding: 12px; cursor: pointer; transition: box-shadow .15s; }
+  .card:hover { box-shadow: 0 0 0 1px var(--h-border2), 0 6px 18px rgba(0,0,0,.08); }
+  .card.on { box-shadow: 0 0 0 2px var(--h-text); }
+  .card .prev { height: 210px; display: grid; place-items: center; }
+  .card .prev canvas { max-width: 100%; max-height: 100%; display: block; }
+  .card .foot { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; font-size: 13px; }
+  .mark { font-size: 11px; display: inline-flex; align-items: center; gap: 4px; color: var(--h-muted); }
+  .mark svg { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+  .mark.ok { color: var(--h-ok); }
+  .mark.warn { color: var(--h-amber); }
+  .mark.bad { color: var(--h-red); }
+  #gridEmpty { color: var(--h-muted); font-size: 14px; text-align: center; padding: 60px 0; }
+
+  /* ---------- scan ---------- */
+  #scan { flex: 1; min-height: 0; overflow: auto; display: grid; place-items: center; padding: 24px; background: var(--h-deep); }
+  #scan.dropping { outline: 2px dashed var(--h-accent); outline-offset: -10px; }
+  #empty { text-align: center; color: var(--h-muted); line-height: 1.7; font-size: 14px; }
+  #empty b { display: block; font-family: var(--h-head); font-size: 26px; font-weight: 700; color: var(--h-text); margin-bottom: 6px; }
+  #empty .keys { display: inline-flex; gap: 6px; margin: 8px 0 14px; }
+  #empty .keys span { border: 1px solid var(--h-btn-border); background: var(--h-btn); border-radius: 6px; padding: 3px 9px; font-size: 13px; color: var(--h-text); box-shadow: 0 2px 0 var(--h-border2); }
+  #empty a { color: var(--h-text2); cursor: pointer; text-decoration: underline; }
+  #cam { display: none; flex-direction: column; align-items: center; gap: 12px; }
+  #cam video { max-width: min(640px, calc(100vw - 48px)); max-height: calc(100vh - 180px); border-radius: 10px; background: #000; }
+  #result { display: none; gap: 24px; align-items: flex-start; flex-wrap: wrap; justify-content: center; width: 100%; max-width: 1000px; }
+  #result .shot { flex: 1 1 360px; max-width: 520px; }
+  #result .shot canvas { display: block; max-width: 100%; max-height: calc(100vh - 160px); border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,.12), 0 10px 30px rgba(0,0,0,.12); }
+  #result .info { flex: 1 1 320px; max-width: 440px; background: var(--h-panel); border: 1px solid var(--h-border); border-radius: 10px; padding: 16px; }
+  .kind { font-size: 12px; color: var(--h-muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 10px; }
+  .kv { display: grid; grid-template-columns: auto 1fr auto; gap: 8px 10px; align-items: center; font-size: 13px; margin-bottom: 14px; }
+  .kv dt { color: var(--h-muted); }
+  .kv dd { word-break: break-word; font-weight: 500; }
+  pre.raw { font: 12px "SF Mono", Menlo, Consolas, monospace; white-space: pre-wrap; word-break: break-all; background: var(--h-deep2); color: var(--h-code); border-radius: 6px; padding: 10px; max-height: 200px; overflow: auto; margin-bottom: 14px; }
+  .acts { display: flex; gap: 6px; flex-wrap: wrap; }
+
+  #toast {
+    position: fixed; left: 50%; bottom: 22px; transform: translate(-50%, 20px); opacity: 0;
+    background: var(--h-accent); color: var(--h-on-accent); font-size: 13px; padding: 8px 14px; border-radius: 8px;
+    transition: opacity .2s, transform .2s; pointer-events: none; z-index: 50;
+  }
+  #toast.show { opacity: 1; transform: translate(-50%, 0); }
+  @media (max-width: 720px) {
+    #make { flex-direction: column; overflow: auto; }
+    aside { width: auto; border-right: 0; border-bottom: 1px solid var(--h-border); overflow: visible; }
+    #gridWrap { overflow: visible; }
+  }
+</style>
+<!-- studio-hub theme kit v1: fonts, light/dark tokens, title shadow, theme slider. Source: _theme/kit.html, inlined by _theme/apply.py -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource-variable/mona-sans@5.3.0/wdth.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource-variable/hubot-sans@5.3.0/wdth.css">
+<script>(function(){var t=null;try{t=new URLSearchParams(location.search).get("theme")||localStorage.getItem("hubTheme")}catch(e){}document.documentElement.dataset.theme=t==="dark"?"dark":"light"})()</script>
+<style id="hub-kit">
+  :root {
+    color-scheme: light;
+    --h-font: "Mona Sans Variable", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --h-head: "Hubot Sans Variable", var(--h-font);
+    --h-bg: #f1efe9; --h-panel: #faf9f5; --h-panel2: #f4f2ec; --h-deep: #ebe8e1; --h-deep2: #e7e4dc;
+    --h-border: #dedad0; --h-border2: #d3cec2; --h-btn: #ffffff; --h-btn-border: #cfcabe; --h-btn-hover: #f1eee6;
+    --h-text: #18181b; --h-text2: #3f3f46; --h-muted: #6b675f; --h-muted2: #8f8a7f; --h-faint: #aaa59a; --h-code: #27272a;
+    --h-accent: #18181b; --h-accent-h: #3f3f46; --h-accent2: #8f8a7f; --h-accent-bg: #e4e0d6; --h-on-accent: #ffffff; --h-strong: #09090b;
+    --h-yellow: #8a5a00; --h-blue: #0b5cad; --h-blue2: #2f5597; --h-purple: #6b3fa0; --h-green2: #2e7d4f; --h-ok: #1a7f37;
+    --h-green: #1a7f37; --h-red: #cf222e; --h-amber: #9a6700; --h-err-bg: #fde2e4; --h-err-bg2: #f5b8be; --h-err-text: #8b1a2b;
+    --h-title-shadow: 0 2px 3px rgba(24, 24, 27, .16), 0 8px 22px rgba(24, 24, 27, .18);
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --h-bg: #1e1f24; --h-panel: #26272e; --h-panel2: #2e2f37; --h-deep: #1b1c21; --h-deep2: #22232a;
+    --h-border: #3a3b44; --h-border2: #3a3b46; --h-btn: #33343d; --h-btn-border: #4a4b55; --h-btn-hover: #41424d;
+    --h-text: #e6e6e6; --h-text2: #b9bac2; --h-muted: #8a8b94; --h-muted2: #6f7078; --h-faint: #565761; --h-code: #d8dee9;
+    --h-accent: #e6e6e6; --h-accent-h: #ffffff; --h-accent2: #8a8b94; --h-accent-bg: #3a3b44; --h-on-accent: #18181b; --h-strong: #ffffff;
+    --h-yellow: #e8d3a8; --h-blue: #9ecbff; --h-blue2: #9db3d8; --h-purple: #c4a7e7; --h-green2: #a8d5b5; --h-ok: #8fd19e;
+    --h-green: #3fb950; --h-red: #f85149; --h-amber: #e3b341; --h-err-bg: #5c1f2b; --h-err-bg2: #7a2938; --h-err-text: #ffb3c0;
+    --h-title-shadow: 0 2px 3px rgba(0, 0, 0, .45), 0 8px 22px rgba(0, 0, 0, .5);
+  }
+  h1 { font-family: var(--h-head); font-weight: 800; font-stretch: 125%; letter-spacing: -.02em; text-shadow: var(--h-title-shadow); }
+  h1 span, h1 em { text-shadow: inherit; color: var(--h-muted); }
+
+  /* the theme slider: fixed top-right, no labels */
+  .hub-theme { position: fixed; top: 14px; right: 16px; z-index: 9999; }
+  .hub-theme button { all: unset; box-sizing: border-box; position: relative; display: block; width: 52px; height: 22px; border-radius: 999px; cursor: pointer;
+    background: linear-gradient(90deg, #f1efe9, #c9c4b7 38%, #3f3f46 62%, #09090b); border: 1px solid var(--h-border2); touch-action: none; }
+  .hub-theme button:focus-visible { outline: 2px solid var(--h-text); outline-offset: 3px; }
+  .hub-theme i { position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff;
+    box-shadow: 0 1px 2px rgba(0,0,0,.35), 0 0 0 1px rgba(0,0,0,.08); transition: left .4s cubic-bezier(.65, 0, .35, 1); }
+  :root[data-theme="dark"] .hub-theme i { left: 32px; }
+  .hub-theme.dragging i { transition: none; }
+  .hub-theme.docked { position: static; flex: none; display: flex; align-items: center; margin-left: 6px; }
+  [data-hub-theme-slot] { display: contents; }
+  @media (prefers-reduced-motion: reduce) { .hub-theme i { transition: none; } }
+  @media print { .hub-theme { display: none; } }
+</style>
+<!-- /studio-hub theme kit -->
+</head>
+<body data-mode="make">
+<header>
+  <h1>QR Studio</h1>
+  <div class="group">
+    <button class="tool on" data-mode="make">Make</button>
+    <button class="tool" data-mode="scan">Scan</button>
+  </div>
+  <div class="spacer"></div>
+  <div class="group" data-for="make">
+    <button id="print" title="A printable card with the network name and password" hidden>Print card</button>
+    <button id="svg" title="Download SVG">SVG</button>
+    <button id="png" title="Download PNG, 1024 px (Ctrl S)">PNG</button>
+    <button id="copy" class="primary">Copy <kbd style="opacity:.8" data-mod>Ctrl C</kbd></button>
+  </div>
+  <div class="group" data-for="scan">
+    <button id="camBtn"><svg viewBox="0 0 24 24"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>Camera</button>
+    <button id="open">Open…</button>
+  </div>
+  <span data-hub-theme-slot></span>
+</header>
+
+<div id="make" data-for="make">
+  <aside>
+    <h2>Content</h2>
+    <div class="types" id="types"></div>
+    <div id="fields"></div>
+    <div class="rule"></div>
+    <div id="custom"></div>
+  </aside>
+  <div id="gridWrap">
+    <div id="grid"></div>
+    <div id="gridEmpty" hidden>Fill in the form to see your codes.</div>
+  </div>
+</div>
+
+<main id="scan" data-for="scan">
+  <div id="empty">
+    <b>Scan a QR code</b>
+    Take a screenshot with <span data-snip>Win Shift S</span>, then press
+    <div><div class="keys"><span data-modkey>Ctrl</span><span>V</span></div></div>
+    or drop an image here, <a id="pick">open a file</a> or <a id="pickCam">use the camera</a>.
+  </div>
+  <div id="cam"><video id="video" playsinline muted></video><button id="camStop">Stop camera</button></div>
+  <div id="result">
+    <div class="shot"><canvas id="shot"></canvas></div>
+    <div class="info" id="info"></div>
+  </div>
+</main>
+<input type="file" id="file" accept="image/*" hidden>
+<input type="file" id="logoFile" accept="image/*" hidden>
+<div id="toast"></div>
+
+<script>
+(() => {
+  const isMac = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
+  const MOD = isMac ? "⌘" : "Ctrl";
+  document.querySelectorAll("[data-modkey]").forEach(e => e.textContent = MOD);
+  document.querySelectorAll("[data-mod]").forEach(e => e.textContent = MOD + " C");
+  document.querySelectorAll("[data-snip]").forEach(e => e.textContent = isMac ? "⌘ Shift 4" : "Win Shift S");
+  const $ = id => document.getElementById(id);
+  const h = (tag, props = {}, ...kids) => { const e = Object.assign(document.createElement(tag), props); e.append(...kids); return e; };
+  const xml = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  let tt;
+  function toast(msg) { const t = $("toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(tt); tt = setTimeout(() => t.classList.remove("show"), 2000); }
+  async function copyText(s) { try { await navigator.clipboard.writeText(s); toast("Copied"); } catch { toast("Copy blocked by the browser"); } }
+
+  // ================= content =================
+  const TYPES = {
+    link: { label: "Link / text", fields: [{ k: "text", label: "Link or text", area: true, ph: "https://" }] },
+    wifi: { label: "Wi-Fi", fields: [
+      { k: "ssid", label: "Network name" }, { k: "pass", label: "Password", pw: true },
+      { k: "sec", label: "Security", opts: [["WPA", "WPA / WPA2 / WPA3"], ["WEP", "WEP"], ["nopass", "None (open network)"]] },
+      { k: "hidden", label: "Hidden network", check: true }] },
+    contact: { label: "Contact", fields: [{ k: "name", label: "Name" }, { k: "phone", label: "Phone", type: "tel" }, { k: "email", label: "Email", type: "email" }, { k: "org", label: "Company" }] },
+    email: { label: "Email", fields: [{ k: "to", label: "To", type: "email" }, { k: "subject", label: "Subject" }, { k: "body", label: "Message", area: true }] },
+    sms: { label: "SMS", fields: [{ k: "num", label: "Phone number", type: "tel" }, { k: "msg", label: "Message", area: true }] },
+    phone: { label: "Phone", fields: [{ k: "num", label: "Phone number", type: "tel" }] },
+  };
+  const vals = {
+    link: { text: "https://example.com" }, wifi: { ssid: "", pass: "", sec: "WPA", hidden: false },
+    contact: { name: "", phone: "", email: "", org: "" }, email: { to: "", subject: "", body: "" },
+    sms: { num: "", msg: "" }, phone: { num: "" },
+  };
+  let type = "link";
+
+  // Wi-Fi strings escape \ ; , : " with a backslash.
+  const wesc = s => String(s).replace(/([\\;,:"])/g, "\\$1");
+  const vesc = s => String(s).replace(/\\/g, "\\\\").replace(/,/g, "\\,").replace(/;/g, "\\;").replace(/\r?\n/g, "\\n");
+  function payload() {
+    const v = vals[type], t = s => (s || "").trim();
+    if (type === "link") return t(v.text);
+    if (type === "wifi") {
+      if (!t(v.ssid)) return "";
+      return `WIFI:T:${v.sec};S:${wesc(v.ssid)};${v.sec !== "nopass" ? `P:${wesc(v.pass)};` : ""}H:${v.hidden ? "true" : "false"};;`;
+    }
+    if (type === "contact") {
+      if (![v.name, v.phone, v.email, v.org].some(t)) return "";
+      const parts = t(v.name).split(/\s+/), last = parts.length > 1 ? parts.pop() : "", first = parts.join(" ");
+      const L = ["BEGIN:VCARD", "VERSION:3.0", `N:${vesc(last)};${vesc(first)};;;`, `FN:${vesc(t(v.name))}`];
+      if (t(v.org)) L.push(`ORG:${vesc(t(v.org))}`);
+      if (t(v.phone)) L.push(`TEL;TYPE=CELL:${t(v.phone)}`);
+      if (t(v.email)) L.push(`EMAIL:${t(v.email)}`);
+      L.push("END:VCARD");
+      return L.join("\r\n");
+    }
+    if (type === "email") {
+      if (!t(v.to)) return "";
+      const q = [];
+      if (t(v.subject)) q.push("subject=" + encodeURIComponent(t(v.subject)));
+      if (t(v.body)) q.push("body=" + encodeURIComponent(v.body.trim()));
+      return "mailto:" + t(v.to) + (q.length ? "?" + q.join("&") : "");
+    }
+    if (type === "sms") return t(v.num) ? `SMSTO:${t(v.num)}:${(v.msg || "").trim()}` : "";
+    if (type === "phone") return t(v.num) ? "tel:" + t(v.num).replace(/[^\d+]/g, "") : "";
+    return "";
+  }
+  // Caption under framed styles, filled from the content unless the user typed one.
+  // Host as typed (URL() would turn göteborg.se into punycode).
+  const hostOf = s => ((s || "").trim().match(/^(?:[a-z][\w+.-]*:\/\/)?(?:[^@\/?#\s]*@)?([^\s\/?#:@.]+(?:\.[^\s\/?#:@.]+)+)/i) || [, ""])[1].replace(/^www\./i, "");
+  function autoCaption() {
+    const v = vals[type], t = s => (s || "").trim();
+    if (type === "link") {
+      const host = hostOf(v.text);
+      return host ? { title: "Scan to open", sub: host } : { title: "Scan me", sub: "" };
+    }
+    if (type === "wifi") return { title: "Scan for Wi-Fi", sub: t(v.ssid) };
+    if (type === "contact") return { title: "Scan to save contact", sub: t(v.name) || t(v.org) };
+    if (type === "email") return { title: "Scan to email", sub: t(v.to) };
+    if (type === "sms") return { title: "Scan to text", sub: t(v.num) };
+    return { title: "Scan to call", sub: t(v.num) };
+  }
+  function autoInitial() {
+    const v = vals[type];
+    let s = type === "link" ? (hostOf(v.text) || v.text)
+      : type === "wifi" ? v.ssid : type === "contact" ? (v.name || v.org) : type === "email" ? v.to : "";
+    s = (s || "").trim();
+    return s ? [...s][0].toUpperCase() : "Q";
+  }
+
+  const typeBox = $("types");
+  Object.entries(TYPES).forEach(([k, d]) => {
+    const b = h("button", { className: "tool" + (k === type ? " on" : ""), textContent: d.label });
+    b.dataset.type = k;
+    b.onclick = () => setType(k);
+    typeBox.append(b);
+  });
+  function setType(k) {
+    type = k;
+    typeBox.querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.type === k));
+    $("print").hidden = k !== "wifi";
+    buildFields(); renderAll();
+  }
+  function buildFields() {
+    const box = $("fields"); box.replaceChildren();
+    const v = vals[type];
+    TYPES[type].fields.forEach(f => {
+      if (f.check) {
+        const c = h("input", { type: "checkbox", checked: !!v[f.k] });
+        c.onchange = () => { v[f.k] = c.checked; renderAll(); };
+        box.append(h("label", { className: "check" }, c, f.label));
+        return;
+      }
+      let inp;
+      if (f.opts) {
+        inp = h("select");
+        f.opts.forEach(([val, lab]) => inp.append(h("option", { value: val, textContent: lab })));
+        inp.value = v[f.k];
+        inp.onchange = () => { v[f.k] = inp.value; syncPw(); renderAll(); };
+      } else {
+        inp = f.area ? h("textarea", { rows: 3 }) : h("input", { type: f.pw ? "password" : (f.type || "text") });
+        inp.value = v[f.k] || ""; inp.placeholder = f.ph || ""; inp.spellcheck = false;
+        inp.oninput = () => { v[f.k] = inp.value; schedule(renderAll, 220); };
+      }
+      inp.dataset.k = f.k;
+      let el = inp;
+      if (f.pw) {
+        const eye = h("button", { type: "button", textContent: "Show", title: "Show / hide" });
+        eye.onclick = () => { inp.type = inp.type === "password" ? "text" : "password"; eye.textContent = inp.type === "password" ? "Show" : "Hide"; };
+        el = h("div", { className: "pw" }, inp, eye);
+      }
+      box.append(h("label", { className: "field" }, h("span", { textContent: f.label }), el));
+    });
+    syncPw();
+  }
+  function syncPw() {   // an open network has no password
+    if (type !== "wifi") return;
+    const p = $("fields").querySelector('[data-k="pass"]');
+    if (p) p.closest(".field").style.display = vals.wifi.sec === "nopass" ? "none" : "";
+  }
+
+  // ================= styles =================
+  const BASE = { fg: "#111111", grad: "", bg: "#ffffff", dots: "square", corners: "square", cdot: "square", margin: 6,
+    frame: false, frameColor: "#18181b", frameText: "#ffffff", caption: "", sub: "", logo: "none", logoText: "", logoSrc: null };
+  const PRESETS = [
+    { name: "Classic" },
+    { name: "Rounded", dots: "rounded", corners: "extra-rounded", cdot: "dot" },
+    { name: "Dots", dots: "dots", corners: "dot", cdot: "dot" },
+    { name: "Classy", dots: "classy-rounded", corners: "extra-rounded", cdot: "square", fg: "#1d2b4f" },
+    { name: "Gradient", dots: "rounded", corners: "extra-rounded", cdot: "dot", fg: "#5b2d91", grad: "#0b5cad" },
+    { name: "Card", dots: "rounded", corners: "extra-rounded", cdot: "dot", frame: true, frameColor: "#ece8df", frameText: "#18181b" },
+    { name: "Dark card", frame: true, frameColor: "#18181b", frameText: "#ffffff" },
+    { name: "Initial", dots: "extra-rounded", corners: "extra-rounded", cdot: "dot", logo: "initial" },
+    { name: "Forest", dots: "classy", corners: "extra-rounded", cdot: "square", fg: "#1f5c3d", bg: "#f6f2e7" },
+    { name: "Brick", corners: "dot", cdot: "dot", fg: "#9b2c1f" },
+    { name: "Navy card", dots: "dots", corners: "extra-rounded", cdot: "dot", fg: "#0b3d91", frame: true, frameColor: "#0b3d91", frameText: "#ffffff", logo: "initial" },
+    { name: "Soft", dots: "extra-rounded", corners: "extra-rounded", cdot: "dot", fg: "#3f3f46", bg: "#f1efe9" },
+  ];
+  const fresh = i => ({ ...BASE, ...PRESETS[i] });
+  const styles = PRESETS.map((_, i) => fresh(i));
+  let sel = 0;
+
+  // A centre badge: the style's ink colour with one or two letters knocked out.
+  const initCache = new Map();
+  function initialImg(st) {
+    const txt = ([...(st.logoText || autoInitial())].slice(0, 2).join("")).toUpperCase();
+    const key = [txt, st.fg, st.grad, st.bg].join("|");
+    if (initCache.has(key)) return initCache.get(key);
+    const c = h("canvas", { width: 240, height: 240 }), x = c.getContext("2d");
+    let fill = st.fg;
+    if (st.grad) { fill = x.createLinearGradient(0, 0, 240, 240); fill.addColorStop(0, st.fg); fill.addColorStop(1, st.grad); }
+    x.fillStyle = fill; x.beginPath(); x.arc(120, 120, 116, 0, Math.PI * 2); x.fill();
+    x.fillStyle = st.bg; x.textAlign = "center"; x.textBaseline = "middle";
+    x.font = `800 ${txt.length > 1 ? 104 : 136}px "Hubot Sans Variable", "Segoe UI", sans-serif`;
+    x.fillText(txt, 120, 128);
+    const url = c.toDataURL("image/png"); initCache.set(key, url);
+    return url;
+  }
+  function qrOptions(st, data, size, kind) {
+    const logo = st.logo === "initial" ? initialImg(st) : st.logo === "image" ? st.logoSrc : null;
+    const grad = st.grad ? { type: "linear", rotation: Math.PI / 4, colorStops: [{ offset: 0, color: st.fg }, { offset: 1, color: st.grad }] } : undefined;
+    return {
+      width: size, height: size, type: kind, data, margin: Math.round(size * st.margin / 100),
+      qrOptions: { errorCorrectionLevel: logo ? "H" : "M" },
+      image: logo || undefined,
+      imageOptions: { hideBackgroundDots: true, imageSize: .3, margin: Math.max(2, Math.round(size * .008)) },
+      dotsOptions: { type: st.dots, color: st.fg, gradient: grad },
+      backgroundOptions: { color: st.bg },
+      cornersSquareOptions: { type: st.corners, color: st.fg, gradient: grad },
+      cornersDotOptions: { type: st.cdot, color: st.grad || st.fg },
+    };
+  }
+  // qrcode-generator writes each character as one byte, so hand it UTF-8 bytes
+  // already spelled out as characters; otherwise å ä ö come out garbled.
+  const utf8 = s => unescape(encodeURIComponent(s));
+  const libData = s => /^[\x00-\x7f]*$/.test(s) ? s : utf8(s);
+
+  const caption = st => { const a = autoCaption(); return { title: st.caption.trim() || a.title, sub: st.sub.trim() || a.sub }; };
+  // Frame geometry shared by the PNG and SVG paths.
+  function frameBox(st, S) {
+    const pad = Math.round(S * .07), inner = S - 2 * pad, cap = caption(st);
+    const ty = S - pad + S * .1, sy = ty + S * .07;
+    return { pad, inner, cap, ty, sy, H: Math.round((cap.sub ? sy : ty) + S * .065), r: S * .06, ri: S * .035 };
+  }
+  function fit(ctx, s, max) {
+    if (ctx.measureText(s).width <= max) return s;
+    while (s.length > 1 && ctx.measureText(s + "…").width > max) s = s.slice(0, -1);
+    return s + "…";
+  }
+  async function render(st, data, S) {
+    const cv = h("canvas"), ctx = cv.getContext("2d");
+    if (!st.frame) {
+      const q = new QRCodeStyling(qrOptions(st, libData(data), S, "canvas"));
+      const bmp = await createImageBitmap(await q.getRawData("png"));
+      cv.width = cv.height = S; ctx.drawImage(bmp, 0, 0, S, S);
+      return cv;
+    }
+    const f = frameBox(st, S);
+    const q = new QRCodeStyling(qrOptions(st, libData(data), f.inner, "canvas"));
+    const bmp = await createImageBitmap(await q.getRawData("png"));
+    cv.width = S; cv.height = f.H;
+    ctx.fillStyle = st.frameColor; ctx.beginPath(); ctx.roundRect(0, 0, S, f.H, f.r); ctx.fill();
+    ctx.save(); ctx.beginPath(); ctx.roundRect(f.pad, f.pad, f.inner, f.inner, f.ri); ctx.clip();
+    ctx.fillStyle = st.bg; ctx.fillRect(f.pad, f.pad, f.inner, f.inner);
+    ctx.drawImage(bmp, f.pad, f.pad, f.inner, f.inner); ctx.restore();
+    ctx.fillStyle = st.frameText; ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
+    ctx.font = `700 ${Math.round(S * .068)}px "Hubot Sans Variable", "Segoe UI", sans-serif`;
+    ctx.fillText(fit(ctx, f.cap.title, f.inner), S / 2, f.ty);
+    if (f.cap.sub) {
+      ctx.globalAlpha = .75; ctx.font = `500 ${Math.round(S * .048)}px "Mona Sans Variable", "Segoe UI", sans-serif`;
+      ctx.fillText(fit(ctx, f.cap.sub, f.inner), S / 2, f.sy);
+    }
+    return cv;
+  }
+  async function renderSvg(st, data, S) {
+    const f = st.frame ? frameBox(st, S) : null;
+    const q = new QRCodeStyling(qrOptions(st, libData(data), f ? f.inner : S, "svg"));
+    const txt = await (await q.getRawData("svg")).text();
+    if (!f) return txt;
+    const doc = new DOMParser().parseFromString(txt, "image/svg+xml"), svg = doc.documentElement;
+    const n = f.inner;
+    if (!svg.getAttribute("viewBox")) svg.setAttribute("viewBox", `0 0 ${n} ${n}`);
+    Object.entries({ x: f.pad, y: f.pad, width: n, height: n }).forEach(([k, v]) => svg.setAttribute(k, v));
+    const inner = new XMLSerializer().serializeToString(svg);
+    const font = `font-family="Hubot Sans, Segoe UI, Helvetica, Arial, sans-serif" text-anchor="middle"`;
+    return `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${S}" height="${f.H}" viewBox="0 0 ${S} ${f.H}">
+<defs><clipPath id="qrclip"><rect x="${f.pad}" y="${f.pad}" width="${n}" height="${n}" rx="${f.ri}"/></clipPath></defs>
+<rect width="${S}" height="${f.H}" rx="${f.r}" fill="${st.frameColor}"/>
+<g clip-path="url(#qrclip)"><rect x="${f.pad}" y="${f.pad}" width="${n}" height="${n}" fill="${st.bg}"/>${inner}</g>
+<text x="${S / 2}" y="${f.ty}" ${font} font-weight="700" font-size="${Math.round(S * .068)}" fill="${st.frameText}">${xml(f.cap.title)}</text>
+${f.cap.sub ? `<text x="${S / 2}" y="${f.sy}" ${font} font-weight="500" font-size="${Math.round(S * .048)}" fill="${st.frameText}" fill-opacity=".75">${xml(f.cap.sub)}</text>` : ""}
+</svg>`;
+  }
+
+  // jsQR 1.4 can throw inside its locator (always with "onlyInvert"); treat that as "not found".
+  const readQR = (id, inv) => { try { return jsQR(id.data, id.width, id.height, { inversionAttempts: inv }); } catch { return null; } };
+
+  // ---------- scan check ----------
+  const lum = hex => {
+    const n = parseInt(hex.slice(1), 16), c = [n >> 16, n >> 8 & 255, n & 255].map(v => { v /= 255; return v <= .03928 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4; });
+    return .2126 * c[0] + .7152 * c[1] + .0722 * c[2];
+  };
+  const ratio = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + .05) / (Math.min(x, y) + .05); };
+  function check(cv, data, st) {
+    const inks = [st.fg, st.grad].filter(Boolean);
+    const worst = Math.min(...inks.map(c => ratio(c, st.bg)));
+    const inverted = inks.every(c => lum(c) > lum(st.bg));
+    // Read it back the way a camera sees it: at a few sizes, with a quiet zone.
+    const t = h("canvas"), x = t.getContext("2d", { willReadFrequently: true });
+    let ok = false;
+    for (const k of [1, .7, .5]) {
+      const w = Math.round(cv.width * k), hh = Math.round(cv.height * k), pad = 16;
+      t.width = w + 2 * pad; t.height = hh + 2 * pad;
+      x.fillStyle = inverted ? "#000" : "#fff"; x.fillRect(0, 0, t.width, t.height);
+      x.drawImage(cv, pad, pad, w, hh);
+      const r = readQR(x.getImageData(0, 0, t.width, t.height), inverted ? "attemptBoth" : "dontInvert");
+      if (r && r.data === data) { ok = true; break; }
+    }
+    if (!ok) return { cls: "bad", text: "May not scan", tip: "Our own reader couldn't read it back. Try more contrast, a smaller logo or square dots." };
+    if (inverted) return { cls: "warn", text: "Inverted", tip: "Light code on a dark background. Many phone cameras won't read this." };
+    if (worst < 3) return { cls: "warn", text: "Low contrast", tip: "Reads here, but darker dots or a lighter background will scan more reliably." };
+    return { cls: "ok", text: "Scans", tip: "Decoded back to the exact content." };
+  }
+  const ICON = { ok: '<path d="M4 12.5l5 5L20 6.5"/>', warn: '<path d="M12 4l9 16H3z"/><path d="M12 10v4"/>', bad: '<path d="M6 6l12 12M18 6L6 18"/>' };
+
+  // ---------- grid ----------
+  const grid = $("grid");
+  const cards = styles.map((st, i) => {
+    const box = h("div", { className: "prev" }), name = h("span"), mark = h("span", { className: "mark", textContent: "…" });
+    const el = h("div", { className: "card" + (i === sel ? " on" : "") }, box, h("div", { className: "foot" }, name, mark));
+    el.onclick = () => select(i);
+    grid.append(el);
+    return { el, box, name, mark, seq: 0 };
+  });
+  async function renderCard(i) {
+    const c = cards[i], st = styles[i], data = payload(), my = ++c.seq;
+    c.name.textContent = st.name;
+    if (!data) return;
+    let cv;
+    try { cv = await render(st, data, 420); } catch (e) { console.warn(e); c.mark.className = "mark bad"; c.mark.textContent = "Too long"; return; }
+    if (my !== c.seq) return;
+    c.box.replaceChildren(cv);
+    let m = check(cv, data, st);
+    // Dense codes are only a pixel or two per module in the preview; judge
+    // those at export size before calling them unreadable.
+    if (m.cls === "bad") { const big = await render(st, data, 1024); if (my !== c.seq) return; m = check(big, data, st); }
+    c.mark.className = "mark " + m.cls; c.mark.title = m.tip;
+    c.mark.innerHTML = `<svg viewBox="0 0 24 24">${ICON[m.cls]}</svg>`; c.mark.append(m.text);
+    c.result = m;
+  }
+  let allSeq = 0;
+  async function renderAll() {
+    const data = payload(), my = ++allSeq;
+    $("gridEmpty").hidden = !!data; grid.hidden = !data;
+    ["png", "svg", "copy", "print"].forEach(id => $(id).disabled = !data);
+    if (!data) return;
+    for (let i = 0; i < styles.length && my === allSeq; i++) await renderCard(i);
+  }
+  const timers = new Map();
+  function schedule(fn, ms, key = fn) { clearTimeout(timers.get(key)); timers.set(key, setTimeout(fn, ms)); }
+
+  // ---------- customize panel ----------
+  const DOTS = [["square", "Square"], ["rounded", "Rounded"], ["dots", "Dots"], ["classy", "Classy"], ["classy-rounded", "Classy rounded"], ["extra-rounded", "Extra rounded"]];
+  const CORNERS = [["square", "Square"], ["extra-rounded", "Rounded"], ["dot", "Circle"]];
+  const CDOTS = [["square", "Square"], ["dot", "Circle"]];
+  function select(i) {
+    sel = i;
+    cards.forEach((c, j) => c.el.classList.toggle("on", j === i));
+    buildCustom();
+  }
+  function buildCustom() {
+    const st = styles[sel], box = $("custom"), a = autoCaption();
+    const changed = () => schedule(() => renderCard(sel), 120, "card");
+    const selectOf = (opts, k, after) => {
+      const s = h("select"); opts.forEach(([v, l]) => s.append(h("option", { value: v, textContent: l })));
+      s.value = st[k]; s.onchange = () => { st[k] = s.value; after && after(); changed(); }; return s;
+    };
+    const color = (k, label) => {
+      const c = h("input", { type: "color", value: st[k] || "#000000" });
+      c.oninput = () => { st[k] = c.value; changed(); };
+      return h("label", {}, label, c);
+    };
+    const field = (label, el) => h("label", { className: "field" }, h("span", { textContent: label }), el);
+    const text = (k, ph) => { const t = h("input", { type: "text", value: st[k], placeholder: ph }); t.oninput = () => { st[k] = t.value; changed(); }; return t; };
+    const check = (k, label, after) => { const c = h("input", { type: "checkbox", checked: !!st[k] }); c.onchange = () => { st[k] = c.checked; after && after(); changed(); }; return h("label", { className: "check" }, c, label); };
+
+    const reset = h("button", { className: "small", textContent: "Reset" });
+    reset.onclick = () => { styles[sel] = fresh(sel); buildCustom(); renderCard(sel); };
+    const gradOn = h("input", { type: "checkbox", checked: !!st.grad });
+    const gradCol = h("input", { type: "color", value: st.grad || "#0b5cad", disabled: !st.grad });
+    gradOn.onchange = () => { st.grad = gradOn.checked ? gradCol.value : ""; gradCol.disabled = !gradOn.checked; changed(); };
+    gradCol.oninput = () => { if (gradOn.checked) { st.grad = gradCol.value; changed(); } };
+    const marg = h("input", { type: "range", min: 0, max: 15, value: st.margin });
+    marg.oninput = () => { st.margin = +marg.value; changed(); };
+
+    const frameBits = h("div", {},
+      h("div", { className: "colors" }, color("frameColor", "Frame"), color("frameText", "Text")),
+      field("Caption", text("caption", a.title)), field("Second line", text("sub", a.sub || "optional")));
+    const showFrame = () => frameBits.style.display = st.frame ? "" : "none";
+    showFrame();
+
+    const logoSel = selectOf([["none", "None"], ["initial", "Letter"], ["image", "Image…"]], "logo", () => showLogo());
+    const logoText = text("logoText", autoInitial());
+    logoText.maxLength = 2;
+    const up = h("button", { textContent: st.logoSrc ? "Change image" : "Choose image" });
+    up.onclick = () => $("logoFile").click();
+    const logoBits = h("div", {});
+    function showLogo() {
+      logoBits.replaceChildren();
+      if (st.logo === "initial") logoBits.append(field("Letters", logoText));
+      if (st.logo === "image") { logoBits.append(h("div", { className: "field" }, up)); if (!st.logoSrc) $("logoFile").click(); }
+    }
+    showLogo();
+
+    box.replaceChildren(
+      h("h2", {}, "Style ", h("span", { textContent: st.name }), reset),
+      h("div", { className: "colors" }, color("fg", "Dots"), h("label", {}, h("span", { className: "check", style: "margin:0;gap:5px" }, gradOn, "Blend"), gradCol), color("bg", "Background")),
+      h("div", { className: "row2" }, field("Dot shape", selectOf(DOTS, "dots")), field("Corners", selectOf(CORNERS, "corners"))),
+      h("div", { className: "row2" }, field("Corner centre", selectOf(CDOTS, "cdot")), field("Centre", logoSel)),
+      logoBits,
+      field("Margin", marg),
+      check("frame", "Frame with caption", showFrame),
+      frameBits,
+      h("p", { className: "hint", textContent: "A centre letter or image switches to high error correction, so the code still reads with part of it covered." }),
+    );
+  }
+  $("logoFile").onchange = e => {
+    const f = e.target.files[0]; e.target.value = "";
+    if (!f) return;
+    const r = new FileReader();
+    r.onload = () => { const st = styles[sel]; st.logo = "image"; st.logoSrc = r.result; buildCustom(); renderCard(sel); };
+    r.readAsDataURL(f);
+  };
+
+  // ---------- export ----------
+  const fname = ext => `qr-${type}-${styles[sel].name.toLowerCase().replace(/\s+/g, "-")}.${ext}`;
+  function download(blob, name) {
+    const a = h("a", { href: URL.createObjectURL(blob), download: name }); a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  }
+  const pngBlob = async () => { const cv = await render(styles[sel], payload(), 1024); return new Promise(r => cv.toBlob(r, "image/png")); };
+  async function savePng() { if (payload()) download(await pngBlob(), fname("png")); }
+  async function saveSvg() { if (payload()) download(new Blob([await renderSvg(styles[sel], payload(), 1024)], { type: "image/svg+xml" }), fname("svg")); }
+  async function copyImg() {
+    if (!payload()) return;
+    try { await navigator.clipboard.write([new ClipboardItem({ "image/png": pngBlob() })]); toast("Copied. Paste it anywhere"); }
+    catch { toast("Copy blocked by the browser. Use PNG instead"); }
+  }
+  async function printCard() {
+    const v = vals.wifi, data = payload();
+    if (type !== "wifi" || !data) return;
+    const src = (await render({ ...styles[sel], frame: false }, data, 1024)).toDataURL("image/png");
+    const sec = { WPA: "WPA", WEP: "WEP", nopass: "Open" }[v.sec];
+    const html = `<!doctype html><html><head><meta charset="utf-8"><title>Wi-Fi ${xml(v.ssid)}</title><style>
+      body{margin:0;font-family:"Segoe UI",-apple-system,Helvetica,Arial,sans-serif;color:#18181b;display:grid;place-items:center;min-height:96vh}
+      .c{width:340px;border:1.5px solid #18181b;border-radius:18px;padding:28px 30px 24px;text-align:center}
+      h1{font-size:13px;letter-spacing:.14em;text-transform:uppercase;font-weight:600;color:#6b675f;margin:0 0 14px}
+      img{width:250px;height:250px;display:block;margin:0 auto 18px}
+      dl{margin:0;text-align:left;display:grid;grid-template-columns:auto 1fr;gap:8px 14px;font-size:15px}
+      dt{color:#6b675f}dd{margin:0;font-weight:600;word-break:break-all}
+      p{font-size:12px;color:#6b675f;margin:18px 0 0}</style></head><body><div class="c">
+      <h1>Wi-Fi</h1><img src="${src}" alt=""><dl><dt>Network</dt><dd>${xml(v.ssid)}</dd>
+      ${v.sec !== "nopass" ? `<dt>Password</dt><dd>${xml(v.pass) || "&mdash;"}</dd>` : ""}<dt>Security</dt><dd>${sec}</dd></dl>
+      <p>Point your phone camera at the code to join.</p></div></body></html>`;
+    const fr = h("iframe", { style: "position:fixed;right:0;bottom:0;width:0;height:0;border:0" });
+    document.body.append(fr);
+    fr.contentDocument.open(); fr.contentDocument.write(html); fr.contentDocument.close();
+    const img = fr.contentDocument.querySelector("img");
+    const go = () => { fr.contentWindow.focus(); fr.contentWindow.print(); setTimeout(() => fr.remove(), 60000); };
+    img.complete ? go() : img.onload = go;
+  }
+  $("png").onclick = savePng; $("svg").onclick = saveSvg; $("copy").onclick = copyImg; $("print").onclick = printCard;
+
+  // ================= scan =================
+  const scanEl = $("scan");
+  let lastScan = null;
+  // jsQR is picky about tiny codes, huge photos and missing quiet zones: try a
+  // few sizes on a white border, and inverted colours, before giving up.
+  function decode(src, w, hgt) {
+    const big = Math.max(w, hgt), base = big > 1400 ? 1400 / big : 1;
+    const scales = [base, base * .5, ...(big < 500 ? [2, 3] : []), base * .25].filter(s => Math.max(w, hgt) * s >= 60);
+    const cv = h("canvas"), ctx = cv.getContext("2d", { willReadFrequently: true });
+    for (const s of scales) {
+      const W = Math.round(w * s), H = Math.round(hgt * s), pad = Math.round(Math.max(W, H) * .06) + 8;
+      cv.width = W + 2 * pad; cv.height = H + 2 * pad;
+      ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, cv.width, cv.height);
+      ctx.imageSmoothingEnabled = s < 1;
+      ctx.drawImage(src, pad, pad, W, H);
+      const id = ctx.getImageData(0, 0, cv.width, cv.height);
+      const r = readQR(id, "attemptBoth");
+      if (r && r.data) {
+        const back = p => ({ x: (p.x - pad) / s, y: (p.y - pad) / s });
+        const L = r.location;
+        return { text: r.data, pts: [L.topLeftCorner, L.topRightCorner, L.bottomRightCorner, L.bottomLeftCorner].map(back) };
+      }
+    }
+    return null;
+  }
+  async function scanBlob(blob) {
+    if (!blob || !blob.type.startsWith("image/")) return toast("That isn't an image");
+    setMode("scan");
+    let bmp;
+    try { bmp = await createImageBitmap(blob); } catch { return toast("Couldn't read that image"); }
+    stopCam();
+    const hit = decode(bmp, bmp.width, bmp.height);
+    if (!hit) { toast("No QR found"); return showShot(bmp, null); }
+    showShot(bmp, hit);
+  }
+  function showShot(src, hit) {
+    const cv = $("shot"), ctx = cv.getContext("2d");
+    const w = src.videoWidth || src.width, hg = src.videoHeight || src.height;
+    cv.width = w; cv.height = hg; ctx.drawImage(src, 0, 0, w, hg);
+    if (hit) {
+      ctx.lineWidth = Math.max(3, Math.max(w, hg) / 160); ctx.strokeStyle = "#1a7f37"; ctx.lineJoin = "round";
+      ctx.beginPath(); hit.pts.forEach((p, i) => i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)); ctx.closePath(); ctx.stroke();
+    }
+    $("empty").style.display = "none"; $("cam").style.display = "none"; $("result").style.display = "flex";
+    lastScan = hit;
+    showInfo(hit);
+  }
+
+  // Undo backslash escapes and split on unescaped ";" (Wi-Fi and MECARD style).
+  function splitEsc(s) {
+    const out = []; let cur = "";
+    for (let i = 0; i < s.length; i++) {
+      if (s[i] === "\\" && i + 1 < s.length) { cur += s[++i]; continue; }
+      if (s[i] === ";") { out.push(cur); cur = ""; continue; }
+      cur += s[i];
+    }
+    if (cur) out.push(cur);
+    return out;
+  }
+  const kvList = (body) => {
+    const o = {};
+    splitEsc(body).forEach(p => { const i = p.indexOf(":"); if (i > 0) { const k = p.slice(0, i).toUpperCase(); (o[k] = o[k] || []).push(p.slice(i + 1)); } });
+    return o;
+  };
+  function parse(text) {
+    const t = text.trim();
+    if (/^WIFI:/i.test(t)) {
+      const o = kvList(t.slice(5)), g = k => (o[k] || [""])[0];
+      const sec = g("T") || "nopass";
+      const rows = [["Network", g("S"), true]];
+      if (g("P")) rows.push(["Password", g("P"), true]);
+      rows.push(["Security", /^nopass$/i.test(sec) ? "Open" : sec, false]);
+      if (/^true$/i.test(g("H"))) rows.push(["Hidden", "Yes", false]);
+      return { kind: "Wi-Fi network", rows };
+    }
+    if (/^BEGIN:VCARD/i.test(t)) {
+      const lines = t.replace(/\r?\n[ \t]/g, "").split(/\r?\n/), rows = [];
+      const un = s => s.replace(/\\n/gi, "\n").replace(/\\([,;\\])/g, "$1");
+      const LAB = { FN: "Name", ORG: "Company", TITLE: "Title", TEL: "Phone", EMAIL: "Email", URL: "Website", ADR: "Address", NOTE: "Note" };
+      let n = "";
+      lines.forEach(l => {
+        const i = l.indexOf(":"); if (i < 0) return;
+        const key = l.slice(0, i).split(";")[0].toUpperCase(), val = l.slice(i + 1);
+        if (key === "N") n = val.split(";").filter(Boolean).reverse().map(un).join(" ");
+        else if (LAB[key] && val.trim()) rows.push([LAB[key], un(key === "ADR" ? val.split(";").filter(Boolean).join(", ") : val), true]);
+      });
+      if (!rows.some(r => r[0] === "Name") && n) rows.unshift(["Name", n, true]);
+      return { kind: "Contact", rows };
+    }
+    if (/^MECARD:/i.test(t)) {
+      const o = kvList(t.slice(7)), rows = [];
+      [["N", "Name"], ["ORG", "Company"], ["TEL", "Phone"], ["EMAIL", "Email"], ["URL", "Website"], ["ADR", "Address"]].forEach(([k, l]) => (o[k] || []).forEach(v => v && rows.push([l, k === "N" ? v.split(",").reverse().join(" ").trim() : v, true])));
+      return { kind: "Contact", rows };
+    }
+    if (/^MATMSG:/i.test(t)) {
+      const o = kvList(t.slice(7)), g = k => (o[k] || [""])[0];
+      const href = "mailto:" + g("TO") + "?subject=" + encodeURIComponent(g("SUB")) + "&body=" + encodeURIComponent(g("BODY"));
+      return { kind: "Email", rows: [["To", g("TO"), true], ["Subject", g("SUB"), true], ["Message", g("BODY"), true]].filter(r => r[1]), act: ["Write email", href] };
+    }
+    if (/^mailto:/i.test(t)) {
+      let to = t.slice(7), q = "";
+      const i = to.indexOf("?"); if (i >= 0) { q = to.slice(i + 1); to = to.slice(0, i); }
+      const p = new URLSearchParams(q);
+      return { kind: "Email", rows: [["To", decodeURIComponent(to), true], ["Subject", p.get("subject") || "", true], ["Message", p.get("body") || "", true]].filter(r => r[1]), act: ["Write email", t] };
+    }
+    if (/^tel:/i.test(t)) return { kind: "Phone number", rows: [["Number", t.slice(4), true]], act: ["Call", t] };
+    if (/^(SMSTO|sms):/i.test(t)) {
+      const body = t.replace(/^(SMSTO|sms):/i, ""), i = body.search(/[:?]/);
+      const num = i < 0 ? body : body.slice(0, i);
+      let msg = i < 0 ? "" : body.slice(i + 1);
+      if (body[i] === "?") msg = new URLSearchParams(msg).get("body") || "";
+      return { kind: "Text message", rows: [["Number", num, true], ["Message", msg, true]].filter(r => r[1]), act: ["Send text", `sms:${num}${msg ? "?body=" + encodeURIComponent(msg) : ""}`] };
+    }
+    if (/^geo:/i.test(t)) {
+      const [lat, lng] = t.slice(4).split(/[,?]/);
+      return { kind: "Location", rows: [["Latitude", lat, true], ["Longitude", lng, true]], act: ["Open map", `https://www.openstreetmap.org/?mlat=${encodeURIComponent(lat)}&mlon=${encodeURIComponent(lng)}#map=16/${encodeURIComponent(lat)}/${encodeURIComponent(lng)}`] };
+    }
+    if (/^(https?:\/\/|www\.)\S+$/i.test(t)) {
+      const href = /^www\./i.test(t) ? "https://" + t : t;
+      let host = ""; try { host = new URL(href).hostname; } catch {}
+      return { kind: "Link", rows: host ? [["Site", host, false]] : [], act: ["Open link", href] };
+    }
+    return { kind: "Text", rows: [] };
+  }
+  function showInfo(hit) {
+    const box = $("info"); box.replaceChildren();
+    if (!hit) {
+      box.append(h("div", { className: "kind", textContent: "Nothing found" }),
+        h("p", { className: "hint", textContent: "No QR code in this image. Crop closer to the code, or try a sharper screenshot." }));
+      return;
+    }
+    const p = parse(hit.text);
+    box.append(h("div", { className: "kind", textContent: p.kind }));
+    if (p.rows.length) {
+      const dl = h("dl", { className: "kv" });
+      p.rows.forEach(([k, v, cp]) => {
+        const b = cp ? h("button", { className: "small", textContent: "Copy" }) : h("span");
+        if (cp) b.onclick = () => copyText(v);
+        dl.append(h("dt", { textContent: k }), h("dd", { textContent: v }), b);
+      });
+      box.append(dl);
+    }
+    box.append(h("pre", { className: "raw", textContent: hit.text }));
+    const acts = h("div", { className: "acts" });
+    if (p.act) {
+      const a = h("a", { className: "btn primary", href: p.act[1], textContent: p.act[0] });
+      if (/^https?:/i.test(p.act[1])) { a.target = "_blank"; a.rel = "noopener noreferrer"; }
+      acts.append(a);
+    }
+    const ca = h("button", { textContent: "Copy text" }); ca.onclick = () => copyText(hit.text);
+    const again = h("button", { textContent: "Scan another" }); again.onclick = resetScan;
+    acts.append(ca, again);
+    box.append(acts);
+  }
+  function resetScan() { stopCam(); $("result").style.display = "none"; $("empty").style.display = ""; lastScan = null; }
+
+  // ---------- camera ----------
+  let stream = null, camTimer = 0;
+  async function startCam() {
+    setMode("scan");
+    if (!navigator.mediaDevices?.getUserMedia) return toast("No camera access in this browser");
+    try { stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false }); }
+    catch { return toast("Camera not available"); }
+    const v = $("video"); v.srcObject = stream; await v.play().catch(() => {});
+    $("empty").style.display = "none"; $("result").style.display = "none"; $("cam").style.display = "flex";
+    $("camBtn").classList.add("on");
+    const tick = () => {
+      if (!stream) return;
+      if (v.videoWidth) {
+        const hit = decode(v, v.videoWidth, v.videoHeight);
+        if (hit) { showShot(v, hit); stopCam(); return; }
+      }
+      camTimer = setTimeout(tick, 180);
+    };
+    tick();
+  }
+  function stopCam() {
+    clearTimeout(camTimer);
+    if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+    $("camBtn").classList.remove("on");
+    if ($("cam").style.display === "flex") { $("cam").style.display = "none"; if (!lastScan && $("result").style.display !== "flex") $("empty").style.display = ""; }
+  }
+  $("camBtn").onclick = () => stream ? stopCam() : startCam();
+  $("pickCam").onclick = startCam;
+  $("camStop").onclick = stopCam;
+
+  // ---------- inputs ----------
+  document.addEventListener("paste", e => {
+    const item = [...(e.clipboardData?.items || [])].find(i => i.type.startsWith("image/"));
+    if (item) { e.preventDefault(); return scanBlob(item.getAsFile()); }
+    if (mode === "scan" && !e.target.closest?.("input, textarea")) toast("No image on the clipboard. Take a screenshot first");
+  });
+  scanEl.addEventListener("dragover", e => { e.preventDefault(); scanEl.classList.add("dropping"); });
+  scanEl.addEventListener("dragleave", () => scanEl.classList.remove("dropping"));
+  scanEl.addEventListener("drop", e => { e.preventDefault(); scanEl.classList.remove("dropping"); scanBlob(e.dataTransfer.files[0]); });
+  // Dropping an image anywhere in Make reads it too.
+  $("make").addEventListener("dragover", e => e.preventDefault());
+  $("make").addEventListener("drop", e => { e.preventDefault(); scanBlob(e.dataTransfer.files[0]); });
+  $("open").onclick = $("pick").onclick = () => $("file").click();
+  $("file").onchange = e => { scanBlob(e.target.files[0]); e.target.value = ""; };
+
+  // ---------- mode ----------
+  let mode = "make";
+  function setMode(m) {
+    if (m === mode) return;
+    mode = m; document.body.dataset.mode = m;
+    document.querySelectorAll("header [data-mode]").forEach(b => b.classList.toggle("on", b.dataset.mode === m));
+    if (m === "make") stopCam();
+    history.replaceState(null, "", m === "scan" ? "#scan" : location.pathname + location.search);
+  }
+  document.querySelectorAll("header [data-mode]").forEach(b => b.onclick = () => setMode(b.dataset.mode));
+
+  document.addEventListener("keydown", e => {
+    if (e.target.closest?.("input, textarea, select")) return;
+    const mod = e.ctrlKey || e.metaKey, k = e.key.toLowerCase();
+    if (mode === "make" && mod && k === "c" && !String(getSelection())) { e.preventDefault(); copyImg(); }
+    else if (mode === "make" && mod && k === "s") { e.preventDefault(); savePng(); }
+    else if (mode === "make" && !mod && (k === "arrowright" || k === "arrowleft")) { e.preventDefault(); select((sel + (k === "arrowright" ? 1 : styles.length - 1)) % styles.length); }
+    else if (k === "escape" && mode === "scan") resetScan();
+  });
+
+  // Exposed for testing.
+  window.qrStudio = { payload, styles, cards, decode, parse, setType, vals, renderAll, select };
+
+  buildFields(); buildCustom();
+  if (location.hash === "#scan") setMode("scan");
+  (document.fonts?.ready || Promise.resolve()).then(renderAll);
+})();
+</script>
+<!-- studio-hub theme slider -->
+<div class="hub-theme" title="Light / dark"><button type="button" role="switch" aria-label="Dark theme" aria-checked="false"><i></i></button></div>
+<script>
+(() => {
+  const root = document.documentElement, wrap = document.querySelector(".hub-theme"), btn = wrap.querySelector("button"), knob = btn.querySelector("i");
+  const slot = document.querySelector("[data-hub-theme-slot]");
+  if (slot) { slot.append(wrap); wrap.classList.add("docked"); }  // app pages: sit at the end of the toolbar
+  const sync = () => btn.setAttribute("aria-checked", String(root.dataset.theme === "dark"));
+  const set = (t) => {
+    root.dataset.theme = t; knob.style.left = ""; sync();
+    try { localStorage.setItem("hubTheme", t); } catch (e) {}
+    window.dispatchEvent(new CustomEvent("hubthemechange", { detail: t }));
+  };
+  // Click toggles; a drag snaps to whichever end it is released nearer.
+  let drag = null, skipClick = false;
+  const frac = (e) => { const r = btn.getBoundingClientRect(); return Math.min(1, Math.max(0, (e.clientX - r.left - 10) / (r.width - 20))); };
+  btn.addEventListener("pointerdown", (e) => { drag = { x: e.clientX, moved: false }; btn.setPointerCapture(e.pointerId); });
+  btn.addEventListener("pointermove", (e) => {
+    if (!drag) return;
+    if (Math.abs(e.clientX - drag.x) > 3) { drag.moved = true; wrap.classList.add("dragging"); }
+    if (drag.moved) knob.style.left = 2 + frac(e) * 30 + "px";
+  });
+  btn.addEventListener("pointerup", (e) => {
+    wrap.classList.remove("dragging");
+    if (drag && drag.moved) { set(frac(e) > 0.5 ? "dark" : "light"); skipClick = true; }
+    drag = null;
+  });
+  btn.addEventListener("click", () => { if (skipClick) { skipClick = false; return; } set(root.dataset.theme === "dark" ? "light" : "dark"); });
+  btn.addEventListener("keydown", (e) => { if (e.key === "ArrowLeft") set("light"); if (e.key === "ArrowRight") set("dark"); });
+  // Another tab changed it: follow along.
+  window.addEventListener("storage", (e) => { if (e.key === "hubTheme") { root.dataset.theme = e.newValue === "dark" ? "dark" : "light"; sync(); } });
+  sync();
+})();
+</script>
+<!-- /studio-hub theme slider -->
+</body>
+</html>

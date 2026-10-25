@@ -1,0 +1,1281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wallpaper Studio</title>
+<meta name="description" content="One wallpaper across several screens: detect your monitors, arrange them as they stand on your desk, export a Span PNG or one per screen.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2318181b' stroke-width='2' stroke-linejoin='round' stroke-linecap='round'%3E%3Crect x='2' y='6' width='12' height='9' rx='1.5'/%3E%3Crect x='16' y='3' width='6' height='12' rx='1.5'/%3E%3Cpath d='M4 13l3-3 2.5 2L12 10'/%3E%3C/svg%3E">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { min-height: 100%; }
+  body {
+    font-family: var(--h-font); background: var(--h-bg); color: var(--h-text);
+    display: flex; flex-direction: column; align-items: center; padding: 6vh 24px 60px;
+  }
+  h1 { font-size: 26px; font-weight: 700; letter-spacing: -.3px; }
+  p.sub { color: var(--h-muted); font-size: 13px; margin: 10px 0 20px; text-align: center; }
+  button, select, input[type=number] {
+    font: inherit; font-size: 13px; padding: 7px 12px; border-radius: 8px;
+    border: 1px solid var(--h-btn-border); background: var(--h-btn); color: var(--h-text);
+  }
+  button, select { cursor: pointer; }
+  button:hover, select:hover { background: var(--h-btn-hover); border-color: var(--h-accent2); }
+  button:disabled { opacity: .55; cursor: default; }
+  button.primary { background: var(--h-accent); border-color: var(--h-accent); color: var(--h-on-accent); font-weight: 600; }
+  button.primary:hover { background: var(--h-accent-h); border-color: var(--h-accent-h); }
+  button.quiet { background: none; border-color: transparent; color: var(--h-muted); }
+  button.quiet:hover { color: var(--h-text); background: none; border-color: transparent; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  [hidden] { display: none !important; }
+
+  #deskbar { justify-content: center; font-size: 12.5px; color: var(--h-muted); margin-bottom: 18px; }
+  #deskbar b { color: var(--h-text); font-weight: 600; font-variant-numeric: tabular-nums; }
+  #deskbar button { padding: 5px 11px; font-size: 12.5px; }
+
+  main { width: 100%; max-width: 1100px; }
+  #stage { display: grid; place-items: center; min-height: 160px; }
+  #stage canvas { display: block; filter: drop-shadow(0 14px 22px rgba(24,24,27,.16)) drop-shadow(0 2px 4px rgba(24,24,27,.12)); }
+  :root[data-theme="dark"] #stage canvas { filter: drop-shadow(0 14px 22px rgba(0,0,0,.45)); }
+  #bar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 22px; }
+  #sceneName { font-family: var(--h-head); font-stretch: 112%; font-weight: 700; font-size: 17px; margin-right: 6px; white-space: nowrap; }
+  #pals { display: flex; gap: 8px; }
+  .sw { width: 24px; height: 24px; border-radius: 50%; padding: 0; border: 1px solid rgba(0,0,0,.12); }
+  .sw:hover { border-color: rgba(0,0,0,.3); }
+  .sw.on { outline: 2px solid var(--h-text); outline-offset: 2px; }
+  .ib { width: 34px; height: 34px; padding: 0; display: grid; place-items: center; }
+  .ib svg { width: 18px; height: 18px; display: block; }
+  .ib[aria-pressed="false"] { color: var(--h-faint); }
+  .grow { flex: 1; }
+  #download { padding: 9px 22px; font-size: 14px; }
+
+  #grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 14px; width: 100%; max-width: 1100px; margin-top: 38px; }
+  .card { background: var(--h-panel); border: 1px solid var(--h-border); border-radius: 14px; padding: 14px 14px 11px; text-align: left;
+    display: flex; flex-direction: column; gap: 9px; transition: transform .12s ease, border-color .12s ease; }
+  .card:hover { transform: translateY(-2px); border-color: var(--h-accent2); background: var(--h-panel); }
+  .card.on { border-color: var(--h-text); }
+  .card .th { aspect-ratio: 16 / 9; display: grid; place-items: center; }
+  .card canvas { display: block; }
+  .card span { font-size: 12.5px; color: var(--h-muted); }
+  .card.on span { color: var(--h-text); }
+
+  #deskPanel { width: 100%; max-width: 1100px; background: var(--h-panel); border: 1px solid var(--h-border); border-radius: 14px; padding: 16px 18px; margin-bottom: 24px; }
+  #deskPanel input[type=number] { width: 72px; padding: 6px 8px; }
+  #deskPanel input[type=text] { font: inherit; font-size: 13px; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--h-btn-border); background: var(--h-btn); color: var(--h-text); width: 130px; }
+  #deskMap { display: block; width: 100%; height: 210px; margin: 14px 0 10px; background: var(--h-deep); border-radius: 10px; touch-action: none; user-select: none; }
+  #deskMap .mon rect { fill: var(--h-btn); stroke: var(--h-accent2); stroke-width: .35; cursor: grab; }
+  #deskMap .mon:hover rect { fill: var(--h-btn-hover); }
+  #deskMap .mon.bad rect { stroke: var(--h-red); fill: var(--h-err-bg); }
+  #deskMap text { fill: var(--h-text); text-anchor: middle; dominant-baseline: middle; pointer-events: none; }
+  #deskMap text.res { fill: var(--h-muted); }
+  .monrow { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 12px; color: var(--h-muted); padding: 7px 0; border-top: 1px solid var(--h-border); }
+  .monrow .num { width: 20px; height: 20px; border-radius: 50%; background: var(--h-accent-bg); color: var(--h-text); display: grid; place-items: center; font-weight: 700; }
+  .monrow select { padding: 6px 8px; }
+  .monrow .rm { padding: 5px 9px; }
+  .monrow .info { margin-left: auto; font-variant-numeric: tabular-nums; }
+  .hint { font-size: 12px; color: var(--h-muted); line-height: 1.6; margin-top: 10px; }
+  .hint b { color: var(--h-text); font-weight: 600; }
+
+  #spanHelp { margin: auto; max-width: 440px; width: calc(100% - 32px); padding: 22px 22px 18px; border-radius: 16px; border: 1px solid var(--h-border);
+    background: var(--h-panel); color: var(--h-text); box-shadow: 0 24px 60px rgba(0,0,0,.25); }
+  #spanHelp::backdrop { background: rgba(0,0,0,.35); }
+  #spanHelp h3 { font-family: var(--h-head); font-stretch: 112%; font-size: 19px; margin-bottom: 4px; }
+  #spanHelp .saved { font-size: 12.5px; color: var(--h-muted); margin-bottom: 14px; overflow-wrap: anywhere; }
+  #spanHelp ol { padding-left: 1.3em; display: grid; gap: 9px; font-size: 14px; line-height: 1.45; }
+  #spanHelp ol a { font-weight: 650; color: var(--h-text); }
+  #spanHelp p { font-size: 14px; line-height: 1.5; }
+  #spanHelp .warn { margin-top: 14px; font-size: 12.5px; color: var(--h-muted); border-left: 2px solid var(--h-border2); padding-left: 10px; line-height: 1.5; }
+  #spanHelp .end { justify-content: flex-end; margin-top: 18px; }
+
+  #toast { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); background: var(--h-text); color: var(--h-bg); font-size: 13px;
+    padding: 8px 14px; border-radius: 999px; opacity: 0; pointer-events: none; transition: opacity .2s; max-width: calc(100% - 32px); text-align: center; }
+  #toast.show { opacity: 1; }
+  footer { margin-top: 44px; font-size: 11px; color: var(--h-faint); text-align: center; line-height: 1.7; }
+
+  @media (max-width: 600px) {
+    body { padding: 5vh 16px 48px; }
+    #grid { grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 28px; }
+    .card { padding: 10px 10px 8px; }
+    #sceneName { width: 100%; }
+    #download { width: 100%; }
+    .grow { display: none; }
+  }
+</style>
+<!-- studio-hub theme kit v1: fonts, light/dark tokens, title shadow, theme slider. Source: _theme/kit.html, inlined by _theme/apply.py -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource-variable/mona-sans@5.3.0/wdth.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource-variable/hubot-sans@5.3.0/wdth.css">
+<script>(function(){var t=null;try{t=new URLSearchParams(location.search).get("theme")||localStorage.getItem("hubTheme")}catch(e){}document.documentElement.dataset.theme=t==="dark"?"dark":"light"})()</script>
+<style id="hub-kit">
+  :root {
+    color-scheme: light;
+    --h-font: "Mona Sans Variable", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --h-head: "Hubot Sans Variable", var(--h-font);
+    --h-bg: #f1efe9; --h-panel: #faf9f5; --h-panel2: #f4f2ec; --h-deep: #ebe8e1; --h-deep2: #e7e4dc;
+    --h-border: #dedad0; --h-border2: #d3cec2; --h-btn: #ffffff; --h-btn-border: #cfcabe; --h-btn-hover: #f1eee6;
+    --h-text: #18181b; --h-text2: #3f3f46; --h-muted: #6b675f; --h-muted2: #8f8a7f; --h-faint: #aaa59a; --h-code: #27272a;
+    --h-accent: #18181b; --h-accent-h: #3f3f46; --h-accent2: #8f8a7f; --h-accent-bg: #e4e0d6; --h-on-accent: #ffffff; --h-strong: #09090b;
+    --h-yellow: #8a5a00; --h-blue: #0b5cad; --h-blue2: #2f5597; --h-purple: #6b3fa0; --h-green2: #2e7d4f; --h-ok: #1a7f37;
+    --h-green: #1a7f37; --h-red: #cf222e; --h-amber: #9a6700; --h-err-bg: #fde2e4; --h-err-bg2: #f5b8be; --h-err-text: #8b1a2b;
+    --h-title-shadow: 0 2px 3px rgba(24, 24, 27, .16), 0 8px 22px rgba(24, 24, 27, .18);
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --h-bg: #1e1f24; --h-panel: #26272e; --h-panel2: #2e2f37; --h-deep: #1b1c21; --h-deep2: #22232a;
+    --h-border: #3a3b44; --h-border2: #3a3b46; --h-btn: #33343d; --h-btn-border: #4a4b55; --h-btn-hover: #41424d;
+    --h-text: #e6e6e6; --h-text2: #b9bac2; --h-muted: #8a8b94; --h-muted2: #6f7078; --h-faint: #565761; --h-code: #d8dee9;
+    --h-accent: #e6e6e6; --h-accent-h: #ffffff; --h-accent2: #8a8b94; --h-accent-bg: #3a3b44; --h-on-accent: #18181b; --h-strong: #ffffff;
+    --h-yellow: #e8d3a8; --h-blue: #9ecbff; --h-blue2: #9db3d8; --h-purple: #c4a7e7; --h-green2: #a8d5b5; --h-ok: #8fd19e;
+    --h-green: #3fb950; --h-red: #f85149; --h-amber: #e3b341; --h-err-bg: #5c1f2b; --h-err-bg2: #7a2938; --h-err-text: #ffb3c0;
+    --h-title-shadow: 0 2px 3px rgba(0, 0, 0, .45), 0 8px 22px rgba(0, 0, 0, .5);
+  }
+  h1 { font-family: var(--h-head); font-weight: 800; font-stretch: 125%; letter-spacing: -.02em; text-shadow: var(--h-title-shadow); }
+  h1 span, h1 em { text-shadow: inherit; color: var(--h-muted); }
+
+  /* the theme slider: fixed top-right, no labels */
+  .hub-theme { position: fixed; top: 14px; right: 16px; z-index: 9999; }
+  .hub-theme button { all: unset; box-sizing: border-box; position: relative; display: block; width: 52px; height: 22px; border-radius: 999px; cursor: pointer;
+    background: linear-gradient(90deg, #f1efe9, #c9c4b7 38%, #3f3f46 62%, #09090b); border: 1px solid var(--h-border2); touch-action: none; }
+  .hub-theme button:focus-visible { outline: 2px solid var(--h-text); outline-offset: 3px; }
+  .hub-theme i { position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff;
+    box-shadow: 0 1px 2px rgba(0,0,0,.35), 0 0 0 1px rgba(0,0,0,.08); transition: left .4s cubic-bezier(.65, 0, .35, 1); }
+  :root[data-theme="dark"] .hub-theme i { left: 32px; }
+  .hub-theme.dragging i { transition: none; }
+  .hub-theme.docked { position: static; flex: none; display: flex; align-items: center; margin-left: 6px; }
+  [data-hub-theme-slot] { display: contents; }
+  @media (prefers-reduced-motion: reduce) { .hub-theme i { transition: none; } }
+  @media print { .hub-theme { display: none; } }
+</style>
+<!-- /studio-hub theme kit -->
+</head>
+<body>
+  <h1>Wallpaper <span>Studio</span></h1>
+  <p class="sub">Scenes drawn to fit your screens.</p>
+
+  <div class="row" id="deskbar">
+    <span id="deskSum"></span>
+    <button id="detect" title="Read your screens and how they are arranged">Detect my screens</button>
+    <button id="editDesk" aria-expanded="false">Adjust</button>
+  </div>
+
+  <section id="deskPanel" hidden>
+    <div class="row">
+      <button data-preset="one">1 screen</button>
+      <button data-preset="two">2 side by side</button>
+      <button id="addMon">+ Screen</button>
+      <label class="row" style="font-size:12px;color:var(--h-muted);gap:6px">Bezel gap <input type="number" id="gap" min="0" max="30" step="0.5"> cm</label>
+    </div>
+    <svg id="deskMap" aria-label="Desk layout: drag screens to arrange them"></svg>
+    <div id="monList"></div>
+    <p class="hint">Drag the screens into the order they stand on your desk and check each diagonal: browsers can read resolution but not inches.</p>
+  </section>
+
+  <main>
+    <div id="stage"><canvas id="big" aria-label="Preview on your desk"></canvas></div>
+    <div id="bar">
+      <span id="sceneName"></span>
+      <div id="pals" role="group" aria-label="Colours"></div>
+      <button class="ib" id="sun" aria-pressed="true" title="Sun"></button>
+      <button class="ib" id="roll" title="Reroll (R)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="3.5"/><g fill="currentColor" stroke="none"><circle cx="8.6" cy="8.6" r="1.35"/><circle cx="15.4" cy="15.4" r="1.35"/><circle cx="12" cy="12" r="1.35"/><circle cx="15.4" cy="8.6" r="1.35"/><circle cx="8.6" cy="15.4" r="1.35"/></g></svg></button>
+      <span class="grow"></span>
+      <button class="quiet" id="dlScreens" title="One PNG per screen, zipped">Per screen</button>
+      <button class="primary" id="download">Download</button>
+    </div>
+  </main>
+
+  <div id="grid" role="list"></div>
+
+  <dialog id="spanHelp" aria-labelledby="spanHelpTitle">
+    <form method="dialog">
+      <h3 id="spanHelpTitle">One last step</h3>
+      <p class="saved">Saved <b id="spanFile"></b> to your Downloads.</p>
+      <div id="spanWin">
+        <ol>
+          <li><a href="ms-settings:personalization-background">Open Background settings</a></li>
+          <li>Next to <i>Personalize your background</i>, choose <b>Picture</b>, then <b>Browse photos</b> and pick the file.</li>
+          <li>Set <i>Choose a fit for your desktop image</i> to <b>Span</b>.</li>
+        </ol>
+        <p class="warn">Don&rsquo;t use &ldquo;Set as desktop background&rdquo; from Photos or a right-click: Windows then uses Fill and squeezes the whole picture onto every screen.</p>
+      </div>
+      <div id="spanMac" hidden>
+        <p>macOS can&rsquo;t stretch one picture across displays, so you got one picture per display. Open System Settings &rsaquo; Wallpaper and pick one for each.</p>
+      </div>
+      <div class="row end"><button value="ok" class="primary">Got it</button></div>
+    </form>
+  </dialog>
+  <div id="toast" role="status"></div>
+  <footer>Every scene is drawn right here, to your screens&rsquo; real size &middot; what you download is yours &middot; single file &middot; works offline</footer>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const TAU = Math.PI * 2;
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  let store = {};
+  try { store = JSON.parse(localStorage.getItem("wallpaperStudio") || "{}") || {}; } catch (e) { store = {}; }
+  const persist = () => { try { localStorage.setItem("wallpaperStudio", JSON.stringify(store)); } catch (e) {} };
+
+  // ---- randomness: mulberry32 plus a few helpers
+  function R(seed) {
+    let a = seed >>> 0;
+    const r = () => {
+      a = (a + 0x6D2B79F5) | 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+    r.u = (lo, hi) => lo + (hi - lo) * r();
+    r.i = (n) => Math.floor(r() * n);
+    r.n = () => Math.sqrt(-2 * Math.log(1 - r())) * Math.cos(TAU * r());
+    return r;
+  }
+  const hash = (s) => { let h = 2166136261; for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619); return h >>> 0; };
+  const rgba = (hex, a) => { const n = parseInt(hex.slice(1), 16); return `rgba(${n >> 16},${(n >> 8) & 255},${n & 255},${Math.max(0, Math.min(1, a)).toFixed(4)})`; };
+
+  // ---- drawing helpers. Every scene draws in physical centimetres over the desk's
+  // bounding box (D.W x D.H), so it continues across bezels at true scale. D.s shrinks
+  // objects (suns, doodles) on small desks such as a laptop or a phone.
+  function vgrad(c, D, stops, y0 = 0, y1 = D.H) {
+    const g = c.createLinearGradient(0, y0, 0, y1);
+    for (const [p, col] of stops) g.addColorStop(clamp(p, 0, 1), col);
+    c.fillStyle = g; c.fillRect(-1, -1, D.W + 2, D.H + 2);
+  }
+  // 1-D fractal ridge across the desk, as a y (cm from the top) every D.step cm.
+  function ridge(r, D, base, amp, rough = .55, oct = 7) {
+    const oc = []; let a = 1, f = 1.5;
+    for (let k = 0; k < oct; k++) { oc.push([a, f, r.u(0, TAU), r.u(0, TAU)]); r(); a *= rough; f *= 2.1; }
+    const n = Math.ceil((D.W + 2) / D.step) + 1, ys = new Float32Array(n);
+    let lo = Infinity, hi = -Infinity;
+    for (let i = 0; i < n; i++) {
+      const xn = (i * D.step - 1) / D.L; let h = 0;
+      for (const [aa, ff, p0, p1] of oc) h += aa * (Math.sin(xn * ff * TAU + p0) * .6 + Math.sin(xn * ff * 3.7 * Math.PI + p1) * .4);
+      ys[i] = h; if (h < lo) lo = h; if (h > hi) hi = h;
+    }
+    let top = Infinity, bot = -Infinity;
+    for (let i = 0; i < n; i++) { const y = (base - (ys[i] - lo) / (hi - lo || 1) * amp) * D.H; ys[i] = y; if (y < top) top = y; if (y > bot) bot = y; }
+    return { ys, n, top, bot, at: (x) => ys[clamp(Math.round((x + 1) / D.step), 0, n - 1)] };
+  }
+  function ridgePath(c, D, rd) {
+    c.moveTo(-1, D.H + 1);
+    for (let i = 0; i < rd.n; i++) c.lineTo(i * D.step - 1, rd.ys[i]);
+    c.lineTo(D.W + 1, D.H + 1); c.closePath();
+  }
+  function fillBelow(c, D, rd, col) { c.beginPath(); ridgePath(c, D, rd); c.fillStyle = col; c.fill(); }
+  function disc(c, x, y, r, col, glow = 0) {
+    if (glow) {
+      const out = r + glow * 6, g = c.createRadialGradient(x, y, r * .98, x, y, out);
+      for (let k = 0; k <= 12; k++) g.addColorStop(k / 12, rgba(col, .35 * Math.exp(-k / 2)));
+      c.fillStyle = g; c.beginPath(); c.arc(x, y, out, 0, TAU); c.fill();
+    }
+    c.fillStyle = col; c.beginPath(); c.arc(x, y, r, 0, TAU); c.fill();
+  }
+  function crescent(c, x, y, r, col) {
+    const out = r * 8.5, g = c.createRadialGradient(x, y, r, x, y, out);
+    for (let k = 0; k <= 10; k++) g.addColorStop(k / 10, rgba(col, .12 * Math.exp(-k / 2)));
+    c.fillStyle = g; c.beginPath(); c.arc(x, y, out, 0, TAU); c.fill();
+    c.save(); c.beginPath(); c.arc(x, y, r, 0, TAU); c.clip();
+    c.beginPath(); c.rect(x - r - 1, y - r - 1, 2 * r + 2, 2 * r + 2); c.arc(x + r * .45, y - r * .3, r * .92, 0, TAU);
+    c.fillStyle = col; c.fill("evenodd"); c.restore();
+  }
+  // A vertical band of `col` whose strength follows fn(t) for t in [0, 1] from y0 to y1.
+  function band(c, D, col, y0, y1, fn, steps = 16) {
+    const g = c.createLinearGradient(0, y0, 0, y1);
+    for (let k = 0; k <= steps; k++) g.addColorStop(k / steps, rgba(col, fn(k / steps)));
+    c.fillStyle = g; c.fillRect(-1, -1, D.W + 2, D.H + 2);
+  }
+  // Soft-edged fill: the shape is drawn far off to the right and only its blurred
+  // shadow lands back in place (canvas shadows ignore the transform, so offsets are px).
+  function soft(c, D, build, col, blurCm) {
+    const F = D.W * 4 + 200;
+    c.save();
+    c.shadowColor = col; c.shadowBlur = blurCm * D.px * 2; c.shadowOffsetX = -F * D.sx; c.shadowOffsetY = 0;
+    c.translate(F, 0); c.beginPath(); build(); c.fillStyle = "#000"; c.fill();
+    c.restore();
+  }
+  // Put a disc of radius r near (fx, fy) of the desk, but always wholly on a screen.
+  function spot(D, fx, fy, r) {
+    const x = fx * D.W, y = fy * D.H;
+    let best = [x, y], bd = Infinity;
+    for (const q of D.scr) {
+      const mx = Math.min(r * 1.4, q.w / 2), my = Math.min(r * 1.4, q.h / 2);
+      const cx = clamp(x, q.x + mx, q.x + q.w - mx), cy = clamp(y, q.y + my, q.y + q.h - my), d = Math.hypot(cx - x, cy - y);
+      if (d < bd) { bd = d; best = [cx, cy]; }
+    }
+    return best;
+  }
+  // Non-overlapping circles on the visible screens (dart throwing), cached per desk.
+  const scatterMemo = new Map();
+  function scatter(r, D, tries, rmin, rmax, gap) {
+    const key = [D.key, tries, rmin, rmax, gap, r()].join("|");
+    if (scatterMemo.has(key)) return scatterMemo.get(key);
+    const placed = [];
+    for (let i = 0; i < tries; i++) {
+      const rr = rmin + (rmax - rmin) * Math.pow(r(), 2.2), x = r.u(0, D.W), y = r.u(0, D.H);
+      if (!D.vis(x, y, rr * .5)) continue;
+      let ok = true;
+      for (const [px, py, pr] of placed) { const m = rr + pr + gap; if ((x - px) ** 2 + (y - py) ** 2 <= m * m) { ok = false; break; } }
+      if (ok) placed.push([x, y, rr]);
+    }
+    if (scatterMemo.size > 12) scatterMemo.delete(scatterMemo.keys().next().value);
+    scatterMemo.set(key, placed);
+    return placed;
+  }
+  // Stars bucketed by brightness. One smaller than half a pixel is drawn at half a pixel
+  // but fainter by its coverage, so a small preview looks like the full-size picture.
+  function stars(nb) {
+    const b = Array.from({ length: nb * 3 }, () => new Path2D());
+    return {
+      add(c, D, x, y, rr, bright, round) {
+        const min = .5 / D.px, fade = rr < min ? (rr / min) ** 2 : 1, q = fade > .66 ? 0 : fade > .33 ? 1 : 2, p = b[Math.floor(bright * nb) * 3 + q];
+        rr = Math.max(rr, min);
+        if (round) { p.moveTo(x + rr, y); p.arc(x, y, rr, 0, TAU); } else p.rect(x - rr, y - rr, 2 * rr, 2 * rr);
+      },
+      fill(c, col) { b.forEach((p, i) => { c.fillStyle = `rgba(${col(Math.floor(i / 3))},${[1, .5, .2][i % 3]})`; c.fill(p); }); },
+    };
+  }
+  const free = (spots, x, y, pad) => spots.every(([px, py, pr]) => (x - px) ** 2 + (y - py) ** 2 > (pr + pad) ** 2);
+
+  // ---- hand-drawn line helpers (doodles, memphis, the noodle)
+  const cpts = (cx, cy, r, n = 40, a0 = 0, a1 = TAU, sq = 1) => Array.from({ length: n + 1 }, (_, i) => [cx + r * Math.cos(a0 + (a1 - a0) * i / n), cy + r * sq * Math.sin(a0 + (a1 - a0) * i / n)]);
+  const rot = (pts, cx, cy, a) => { const co = Math.cos(a), si = Math.sin(a); return pts.map(([x, y]) => [cx + (x - cx) * co - (y - cy) * si, cy + (x - cx) * si + (y - cy) * co]); };
+  function pen(c, r, D, width) {
+    const w = Math.max(width * D.s, .8 / D.px);
+    return {
+      line(pts, col, closed = false, amt = .05) {
+        pts = amt ? pts.map(([x, y]) => [x + r.n() * amt * D.s, y + r.n() * amt * D.s]) : pts;
+        if (closed) pts = [...pts, pts[0], pts[1] || pts[0]];
+        c.strokeStyle = col; c.lineWidth = w; c.lineCap = "round"; c.lineJoin = "round";
+        c.beginPath(); pts.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y))); c.stroke();
+      },
+      dot(x, y, rr, col) { c.fillStyle = col; c.beginPath(); c.arc(x, y, rr, 0, TAU); c.fill(); },
+    };
+  }
+  const poly = (c, pts, col) => { c.fillStyle = col; c.beginPath(); pts.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y))); c.closePath(); c.fill(); };
+
+  // Doodles: each draws around (cx, cy) with size r.
+  const H = Math.PI;
+  const DOODLES = [
+    (p, cx, cy, r, c, a) => p.line(Array.from({ length: 10 }, (_, i) => { const q = i % 2 ? r * .45 : r, t = a + i * H / 5 - H / 2; return [cx + q * Math.cos(t), cy + q * Math.sin(t)]; }), c, true), // star
+    (p, cx, cy, r, c, a) => p.line(Array.from({ length: 61 }, (_, t) => [cx + r * t / 60 * Math.cos(a + t / 6), cy + r * t / 60 * Math.sin(a + t / 6)]), c), // spiral
+    (p, cx, cy, r, c, a) => { // heart
+      const pts = Array.from({ length: 50 }, (_, i) => { const t = i / 49 * TAU; return [cx + 16 * Math.sin(t) ** 3 * r / 17, cy - (13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t)) * r / 17]; });
+      p.line(rot(pts, cx, cy, a * .3), c);
+    },
+    (p, cx, cy, r, c, a) => p.line(rot([[.2, -1], [-.45, .1], [.05, .1], [-.25, 1], [.5, -.2], [0, -.2], [.35, -1]].map(([x, y]) => [cx + x * r, cy + y * r]), cx, cy, a * .4), c, true), // bolt
+    (p, cx, cy, r, c, a) => { // planet
+      p.line(cpts(cx, cy, r * .6), c);
+      p.line(rot(cpts(cx, cy, r, 40, .15 * H, .85 * H, .3), cx, cy, a * .5), c);
+      p.line(rot(cpts(cx, cy, r, 40, 1.12 * H, 1.88 * H, .3), cx, cy, a * .5), c);
+    },
+    (p, cx, cy, r, c) => { // smiley
+      p.line(cpts(cx, cy, r), c); p.dot(cx - r * .35, cy - r * .25, r * .1, c); p.dot(cx + r * .35, cy - r * .25, r * .1, c);
+      p.line(cpts(cx, cy + r * .05, r * .55, 16, .15 * H, .85 * H), c);
+    },
+    (p, cx, cy, r, c) => { // cat
+      p.line(cpts(cx, cy, r, 40, -.25 * H, 1.25 * H), c);
+      p.line([[cx - r * .71, cy - r * .71], [cx - r * .75, cy - r * 1.35], [cx - r * .2, cy - r * .98], [cx + r * .2, cy - r * .98], [cx + r * .75, cy - r * 1.35], [cx + r * .71, cy - r * .71]], c);
+      p.dot(cx - r * .35, cy - r * .1, r * .09, c); p.dot(cx + r * .35, cy - r * .1, r * .09, c);
+      for (const s of [-1, 1]) for (const dy of [.15, .35]) p.line([[cx + s * r * .3, cy + r * dy], [cx + s * r * 1.15, cy + r * (dy - .1)]], c);
+    },
+    (p, cx, cy, r, c, a) => { // rocket
+      const f = (pts) => rot(pts.map(([x, y]) => [cx + x * r, cy + y * r]), cx, cy, a * .6);
+      p.line(f([[0, -1], [.32, -.5], [.32, .55], [-.32, .55], [-.32, -.5]]), c, true);
+      p.line(f([[.32, .2], [.6, .75], [.32, .55]]), c); p.line(f([[-.32, .2], [-.6, .75], [-.32, .55]]), c);
+      p.line(f([[-.18, .6], [0, 1.05], [.18, .6]]), c);
+      p.line(rot(cpts(cx, cy - r * .25, r * .14, 14), cx, cy, a * .6), c);
+    },
+    (p, cx, cy, r, c, a) => { // sun
+      p.line(cpts(cx, cy, r * .5), c);
+      for (let i = 0; i < 10; i++) { const t = a + i * H / 5; p.line([[cx + r * .7 * Math.cos(t), cy + r * .7 * Math.sin(t)], [cx + r * Math.cos(t), cy + r * Math.sin(t)]], c); }
+    },
+    (p, cx, cy, r, c, a) => p.line(rot(Array.from({ length: 41 }, (_, i) => [cx - r * 1.3 + r * 2.6 * i / 40, cy + r * .35 * Math.sin(i / 40 * 4 * H)]), cx, cy, a), c), // squiggle
+    (p, cx, cy, r, c) => { // cloud
+      let pts = [];
+      for (const [ox, oy, rr, a0, a1] of [[-.55, .1, .4, .5, 1.5], [-.1, -.2, .5, 1, 1.95], [.5, .05, .4, 1.4, 2.5]]) pts = pts.concat(cpts(cx + ox * r, cy + oy * r, rr * r, 14, a0 * H, a1 * H));
+      pts.push([cx + .9 * r, cy + .45 * r], [cx - .95 * r, cy + .45 * r]);
+      p.line(pts, c, true);
+    },
+    (p, cx, cy, r, c) => { // eye
+      p.line(cpts(cx, cy + r * .6, r * 1.1, 20, 1.22 * H, 1.78 * H), c); p.line(cpts(cx, cy - r * .6, r * 1.1, 20, .22 * H, .78 * H), c);
+      p.line(cpts(cx, cy, r * .32), c); p.dot(cx, cy, r * .12, c);
+    },
+    (p, cx, cy, r, c) => { // cube
+      p.line([[cx, cy - r], [cx + r * .87, cy - r / 2], [cx + r * .87, cy + r / 2], [cx, cy + r], [cx - r * .87, cy + r / 2], [cx - r * .87, cy - r / 2]], c, true);
+      p.line([[cx - r * .87, cy - r / 2], [cx, cy], [cx + r * .87, cy - r / 2]], c); p.line([[cx, cy], [cx, cy + r]], c);
+    },
+    (p, cx, cy, r, c, a) => { // flower
+      for (let i = 0; i < 6; i++) { const t = a + i * H / 3, px = cx + r * .55 * Math.cos(t), py = cy + r * .55 * Math.sin(t); p.line(rot(cpts(px, py, r * .42, 18, 0, TAU, .55), px, py, t), c); }
+      p.line(cpts(cx, cy, r * .22, 14), c);
+    },
+    (p, cx, cy, r, c) => { // note
+      p.line(rot(cpts(cx - r * .35, cy + r * .55, r * .28, 16, 0, TAU, .7), cx - r * .35, cy + r * .55, -.4), c);
+      p.line([[cx - r * .08, cy + r * .5], [cx - r * .08, cy - r * .9], [cx + r * .55, cy - r * .6]], c);
+    },
+    (p, cx, cy, r, c, a, rg) => { for (let i = 0; i < 6; i++) p.dot(cx + rg.u(-r, r), cy + rg.u(-r, r), r * rg.u(.07, .14), c); }, // dots
+    (p, cx, cy, r, c) => p.line([[cx - r, cy + r * .5], [cx - r, cy - r * .4], [cx - r * .5, cy + r * .05], [cx, cy - r * .7], [cx + r * .5, cy + r * .05], [cx + r, cy - r * .4], [cx + r, cy + r * .5]], c, true), // crown
+    (p, cx, cy, r, c) => { // fish
+      const body = cpts(cx, cy, r * .8, 30, .12 * H, 1.88 * H, .5);
+      p.line([...body, [cx + r * 1.2, cy - r * .35], [cx + r * 1.2, cy + r * .35], body[0]], c); p.dot(cx - r * .4, cy - r * .08, r * .08, c);
+    },
+    (p, cx, cy, r, c, a) => { // arrow
+      p.line(rot(Array.from({ length: 21 }, (_, i) => [cx - r + 2 * r * i / 20, cy + r * .25 * Math.sin(i / 20 * TAU)]), cx, cy, a), c);
+      p.line(rot([[cx + r * .65, cy - r * .35], [cx + r, cy], [cx + r * .65, cy + r * .35]], cx, cy, a), c);
+    },
+  ];
+
+  // Catmull-Rom through the control points.
+  function catmull(pts, n) {
+    const P = [pts[0], ...pts, pts[pts.length - 1]], out = [];
+    for (let i = 1; i < P.length - 2; i++) {
+      const [p0, p1, p2, p3] = [P[i - 1], P[i], P[i + 1], P[i + 2]];
+      for (let k = 0; k < n; k++) {
+        const t = k / n, t2 = t * t, t3 = t2 * t;
+        out.push([0, 1].map((j) => .5 * (2 * p1[j] + (-p0[j] + p2[j]) * t + (2 * p0[j] - 5 * p1[j] + 4 * p2[j] - p3[j]) * t2 + (-p0[j] + 3 * p1[j] - 3 * p2[j] + p3[j]) * t3)));
+      }
+    }
+    out.push(pts[pts.length - 1]);
+    return out;
+  }
+
+  // ---- the scenes. Each has colourways (vars); sun: which toggle it offers; fixed: no reroll.
+  const SCENES = [
+    {
+      id: "dusk-mountains", name: "Dusk mountains", sun: true, grain: 2,
+      vars: [
+        { n: "Dusk", sky: [[0, "#2b2d52"], [.45, "#6b4f7a"], [.72, "#e3906f"], [1, "#f6c9a0"]], sun: "#fde3c2", layers: ["#9c6f86", "#7a5576", "#573f62", "#382b49", "#1f1a30"] },
+        { n: "Dawn", sky: [[0, "#33507a"], [.45, "#8fa9c9"], [.72, "#f0c4b0"], [1, "#fbe2cf"]], sun: "#fff3e3", layers: ["#a3afc9", "#8090b3", "#5f6e97", "#424f77", "#283352"] },
+        { n: "Ember", sky: [[0, "#2e1730"], [.45, "#7a2c45"], [.72, "#e2643f"], [1, "#f8b46c"]], sun: "#ffe3b3", layers: ["#a8474f", "#843549", "#602742", "#401b35", "#231022"] },
+        { n: "Night", moon: true, sky: [[0, "#05070f"], [.5, "#101a34"], [.8, "#22335a"], [1, "#2f426b"]], sun: "#e8ebf4", layers: ["#2b3758", "#222c49", "#1a223a", "#12192c", "#0a0f1d"] },
+      ],
+      draw(c, D, o, r) {
+        vgrad(c, D, o.v.sky);
+        if (o.sun) { const rr = 3.2 * D.s, [x, y] = spot(D, .644, .62, rr); disc(c, x, y, rr, o.v.sun, 6 * D.s); }
+        o.v.layers.forEach((col, i) => fillBelow(c, D, ridge(r, D, .70 + i * .065, .20 - i * .02), col));
+      },
+    },
+    {
+      id: "soft-gradient", name: "Soft gradient", fixed: true, grain: 2.5,
+      vars: [
+        { n: "Harbour", sky: [[0, "#1d3b5a"], [.5, "#3f6f8f"], [1, "#c9b6a6"]], warm: "#e8a67c" },
+        { n: "Lilac", sky: [[0, "#2d2a4e"], [.5, "#6c5a8e"], [1, "#e4c2c7"]], warm: "#f2b799" },
+        { n: "Sage", sky: [[0, "#233f38"], [.5, "#5e8876"], [1, "#ddd6bd"]], warm: "#e8c48d" },
+        { n: "Graphite", sky: [[0, "#111216"], [.6, "#272930"], [1, "#44464f"]], warm: "#8c6e5a" },
+      ],
+      draw(c, D, o) {
+        vgrad(c, D, o.v.sky);
+        const g = c.createLinearGradient(0, 0, D.W, 0);
+        for (let k = 0; k <= 12; k++) g.addColorStop(k / 12, rgba(o.v.warm, (k / 12) ** 2 * .35));
+        c.fillStyle = g; c.fillRect(-1, -1, D.W + 2, D.H + 2);
+      },
+    },
+    {
+      id: "ink-mist", name: "Ink mist", sun: true, grain: 3,
+      vars: [
+        { n: "Paper", sky: [[0, "#f3eee2"], [1, "#e6dfcf"]], mist: "#f3eee2", sun: "#c4433a", layers: ["#d5d0c4", "#bdb7aa", "#9e988c", "#77726a", "#4d4a45"] },
+        { n: "Indigo", sky: [[0, "#eef0f4"], [1, "#dde2ea"]], mist: "#eef0f4", sun: "#c4433a", layers: ["#ccd3df", "#adb8ca", "#8796ae", "#5f6f8b", "#3a4865"] },
+        { n: "Night", sky: [[0, "#4a4d57"], [1, "#3f424c"]], mist: "#4a4d57", sun: "#d0574a", layers: ["#3d404a", "#34373f", "#2b2d35", "#222429", "#18191d"] },
+      ],
+      draw(c, D, o, r) {
+        vgrad(c, D, o.v.sky);
+        o.v.layers.forEach((col, i) => {
+          const rd = ridge(r, D, .62 + i * .08, .26 - i * .03, .42, 5), foot = rd.bot + D.sh, w = 2.5 * D.sh;
+          fillBelow(c, D, rd, col);
+          band(c, D, o.v.mist, foot - 5 * w, foot + 5 * w, (t) => .55 * Math.exp(-Math.abs(t - .5) * 10), 20);
+        });
+        if (o.sun) { const rr = 2.4 * D.s, [x, y] = spot(D, .481, .264, rr); disc(c, x, y, rr, o.v.sun); }
+      },
+    },
+    {
+      id: "night-sky", name: "Night sky", sun: true, moon: true, grain: 1.5,
+      vars: [
+        { n: "Navy", sky: [[0, "#070b1d"], [.6, "#13204a"], [1, "#2c3b6b"]], hills: ["#0d1530", "#060a18"] },
+        { n: "Violet", sky: [[0, "#0c0716"], [.6, "#271846"], [1, "#46306b"]], hills: ["#1a1130", "#0b0716"] },
+        { n: "Teal", sky: [[0, "#03100f"], [.6, "#0a2c31"], [1, "#1b4c52"]], hills: ["#072124", "#031012"] },
+      ],
+      draw(c, D, o, r) {
+        vgrad(c, D, o.v.sky);
+        const n = Math.round(D.W * D.H * .9 / D.s), sizes = [.6, .9, 1.3, 2], cum = [.6, .85, .96, 1];
+        const st = stars(8);
+        for (let i = 0; i < n; i++) {
+          const x = r.u(0, D.W), y = r.u(0, D.H * .8), q = r(), b = r();
+          if (D.vis(x, y, .2)) st.add(c, D, x, y, sizes[cum.findIndex((t) => q <= t)] / 30 * Math.max(D.s, .6), b, true);
+        }
+        st.fill(c, (k) => { const v = Math.round(150 + (k + .5) / 8 * 105); return `${v},${v},${Math.min(255, v + 15)}`; });
+        if (o.sun) { const rr = 2.2 * D.s, [x, y] = spot(D, .481, .208, rr); crescent(c, x, y, rr, "#f4f1e3"); }
+        fillBelow(c, D, ridge(r, D, .93, .10), o.v.hills[0]);
+        fillBelow(c, D, ridge(r, D, .98, .07), o.v.hills[1]);
+      },
+    },
+    {
+      id: "sea-sunrise", name: "Sea sunrise", sun: true, grain: 2,
+      vars: [
+        { n: "Sunrise", sky: ["#4d6c9c", "#e9b48e", "#f7dcbf"], sea: ["#5c7c9a", "#22344d"], sun: "#fff1dc", glint: "#ffe2be" },
+        { n: "Day", sky: ["#3b78b8", "#9fcbea", "#e2f1f8"], sea: ["#3f7ea3", "#143a57"], sun: "#ffffff", glint: "#f2fbff" },
+        { n: "Moonlight", moon: true, sky: ["#060b1a", "#18264a", "#2f4268"], sea: ["#1d2c4a", "#070c19"], sun: "#eef0f6", glint: "#c9d3ea" },
+      ],
+      draw(c, D, o, r) {
+        const v = o.v, hz = .72 * D.H;
+        vgrad(c, D, [[0, v.sky[0]], [.72 * .75, v.sky[1]], [.72, v.sky[2]], [.7205, v.sea[0]], [1, v.sea[1]]]);
+        if (!o.sun) return;
+        const rr = 3 * D.s, [sx] = spot(D, .675, .72, rr), sy = hz - D.s;
+        disc(c, sx, sy, rr, v.sun, 8 * D.s);
+        c.strokeStyle = v.glint; c.lineCap = "butt";
+        for (let i = 0, n = Math.round(900 * D.s); i < n; i++) {
+          const y = r.u(hz + .3 * D.s, D.H), t = (y - hz) / (D.H - hz), x = sx + r.n() * (2 + 9 * t) * D.s, w = r.u(.4, 2) * (.5 + t) * D.s;
+          c.lineWidth = Math.max((.08 + .12 * t) * D.s, 1 / D.px);
+          c.beginPath(); c.moveTo(x - w, y); c.lineTo(x + w, y); c.stroke();
+        }
+      },
+    },
+    {
+      id: "desert-dunes", name: "Desert dunes", sun: true, grain: 2.5,
+      vars: [
+        { n: "Day", sky: [[0, "#9fc3d6"], [.55, "#f1dcc0"], [1, "#f6e3c8"]], sun: "#fff6e6", layers: ["#e9c49a", "#dfae7e", "#d29766", "#c07f52", "#a86a43"] },
+        { n: "Sunset", sky: [[0, "#4b3a6a"], [.55, "#f09e72"], [1, "#f8c48e"]], sun: "#ffe7c6", layers: ["#e59b6c", "#d0805a", "#b7674b", "#94503f", "#6c3a32"] },
+        { n: "Night", moon: true, sky: [[0, "#0a0f25"], [.55, "#28335e"], [1, "#3a4573"]], sun: "#f1eee4", layers: ["#5b5678", "#4b4667", "#3c3855", "#2e2b43", "#201e31"] },
+      ],
+      draw(c, D, o, r) {
+        vgrad(c, D, o.v.sky);
+        if (o.sun) { const rr = 2.2 * D.s, [x, y] = spot(D, .2625, .472, rr); disc(c, x, y, rr, o.v.sun, 5 * D.s); }
+        o.v.layers.forEach((col, i) => fillBelow(c, D, ridge(r, D, .66 + i * .075, .13, .3, 3), col));
+      },
+    },
+    {
+      id: "foggy-pines", name: "Foggy pines", grain: 2,
+      vars: [
+        { n: "Fog", sky: [[0, "#c9d6d3"], [1, "#dfe6e2"]], fog: "#dfe6e2", layers: ["#b4c4bf", "#8fa59f", "#6a827c", "#46605a", "#263b37"] },
+        { n: "Autumn", sky: [[0, "#e9d5c0"], [1, "#f2e5d5"]], fog: "#f2e5d5", layers: ["#d9bea3", "#c39a79", "#a37258", "#7a4d3d", "#4d2f28"] },
+        { n: "Night", sky: [[0, "#0e1822"], [1, "#1d2c37"]], fog: "#1d2c37", layers: ["#2b3d49", "#22323d", "#1a2832", "#121e27", "#09121a"] },
+      ],
+      draw(c, D, o, r) {
+        vgrad(c, D, o.v.sky);
+        o.v.layers.forEach((col, i) => {
+          const rd = ridge(r, D, .70 + i * .07, .10, .4, 4), size = (1.2 + i * .9) * D.s;
+          fillBelow(c, D, rd, col);
+          c.beginPath();
+          for (let x = r.u(0, size); x < D.W + size; x += size * r.u(1.4, 4.5) * (r() < .25 ? 1.6 : 1)) {
+            const h = size * r.u(2, 3.2), w = size * r.u(.7, .95), y0 = rd.at(x) + size * .3;
+            c.moveTo(x, y0 - h); c.lineTo(x - w / 2, y0); c.lineTo(x + w / 2, y0); c.closePath();
+          }
+          c.fillStyle = col; c.fill();
+          const y0 = rd.top - 4 * D.sh, a = .5 * (1 - i / 5);
+          band(c, D, o.v.fog, y0, y0 + 10 * D.sh, (t) => t * a, 4);
+        });
+      },
+    },
+    {
+      id: "aurora-snow", name: "Aurora snow", grain: 1.5,
+      vars: [
+        { n: "Green", a: "#5dffb0", b: "#b06cff", sw: ["#0d1f33", "#5dffb0"] },
+        { n: "Violet", a: "#c08bff", b: "#ff6fae", sw: ["#0d1f33", "#c08bff"] },
+        { n: "Ice", a: "#6fe0ff", b: "#7a7dff", sw: ["#0d1f33", "#6fe0ff"] },
+      ],
+      draw(c, D, o, r) {
+        vgrad(c, D, [[0, "#050a1a"], [.7, "#0d1f33"], [1, "#16314a"]]);
+        const st = stars(6);
+        for (let i = 0, n = Math.round(D.W * D.H * .5 / D.s); i < n; i++) {
+          const x = r.u(0, D.W), y = r.u(0, D.H * .75), b = r();
+          if (D.vis(x, y, .2)) st.add(c, D, x, y, .009, b, false);
+        }
+        st.fill(c, (k) => { const v = Math.round(120 + (k + .5) / 6 * 110); return `${v},${v},${v}`; });
+        // a wavy band whose light streams upward in thin curtains
+        const ph = [r.u(0, TAU), r.u(0, TAU), r.u(0, TAU), r.u(0, TAU), r.u(0, TAU)], sh = D.sh;
+        const A = parseInt(o.v.a.slice(1), 16), B = parseInt(o.v.b.slice(1), 16), ch = (n, k) => (n >> (16 - 8 * k)) & 255;
+        const dx = Math.max(D.W / 2400, .03), top = 30 * sh, bot = 4 * sh;
+        c.globalCompositeOperation = "lighter";
+        for (let x = Math.max(0, D.view[0] - dx); x < Math.min(D.W, D.view[1] + dx); x += dx) {
+          const xn = x / D.L, cy = (.5 + .08 * Math.sin(xn * TAU * 1.3 + ph[0]) + .05 * Math.sin(xn * TAU * 3.1 + ph[1])) * D.H;
+          let st = .7 + .3 * Math.sin(x / (.3 * D.s) + 4 * Math.sin(x / (5 * D.s) + ph[2])) * Math.sin(x / (1.1 * D.s) + ph[3]);
+          st *= .6 + .4 * Math.sin(xn * TAU * 2.2 + ph[4]);
+          const g = c.createLinearGradient(0, cy - top, 0, cy + bot), N = 16;
+          for (let k = 0; k <= N; k++) {
+            const dy = -top + (top + bot) * k / N, inten = (dy > 0 ? Math.exp(-dy / (.8 * sh)) : Math.exp(dy / (7 * sh))) * st, up = clamp(-dy / (14 * sh), 0, 1);
+            const col = [0, 1, 2].map((j) => Math.round(ch(A, j) * (1 - up) + ch(B, j) * up));
+            g.addColorStop(k / N, `rgba(${col.join(",")},${clamp(inten * .45, 0, 1).toFixed(4)})`);
+          }
+          c.fillStyle = g; c.fillRect(x, cy - top, dx * 1.02, top + bot);
+        }
+        c.globalCompositeOperation = "source-over";
+        ["#9fb4c8", "#c7d6e3", "#e8f0f6"].forEach((col, i) => fillBelow(c, D, ridge(r, D, .84 + i * .05, .12 - i * .02, .45, 5), col));
+      },
+    },
+    {
+      id: "mirror-lake", name: "Mirror lake", grain: 2,
+      vars: [
+        { n: "Dawn", sky: [[0, "#7f9cc0"], [.5, "#e7c6c4"], [.66, "#f8e3d0"], [1, "#f8e3d0"]], m: ["#9aa3bd", "#6c7594"], tint: "#3d5a7a", rip: "#ebe1e1" },
+        { n: "Dusk", sky: [[0, "#2a2853"], [.5, "#b9666c"], [.66, "#f0ad79"], [1, "#f0ad79"]], m: ["#6a5277", "#3d3150"], tint: "#251c3a", rip: "#f7c79c" },
+        { n: "Day", sky: [[0, "#5f9bd6"], [.5, "#bcdaf0"], [.66, "#eef6f8"], [1, "#eef6f8"]], m: ["#86a596", "#557566"], tint: "#2d5a6c", rip: "#ffffff" },
+      ],
+      draw(c, D, o, r) {
+        const hz = .66 * D.H, r1 = ridge(r, D, .63, .32, .5, 6), r2 = ridge(r, D, .66, .16, .5, 6);
+        const upper = () => { vgrad(c, D, o.v.sky); fillBelow(c, D, r1, o.v.m[0]); fillBelow(c, D, r2, o.v.m[1]); };
+        upper();
+        // the reflection: the same scene mirrored about the shoreline, a little darker and bluer
+        c.save(); c.beginPath(); c.rect(-1, hz, D.W + 2, D.H - hz + 1); c.clip(); c.translate(0, 2 * hz); c.scale(1, -1); upper(); c.restore();
+        c.fillStyle = rgba(o.v.tint, .18); c.fillRect(-1, hz, D.W + 2, D.H - hz + 1);
+        c.strokeStyle = o.v.rip; c.lineCap = "butt"; c.lineWidth = Math.max(.05 * D.s, .8 / D.px);
+        c.beginPath();
+        for (let i = 0, n = Math.round(260 * Math.max(D.W / 160, .25)); i < n; i++) {
+          const y = r.u(hz + .5 * D.s, D.H), x = r.u(0, D.W), w = r.u(1, 6) * D.s;
+          c.moveTo(x - w, y); c.lineTo(x + w, y);
+        }
+        c.stroke();
+      },
+    },
+    {
+      id: "rolling-hills", name: "Rolling hills", grain: 2,
+      vars: [
+        { n: "Spring", sky: [[0, "#a9d2ec"], [.6, "#e3f1ec"], [1, "#f2f7ec"]], layers: ["#bcd9a8", "#9cc78a", "#7db36f", "#5f9b58", "#467f44"] },
+        { n: "Autumn", sky: [[0, "#b5cde0"], [.6, "#efe6d6"], [1, "#f6efe2"]], layers: ["#e7c98f", "#d9a86a", "#c4874e", "#a5683d", "#7f4e30"] },
+        { n: "Lavender", sky: [[0, "#c3cff0"], [.6, "#efe9f4"], [1, "#f7f3f7"]], layers: ["#d8cae9", "#bea9dc", "#a089c7", "#806aac", "#5f4c8a"] },
+      ],
+      draw(c, D, o, r) {
+        vgrad(c, D, o.v.sky);
+        const clouds = [];
+        for (let k = 0, n = Math.max(2, Math.round(9 * D.W / 160)); k < n; k++) {
+          const cx = r.u(0, D.W), cy = r.u(4 * D.sh, 22 * D.sh);
+          for (let j = 0; j < 6; j++) { const rr = r.u(1.5, 3.5) * D.s; clouds.push([cx + r.u(-5, 5) * D.s, cy + r.u(-1, 1) * D.s, rr]); }
+        }
+        soft(c, D, () => { for (const [x, y, rr] of clouds) { c.moveTo(x + rr * 1.6, y); c.ellipse(x, y, rr * 1.6, rr, 0, 0, TAU); } }, "rgba(255,255,255,.82)", .6 * D.s);
+        o.v.layers.forEach((col, i) => fillBelow(c, D, ridge(r, D, .70 + i * .065, .12, .3, 3), col));
+      },
+    },
+    {
+      id: "doodle-wall", name: "Doodle wall",
+      vars: [
+        { n: "Night", bg: "#161423", cols: ["#ff6f91", "#ffd666", "#6ee7b7", "#7dc8ff", "#c4a0ff", "#f5f5f0"], sw: ["#161423", "#ffd666"] },
+        { n: "Paper", bg: "#f5f0e6", cols: ["#e5486f", "#d99a12", "#1f9e74", "#2f7fd0", "#7d5bd0", "#2a2838"], sw: ["#f5f0e6", "#e5486f"] },
+        { n: "Chalk", bg: "#24312c", cols: ["#f7a8b8", "#f5dc8c", "#b5ead0", "#a9d8f5", "#d5c3f5", "#f2f2ec"], sw: ["#24312c", "#f2f2ec"] },
+      ],
+      draw(c, D, o, r) {
+        c.fillStyle = o.v.bg; c.fillRect(-1, -1, D.W + 2, D.H + 2);
+        const p = pen(c, r, D, .17), cols = o.v.cols, s = D.s;
+        const tries = Math.round(clamp(20000 * D.W * D.H / 8480 / (s * s), 1500, 40000));
+        const spots = scatter(r, D, tries, .9 * s, 4.2 * s, .7 * s);
+        for (const [x, y, rr] of spots) {
+          const f = DOODLES[r.i(DOODLES.length)], col = cols[r.i(cols.length)];
+          f(p, x, y, rr * .85, col, r.u(-.6, .6), r);
+        }
+        const small = pen(c, r, D, .1);
+        for (let i = 0, n = Math.round(1600 * D.W * D.H / 8480 / (s * s)); i < n; i++) {
+          const x = r.u(0, D.W), y = r.u(0, D.H), col = cols[r.i(cols.length)], dot = r() < .5;
+          if (!D.vis(x, y) || !free(spots, x, y, .5 * s)) continue;
+          if (dot) small.dot(x, y, .09 * s, col);
+          else { small.line([[x - .25 * s, y], [x + .25 * s, y]], col, false, 0); small.line([[x, y - .25 * s], [x, y + .25 * s]], col, false, 0); }
+        }
+      },
+    },
+    {
+      id: "memphis", name: "Memphis",
+      vars: [
+        { n: "Classic", bg: "#f5efe4", pal: ["#ff5e5b", "#00c4c2", "#ffd23f", "#2b2d42", "#a06cd5", "#ff9ec4"], ink: "#2b2d42", sw: ["#f5efe4", "#ff5e5b"] },
+        { n: "Pastel", bg: "#fbf6ee", pal: ["#f7a399", "#8fd6cf", "#f9dc84", "#5b5f7a", "#c3a6e0", "#ffc4d8"], ink: "#5b5f7a", sw: ["#fbf6ee", "#8fd6cf"] },
+        { n: "Night", bg: "#1c1b29", pal: ["#ff5e5b", "#00c4c2", "#ffd23f", "#f5efe4", "#a06cd5", "#ff9ec4"], ink: "#f5efe4", sw: ["#1c1b29", "#ffd23f"] },
+      ],
+      draw(c, D, o, r) {
+        const { bg, pal, ink } = o.v, s = D.s;
+        c.fillStyle = bg; c.fillRect(-1, -1, D.W + 2, D.H + 2);
+        const p = pen(c, r, D, .45), fat = pen(c, r, D, .9), mid = pen(c, r, D, .3), plus = pen(c, r, D, .6);
+        const tries = Math.round(clamp(8000 * D.W * D.H / 8480 / (s * s), 800, 16000));
+        const spots = scatter(r, D, tries, 1.6 * s, 6.5 * s, 1.4 * s);
+        for (const [x, y, rr] of spots) {
+          const col = pal[r.i(pal.length)], kind = r.i(8), a = r.u(0, TAU);
+          if (kind === 0) { p.dot(x, y, rr * .7, col); p.line(cpts(x + rr * .15, y - rr * .15, rr * .7), ink, false, 0); }
+          else if (kind === 1) { const t = rot([[x, y - rr], [x + rr * .87, y + rr / 2], [x - rr * .87, y + rr / 2]], x, y, a); poly(c, t, col); p.line(t, ink, true, 0); }
+          else if (kind === 2) fat.line(rot(Array.from({ length: 41 }, (_, i) => [x - rr + 2 * rr * i / 40, y + rr * .3 * Math.sin(i / 40 * 3 * Math.PI)]), x, y, a), col, false, 0);
+          else if (kind === 3) p.line(rot(Array.from({ length: 9 }, (_, i) => [x - rr + 2 * rr * i / 8, y + (i % 2 ? rr * .3 : -rr * .3)]), x, y, a), col, false, 0);
+          else if (kind === 4) { for (let i = 0; i < 5; i++) for (let j = 0; j < 5; j++) p.dot(x - rr * .7 + i * rr * .35, y - rr * .7 + j * rr * .35, rr * .06, ink); }
+          else if (kind === 5) poly(c, rot(cpts(x, y, rr * .8, 30, 0, Math.PI), x, y, a), col);
+          else if (kind === 6) { for (let i = 0; i < 5; i++) mid.line(rot([[x - rr * .7, y - rr * .7 + i * rr * .35], [x + rr * .7, y - rr * .7 + i * rr * .35]], x, y, a), col, false, 0); }
+          else for (const q of [[[x - rr * .5, y], [x + rr * .5, y]], [[x, y - rr * .5], [x, y + rr * .5]]]) plus.line(rot(q, x, y, a), col, false, 0);
+        }
+        const conf = pen(c, r, D, .14);
+        for (let i = 0, n = Math.round(2500 * D.W * D.H / 8480 / (s * s)); i < n; i++) {
+          const x = r.u(0, D.W), y = r.u(0, D.H), a = r.u(0, Math.PI), col = pal[r.i(pal.length)];
+          if (D.vis(x, y) && free(spots, x, y, .4 * s)) conf.line([[x, y], [x + .35 * s * Math.cos(a), y + .35 * s * Math.sin(a)]], col, false, 0);
+        }
+      },
+    },
+    {
+      id: "desk-noodle", name: "Desk noodle",
+      vars: [
+        { n: "Lemon", bg: "#ffe47a", dots: "#fad25f", stripes: ["#ff6384", "#ffffff", "#5bc0eb", "#ffffff"], head: "#ff6384", ink: "#281e3c", blush: "#ffa0af", sw: ["#ffe47a", "#ff6384"] },
+        { n: "Mint", bg: "#c4efdd", dots: "#ade4cd", stripes: ["#ff7a59", "#ffffff", "#6c63ff", "#ffffff"], head: "#ff7a59", ink: "#1f2a3a", blush: "#ffb59f", sw: ["#c4efdd", "#6c63ff"] },
+        { n: "Night", bg: "#1f1b3a", dots: "#29244d", stripes: ["#ff6384", "#ffffff", "#5bc0eb", "#ffffff"], head: "#ff6384", ink: "#0d0a1e", blush: "#ffa0af", sw: ["#1f1b3a", "#5bc0eb"] },
+      ],
+      draw(c, D, o, r) {
+        const v = o.v, s = D.s;
+        c.fillStyle = v.bg; c.fillRect(-1, -1, D.W + 2, D.H + 2);
+        const dots = new Path2D(), st = 3 * s;
+        for (let i = 0; i * st < D.W + st; i++) for (let j = 0; j * st < D.H + st; j++) {
+          const x = i * st + (j % 2 ? st / 2 : 0), y = j * st; dots.moveTo(x + .1 * s, y); dots.arc(x, y, .1 * s, 0, TAU);
+        }
+        c.fillStyle = v.dots; c.fill(dots);
+        // path: tail comes in from the left, the body wanders through every screen, the head rests on the last one
+        const scr = [...D.scr].sort((a, b) => a.x - b.x), at = (q, u, v2) => [q.x + u * q.w, q.y + v2 * q.h];
+        const j = () => r.n() * .035, ctrl = [[scr[0].x - 6 * s, scr[0].y + .72 * scr[0].h]];
+        const LOOPS = [[[.27, .15], [.73, .23], [.8, .57], [.33, .68], [.47, .89]], [[.07, .81], [.4, .3], [.73, .17], [.9, .55], [.6, .81]]];
+        let head;
+        scr.forEach((q, k) => {
+          const last = k === scr.length - 1, wide = q.w >= q.h;
+          if (!last) {
+            if (wide) {
+              const m = Math.max(3, Math.round(q.w / q.h * 2.3));
+              for (let i = 0; i < m; i++) ctrl.push(at(q, .13 + .74 * i / (m - 1) + j(), (i % 2 ? .28 : .7) + j()));
+              if (scr[k + 1].y < q.y) ctrl.push(at(q, 1, 0));   // climb out into a taller neighbour
+            } else for (const [u, v2] of LOOPS[(k + 1) % 2]) ctrl.push(at(q, u + j(), v2 + j()));
+          } else if (scr.length === 1 && wide) {
+            for (const [u, v2] of [[.12, .68], [.3, .3], [.5, .7]]) ctrl.push(at(q, u + j(), v2 + j()));
+            head = at(q, .74, .5);
+          } else if (scr.length === 1) {
+            for (const [u, v2] of [[.22, .8], [.3, .35], [.7, .2], [.78, .5], [.45, .62]]) ctrl.push(at(q, u + j(), v2 + j()));
+            head = at(q, .58, .82);
+          } else if (wide) { ctrl.push(at(q, .12, .68)); head = at(q, .47, .42); }
+          else { ctrl.push(at(q, .25, .85)); head = at(q, .5, .55); }
+        });
+        ctrl.push(head);
+        const path = catmull(ctrl, 80), seg = [0];
+        for (let i = 1; i < path.length; i++) seg.push(seg[i - 1] + Math.hypot(path[i][0] - path[i - 1][0], path[i][1] - path[i - 1][1]));
+        const L = seg[seg.length - 1], Rb = 2.3 * s, pts = [];
+        for (let d = 0, i = 0; d < L; d += .12 * s) {
+          while (seg[i + 1] < d) i++;
+          const t = (d - seg[i]) / (seg[i + 1] - seg[i] || 1);
+          pts.push([path[i][0] + (path[i + 1][0] - path[i][0]) * t, path[i][1] + (path[i + 1][1] - path[i][1]) * t, d]);
+        }
+        const rad = (d) => Rb * Math.min(1, .35 + d / (18 * s)), ol = .25 * s;
+        const outline = new Path2D();
+        for (const [x, y, d] of pts) { const rr = rad(d) + ol; outline.moveTo(x + rr, y); outline.arc(x, y, rr, 0, TAU); }
+        c.fillStyle = v.ink; c.fill(outline);
+        let run = null, runCol = null;
+        const flush = () => { if (run) { c.fillStyle = runCol; c.fill(run); } };
+        for (const [x, y, d] of pts) {
+          const col = v.stripes[Math.floor(d / (2.2 * s)) % v.stripes.length];
+          if (col !== runCol) { flush(); run = new Path2D(); runCol = col; }
+          const rr = rad(d); run.moveTo(x + rr, y); run.arc(x, y, rr, 0, TAU);
+        }
+        flush();
+        // the head, googly eyes looking back along the body
+        const [hx, hy] = head, Hh = Rb * 1.9;
+        disc(c, hx, hy, Hh + .3 * s, v.ink); disc(c, hx, hy, Hh, v.head);
+        for (const ex of [-.85, .85]) {
+          const ecx = hx + ex * Hh * .55, ecy = hy - Hh * .35, er = Hh * .42;
+          disc(c, ecx, ecy, er + .2 * s, v.ink); disc(c, ecx, ecy, er, "#ffffff"); disc(c, ecx - er * .35, ecy - er * .25, er * .45, v.ink);
+        }
+        pen(c, r, D, .3).line(cpts(hx, hy + Hh * .1, Hh * .5, 20, .2 * Math.PI, .8 * Math.PI), v.ink, false, 0);
+        c.fillStyle = v.blush;
+        for (const bx of [-1, 1]) { c.beginPath(); c.ellipse(hx + bx * Hh * .68, hy + Hh * .25, .7 * s, .35 * s, 0, 0, TAU); c.fill(); }
+        // a little speech bubble, kept on the head's screen
+        const hs = D.scr.find((q) => hx >= q.x && hx <= q.x + q.w && hy >= q.y && hy <= q.y + q.h) || scr[scr.length - 1];
+        const bx = clamp(hx - 8.5 * s, hs.x + 3.6 * s, hs.x + hs.w - 3.6 * s), by = Math.max(hy - 6.2 * s, hs.y + 1.6 * s);
+        c.beginPath(); c.roundRect ? c.roundRect(bx - 3.3 * s, by - 1.3 * s, 6.6 * s, 2.6 * s, s) : c.rect(bx - 3.3 * s, by - 1.3 * s, 6.6 * s, 2.6 * s);
+        c.fillStyle = "#ffffff"; c.fill(); c.lineWidth = .15 * s; c.strokeStyle = v.ink; c.stroke();
+        poly(c, [[bx + 1.6 * s, by + 1.2 * s], [bx + 3.2 * s, by + 2.6 * s], [bx + 2.4 * s, by + 1.2 * s]], v.ink);
+        c.save(); c.translate(bx, by); c.scale(.01, .01);
+        c.font = `bold ${Math.round(110 * s)}px "Comic Sans MS", "Chalkboard SE", "Comic Neue", "Mona Sans Variable", sans-serif`;
+        c.textAlign = "center"; c.textBaseline = "middle"; c.fillStyle = v.ink; c.fillText("hi :)", 0, 4 * s);
+        c.restore();
+      },
+    },
+  ];
+  const swatch = (v) => v.sw || [v.sky ? (Array.isArray(v.sky[0]) ? v.sky[0][1] : v.sky[0]) : v.bg, (v.layers || v.m || v.sea || [v.bg])[Math.min(2, (v.layers || v.m || v.sea || [v.bg]).length - 1)]];
+  const fillOf = (sc, v) => v.bg || (v.sky ? (Array.isArray(v.sky[0]) ? v.sky[0][1] : v.sky[0]) : "#050a1a");
+
+  // ---- desk model (shared with Pattern Studio's Desk format). Screens live in physical
+  // centimetres, x/y = top-left of the visible panel; `win` = Windows' pixel position.
+  const DESKS = {
+    one: [["Screen", 1920, 1080, 24]],
+    two: [["Left", 1920, 1080, 24], ["Right", 1920, 1080, 24]],
+  };
+  const DEMO = { rows: [["Samsung 27\"", 1920, 1080, 27, 60, 34], ["BenQ 24\"", 900, 1440, 24, 30, 53], ["Dell 22\"", 1050, 1680, 22, 30, 47], ["Laptop", 1920, 1080, 15.6, 34, 19]],
+    win: [[0, 0], [1920, 0], [2820, 0], [3870, 0]] };
+  const size = (m) => {
+    if (m.cm) return m.cm;
+    const k = m.diag * 2.54 / Math.hypot(m.w, m.h);
+    return [m.w * k, m.h * k];
+  };
+  // Left to right, bottoms level, one bezel gap apart.
+  function pack(rows, gap) {
+    const mons = rows.map(([name, w, h, diag, cw, ch]) => ({ name, w, h, diag, ...(cw ? { cm: [cw, ch] } : {}), x: 0, y: 0 }));
+    const tall = Math.max(...mons.map((m) => size(m)[1]));
+    let x = 0;
+    for (const m of mons) { const [cw, ch] = size(m); m.x = x; m.y = tall - ch; x += cw + gap; }
+    return { gap, mons };
+  }
+  const guessDiag = (w, h, internal) => Math.round(Math.hypot(w, h) / (internal ? 140 : 92) * 2) / 2;
+  const isPhone = () => navigator.maxTouchPoints > 0 && Math.min(screen.width, screen.height) < 600;
+  // Just the screen this page is on, without asking for anything. Phones and tablets
+  // report CSS pixels of about 1/160 and 1/132 inch; desktops get the usual guess.
+  function thisScreen() {
+    const dpr = devicePixelRatio || 1, cw = screen.width, ch = screen.height, w = Math.round(cw * dpr), h = Math.round(ch * dpr);
+    let diag;
+    if (isPhone()) diag = Math.hypot(cw, ch) / 160;
+    else if (navigator.maxTouchPoints > 0 && Math.min(cw, ch) < 1100 && /iPad|Android|Mobile|Macintosh/.test(navigator.userAgent)) diag = Math.hypot(cw, ch) / 132;
+    else diag = guessDiag(w, h, dpr >= 1.5);
+    const d = pack([[isPhone() ? "Phone" : "This screen", w, h, Math.round(diag * 2) / 2]], 2);
+    d.auto = true;
+    return d;
+  }
+  const demo = new URLSearchParams(location.search).get("desk") === "demo";
+  let desk;
+  if (demo) { desk = pack(DEMO.rows, 2); desk.mons.forEach((m, i) => (m.win = DEMO.win[i])); }
+  else if (store.desk && store.desk.mons && store.desk.mons.length && !store.desk.auto) desk = store.desk;
+  else desk = thisScreen();
+
+  function geom() {
+    const ms = desk.mons.map((m) => { const [cw, ch] = size(m); return { m, x: m.x, y: m.y, cw, ch }; });
+    const x0 = Math.min(...ms.map((s) => s.x)), y0 = Math.min(...ms.map((s) => s.y));
+    const x1 = Math.max(...ms.map((s) => s.x + s.cw)), y1 = Math.max(...ms.map((s) => s.y + s.ch));
+    for (const s of ms) { s.rx = s.x - x0; s.ry = s.y - y0; }
+    // Where each screen sits in Windows' own layout, which is what Span follows. Detected
+    // screens carry their real position; otherwise assume left to right, tops level.
+    const win = ms.every((s) => s.m.win);
+    const order = [...ms].sort((a, b) => (win ? a.m.win[0] - b.m.win[0] : a.x - b.x));
+    if (win) {
+      const mx = Math.min(...ms.map((s) => s.m.win[0])), my = Math.min(...ms.map((s) => s.m.win[1]));
+      for (const s of ms) { s.wx = s.m.win[0] - mx; s.wy = s.m.win[1] - my; }
+    } else {
+      let wx = 0;
+      for (const s of order) { s.wx = wx; s.wy = 0; wx += s.m.w; }
+    }
+    const vw = Math.max(...ms.map((s) => s.wx + s.m.w)), vh = Math.max(...ms.map((s) => s.wy + s.m.h));
+    return { ms, order, x0, y0, cmW: x1 - x0, cmH: y1 - y0, vw, vh, win };
+  }
+  // What a scene sees: the desk in cm plus the render's resolution (px per cm).
+  function deskFor(g, sx, sy, view) {
+    const W = g.cmW, H = g.cmH, s = clamp(Math.min(W, H) / 36, .3, 1);
+    const scr = g.ms.map((q) => ({ x: q.rx, y: q.ry, w: q.cw, h: q.ch }));
+    return {
+      W, H, s, sh: H / 53, L: Math.max(W, 100 * s), step: W / 1600, scr, sx, sy, px: (sx + sy) / 2, view: view || [0, W],
+      key: scr.map((q) => [q.x, q.y, q.w, q.h].map((n) => n.toFixed(2)).join(",")).join(";"),
+      vis(x, y, m = 0) { for (const q of scr) if (x >= q.x - m && x <= q.x + q.w + m && y >= q.y - m && y <= q.y + q.h + m) return true; return false; },
+    };
+  }
+  const optsOf = (sc) => {
+    store.opts = store.opts || {};
+    const o = store.opts[sc.id] = Object.assign({ v: 0, sun: true, seed: 1 }, store.opts[sc.id]);
+    return { v: sc.vars[o.v] || sc.vars[0], sun: o.sun, seed: o.seed, raw: o };
+  };
+  function paint(c, sc, o, D) {
+    c.save();
+    try { sc.draw(c, D, o, R(hash(sc.id) + o.seed * 7919)); } catch (e) { console.error(sc.id, e); }
+    c.restore();
+  }
+
+  // ---- previews: the desk at its true shape, screens framed by thin dark bezels
+  const BEZEL = "#0c0c0e";
+  function preview(cv, sc, o, maxW, maxH) {
+    const g = geom(), dpr = Math.min(2, devicePixelRatio || 1), pad = Math.max(g.cmW, g.cmH) * .012 + .4;
+    const k = Math.min(maxW * dpr / (g.cmW + 2 * pad), maxH * dpr / (g.cmH + 2 * pad));
+    const w = Math.max(1, Math.round((g.cmW + 2 * pad) * k)), h = Math.max(1, Math.round((g.cmH + 2 * pad) * k));
+    if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
+    cv.style.width = w / dpr + "px"; cv.style.height = h / dpr + "px";
+    const c = cv.getContext("2d");
+    c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, w, h);
+    c.setTransform(k, 0, 0, k, pad * k, pad * k);
+    const bz = Math.max(Math.max(.3, Math.min(1, desk.gap * .45)), 1.4 / k);
+    c.fillStyle = BEZEL;
+    for (const s of g.ms) { c.beginPath(); c.roundRect ? c.roundRect(s.rx - bz, s.ry - bz, s.cw + 2 * bz, s.ch + 2 * bz, bz * .7) : c.rect(s.rx - bz, s.ry - bz, s.cw + 2 * bz, s.ch + 2 * bz); c.fill(); }
+    c.save(); c.beginPath(); for (const s of g.ms) c.rect(s.rx, s.ry, s.cw, s.ch); c.clip();
+    paint(c, sc, o, deskFor(g, k, k));
+    c.restore();
+  }
+
+  // ---- exports: each screen is drawn from its own slice of the desk at its own resolution.
+  // A non-uniform scale lets a panel whose pixels are not square still map its cm exactly.
+  let grainTile = null;
+  function grain(c, w, h, amt) {
+    if (!amt) return;
+    if (!grainTile) {
+      grainTile = document.createElement("canvas"); grainTile.width = grainTile.height = 256;
+      const x = grainTile.getContext("2d"), im = x.createImageData(256, 256), r = R(7);
+      for (let i = 0; i < im.data.length; i += 4) { const g = r.n(), v = g > 0 ? 255 : 0; im.data[i] = im.data[i + 1] = im.data[i + 2] = v; im.data[i + 3] = Math.min(255, Math.round(Math.abs(g) * 16)); }
+      x.putImageData(im, 0, 0);
+    }
+    c.save(); c.setTransform(1, 0, 0, 1, 0, 0); c.globalAlpha = amt / 8; c.fillStyle = c.createPattern(grainTile, "repeat"); c.fillRect(0, 0, w, h); c.restore();
+  }
+  function screenCanvas(g, s, sc, o) {
+    const cv = document.createElement("canvas"), c = cv.getContext("2d"), sx = s.m.w / s.cw, sy = s.m.h / s.ch;
+    cv.width = s.m.w; cv.height = s.m.h;
+    c.fillStyle = fillOf(sc, o.v); c.fillRect(0, 0, cv.width, cv.height);
+    c.setTransform(sx, 0, 0, sy, -s.rx * sx, -s.ry * sy);
+    paint(c, sc, o, deskFor(g, sx, sy, [s.rx, s.rx + s.cw]));
+    c.setTransform(1, 0, 0, 1, 0, 0);
+    grain(c, cv.width, cv.height, sc.grain);
+    return cv;
+  }
+  const blobOf = (c) => new Promise((ok, no) => c.toBlob((b) => (b ? ok(b) : no(new Error("too big for this browser"))), "image/png"));
+  function save(blob, name) {
+    const a = document.createElement("a"), url = URL.createObjectURL(blob);
+    a.href = url; a.download = name; document.body.append(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+  }
+  const slug = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "screen";
+  const isMac = () => /Mac/i.test(navigator.userAgentData?.platform || navigator.platform || "") && !isPhone();
+  let toastT;
+  function toast(msg, ms = 2600) { const t = $("toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove("show"), ms); }
+  const tick = () => new Promise((ok) => setTimeout(ok, 30));
+  const busy = (fn) => async () => {
+    const btns = [$("download"), $("dlScreens")];
+    if (btns[0].disabled) return;
+    btns.forEach((b) => (b.disabled = true));
+    const label = $("download").textContent; $("download").textContent = "Saving…";
+    await tick();
+    try { await fn(); } catch (err) { console.error(err); toast("Couldn't save: " + err.message); }
+    $("download").textContent = label;
+    btns.forEach((b) => (b.disabled = false));
+  };
+  async function saveScreens(g, sc, o) {
+    const files = [];
+    for (const [i, s] of g.order.entries()) {
+      files.push({ name: `${i + 1}-${slug(s.m.name)}-${s.m.w}x${s.m.h}.png`, data: new Uint8Array(await (await blobOf(screenCanvas(g, s, sc, o))).arrayBuffer()) });
+      await tick();
+    }
+    const name = `${sc.id}-screens.zip`;
+    save(zip(files), name);
+    return name;
+  }
+  $("download").onclick = busy(async () => {
+    const g = geom(), sc = SCENES[cur], o = optsOf(sc);
+    if (g.ms.length === 1) {
+      const s = g.ms[0];
+      save(await blobOf(screenCanvas(g, s, sc, o)), `${sc.id}-${s.m.w}x${s.m.h}.png`);
+      toast("Saved"); return;
+    }
+    if (isMac()) { showHelp(await saveScreens(g, sc, o), true); return; }
+    const c = document.createElement("canvas"), x = c.getContext("2d");
+    c.width = g.vw; c.height = g.vh;
+    // Parts of the rectangle no screen covers are never seen with Span.
+    x.fillStyle = fillOf(sc, o.v); x.fillRect(0, 0, g.vw, g.vh);
+    for (const s of g.order) { x.drawImage(screenCanvas(g, s, sc, o), s.wx, s.wy); await tick(); }
+    const name = `${sc.id}-span-${g.vw}x${g.vh}.png`;
+    save(await blobOf(c), name);
+    showHelp(name, false);
+  });
+  $("dlScreens").onclick = busy(async () => {
+    const g = geom(), sc = SCENES[cur], name = await saveScreens(g, sc, optsOf(sc));
+    toast(`Saved ${g.ms.length} screens (${name})`);
+  });
+  function showHelp(name, mac) {
+    $("spanFile").textContent = name; $("spanWin").hidden = mac; $("spanMac").hidden = !mac;
+    const d = $("spanHelp");
+    if (d.showModal) d.showModal(); else alert("Saved " + name + ". Set it in Settings > Personalization > Background, fit: Span.");
+  }
+
+  // Minimal stored (uncompressed) zip: PNGs are already compressed.
+  const CRC = Array.from({ length: 256 }, (_, n) => { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; return c >>> 0; });
+  const crc32 = (d) => { let c = ~0; for (let i = 0; i < d.length; i++) c = CRC[(c ^ d[i]) & 255] ^ (c >>> 8); return ~c >>> 0; };
+  function zip(files) {
+    const now = new Date(), time = (now.getHours() << 11) | (now.getMinutes() << 5) | (now.getSeconds() >> 1);
+    const date = ((now.getFullYear() - 1980) << 9) | ((now.getMonth() + 1) << 5) | now.getDate();
+    const parts = [], dir = [];
+    let off = 0, dirLen = 0;
+    for (const f of files) {
+      const name = new TextEncoder().encode(f.name), crc = crc32(f.data), len = f.data.length;
+      const head = (sig, n) => { const v = new DataView(new ArrayBuffer(n)); v.setUint32(0, sig, true); return v; };
+      const lh = head(0x04034b50, 30);
+      lh.setUint16(4, 20, true); lh.setUint16(10, time, true); lh.setUint16(12, date, true);
+      lh.setUint32(14, crc, true); lh.setUint32(18, len, true); lh.setUint32(22, len, true); lh.setUint16(26, name.length, true);
+      const ch = head(0x02014b50, 46);
+      ch.setUint16(4, 20, true); ch.setUint16(6, 20, true); ch.setUint16(12, time, true); ch.setUint16(14, date, true);
+      ch.setUint32(16, crc, true); ch.setUint32(20, len, true); ch.setUint32(24, len, true); ch.setUint16(28, name.length, true); ch.setUint32(42, off, true);
+      parts.push(lh, name, f.data); dir.push(ch, name);
+      off += 30 + name.length + len; dirLen += 46 + name.length;
+    }
+    const end = new DataView(new ArrayBuffer(22));
+    end.setUint32(0, 0x06054b50, true); end.setUint16(8, files.length, true); end.setUint16(10, files.length, true);
+    end.setUint32(12, dirLen, true); end.setUint32(16, off, true);
+    return new Blob([...parts, ...dir, end], { type: "application/zip" });
+  }
+
+  // ---- the page: big stage, a few controls, the gallery
+  let cur = Math.max(0, SCENES.findIndex((s) => s.id === (location.hash.slice(1) || store.cur)));
+  const SUN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/></svg>';
+  const MOON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M19.5 14.5A8 8 0 0 1 9.5 4.5a8 8 0 1 0 10 10z"/></svg>';
+
+  function drawStage() {
+    const st = $("stage"), w = st.clientWidth, h = Math.min(innerHeight * .56, 640, Math.max(220, w * .7));
+    const sc = SCENES[cur];
+    preview($("big"), sc, optsOf(sc), w, h);
+  }
+  function drawBar() {
+    const sc = SCENES[cur], o = optsOf(sc);
+    $("sceneName").textContent = sc.name;
+    const pals = $("pals");
+    pals.innerHTML = "";
+    sc.vars.forEach((v, i) => {
+      const b = document.createElement("button");
+      b.className = "sw" + (i === o.raw.v ? " on" : ""); b.title = v.n; b.setAttribute("aria-label", v.n); b.setAttribute("aria-pressed", String(i === o.raw.v));
+      b.style.background = `linear-gradient(160deg, ${swatch(v).join(", ")})`;
+      b.onclick = () => { o.raw.v = i; changed(); };
+      pals.append(b);
+    });
+    const sun = $("sun"), moon = sc.moon || o.v.moon;
+    sun.hidden = !sc.sun; sun.innerHTML = moon ? MOON : SUN; sun.title = moon ? "Moon" : "Sun";
+    sun.setAttribute("aria-label", sun.title); sun.setAttribute("aria-pressed", String(o.raw.sun));
+    $("roll").hidden = !!sc.fixed;
+    $("dlScreens").hidden = desk.mons.length < 2;
+    document.querySelectorAll(".card").forEach((cd, i) => { cd.classList.toggle("on", i === cur); cd.setAttribute("aria-current", String(i === cur)); });
+  }
+  $("sun").onclick = () => { const o = optsOf(SCENES[cur]).raw; o.sun = !o.sun; changed(); };
+  const reroll = () => { const sc = SCENES[cur]; if (sc.fixed) return; optsOf(sc).raw.seed = 1 + Math.floor(Math.random() * 99999); changed(); };
+  $("roll").onclick = reroll;
+  function changed() { persist(); drawBar(); drawStage(); drawThumb(cur); }
+  function select(i, scroll) {
+    cur = (i + SCENES.length) % SCENES.length; store.cur = SCENES[cur].id; persist();
+    history.replaceState(null, "", "#" + SCENES[cur].id);
+    drawBar(); drawStage();
+    if (scroll) $("stage").scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "nearest" });
+  }
+
+  const grid = $("grid");
+  SCENES.forEach((sc, i) => {
+    const b = document.createElement("button");
+    b.className = "card"; b.setAttribute("role", "listitem");
+    b.innerHTML = `<div class="th"><canvas></canvas></div><span></span>`;
+    b.querySelector("span").textContent = sc.name;
+    b.onclick = () => select(i, true);
+    grid.append(b);
+  });
+  function drawThumb(i) {
+    const card = grid.children[i], th = card.querySelector(".th"), w = th.clientWidth;
+    if (w) preview(card.querySelector("canvas"), SCENES[i], optsOf(SCENES[i]), w, w * 9 / 16);
+  }
+  let thumbJob = 0;
+  function drawThumbs() {
+    const job = ++thumbJob, order = SCENES.map((_, i) => i);
+    const next = () => { if (job !== thumbJob || !order.length) return; drawThumb(order.shift()); setTimeout(next, 0); };
+    next();
+  }
+  function drawAll() { drawBar(); drawStage(); drawThumbs(); drawDeskSum(); }
+  let resizeT;
+  new ResizeObserver(() => { clearTimeout(resizeT); resizeT = setTimeout(() => { drawStage(); drawThumbs(); }, 120); }).observe(document.body);
+  addEventListener("hashchange", () => { const i = SCENES.findIndex((s) => s.id === location.hash.slice(1)); if (i >= 0 && i !== cur) select(i); });
+  addEventListener("keydown", (e) => {
+    if (e.target.closest("input, select, textarea, dialog") || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.key === "ArrowRight") select(cur + 1);
+    else if (e.key === "ArrowLeft") select(cur - 1);
+    else if (e.key === "r" || e.key === "R") reroll();
+  });
+
+  // ---- desk summary and layout editor
+  function drawDeskSum() {
+    const g = geom(), n = desk.mons.length;
+    $("deskSum").innerHTML = n === 1
+      ? `${desk.mons[0].name === "Phone" ? "Phone" : "One screen"} &middot; <b>${desk.mons[0].w} × ${desk.mons[0].h}</b>`
+      : `<b>${n}</b> screens &middot; <b>${g.cmW.toFixed(0)} × ${g.cmH.toFixed(0)} cm</b>`;
+    $("detect").hidden = isPhone() || !("getScreenDetails" in window || screen.isExtended);
+    $("detect").classList.toggle("primary", n === 1 && screen.isExtended === true);
+  }
+  const saveDesk = () => { if (!demo) { delete desk.auto; store.desk = desk; persist(); } };
+  const overlap = (a, b) => {
+    const [aw, ah] = size(a), [bw, bh] = size(b);
+    return a.x < b.x + bw - 0.1 && b.x < a.x + aw - 0.1 && a.y < b.y + bh - 0.1 && b.y < a.y + ah - 0.1;
+  };
+  const u3 = (n) => +n.toFixed(3);
+  let mapView = null;
+  function drawMap(view) {
+    const g = geom(), svg = $("deskMap");
+    if (!view) {
+      const pad = Math.max(g.cmW, g.cmH) * 0.05 + 5;
+      view = [g.x0 - pad, g.y0 - pad, g.cmW + 2 * pad, g.cmH + 2 * pad];
+    }
+    mapView = view;
+    svg.setAttribute("viewBox", view.map(u3).join(" "));
+    svg.innerHTML = g.ms.map((s, i) => {
+      const bad = desk.mons.some((o) => o !== s.m && overlap(o, s.m)), cx = s.x + s.cw / 2, cy = s.y + s.ch / 2, fs = Math.min(s.cw, s.ch);
+      return `<g class="mon${bad ? " bad" : ""}" data-i="${i}"><rect x="${u3(s.x)}" y="${u3(s.y)}" width="${u3(s.cw)}" height="${u3(s.ch)}" rx="0.8"/>` +
+        `<text x="${u3(cx)}" y="${u3(cy - fs * 0.08)}" font-size="${u3(fs * 0.32)}" font-weight="700">${i + 1}</text>` +
+        `<text class="res" x="${u3(cx)}" y="${u3(cy + fs * 0.24)}" font-size="${u3(Math.min(fs * 0.15, s.cw * 0.11))}">${s.m.w}×${s.m.h}</text></g>`;
+    }).join("");
+  }
+  function drawList() {
+    const g = geom(), box = $("monList");
+    box.innerHTML = "";
+    desk.mons.forEach((m, i) => {
+      const s = g.ms[i], row = document.createElement("div");
+      row.className = "monrow";
+      row.innerHTML = `<span class="num">${i + 1}</span><input type="text" class="nm" aria-label="Screen name">` +
+        `<input type="number" class="w" min="100" max="16384" step="1" aria-label="Width in pixels"><span>×</span>` +
+        `<input type="number" class="h" min="100" max="16384" step="1" aria-label="Height in pixels"><span>px</span>` +
+        `<input type="number" class="dg" min="3" max="120" step="0.1" aria-label="Diagonal in inches"><span>in</span>` +
+        `<select class="or" aria-label="Orientation"><option value="l">Landscape</option><option value="p">Portrait</option></select>` +
+        `<button class="rm" title="Remove this screen"${desk.mons.length < 2 ? " disabled" : ""}>&times;</button>` +
+        `<span class="info">${s.cw.toFixed(1)} × ${s.ch.toFixed(1)} cm &middot; at ${s.wx}, ${s.wy}</span>`;
+      const q = (c) => row.querySelector(c);
+      q(".nm").value = m.name; q(".w").value = m.w; q(".h").value = m.h; q(".dg").value = m.diag; q(".or").value = m.h > m.w ? "p" : "l";
+      q(".nm").oninput = (e) => { m.name = e.target.value; saveDesk(); };
+      const num = (c, key, lo, hi) => (q(c).onchange = (e) => {
+        const v = +e.target.value;
+        if (!(v >= lo && v <= hi)) { e.target.value = m[key]; return; }
+        resize(m, () => { m[key] = key === "diag" ? v : Math.round(v); delete m.cm; });
+      });
+      num(".w", "w", 100, 16384); num(".h", "h", 100, 16384); num(".dg", "diag", 3, 120);
+      q(".or").onchange = (e) => resize(m, () => {
+        if ((e.target.value === "p") !== (m.h > m.w)) { [m.w, m.h] = [m.h, m.w]; if (m.cm) m.cm = [m.cm[1], m.cm[0]]; }
+      });
+      q(".rm").onclick = () => {
+        if (desk.mons.length < 2) return;
+        forgetWindows();
+        const [w] = size(m), right = m.x + w;
+        desk.mons.splice(i, 1);
+        for (const o of desk.mons) if (o.x >= right - 0.5) o.x -= w + desk.gap;
+        deskChanged();
+      };
+      box.append(row);
+    });
+  }
+  // A screen changing size keeps its bottom edge and pushes the screens to its right along.
+  const forgetWindows = () => { for (const o of desk.mons) delete o.win; };
+  function resize(m, fn) {
+    forgetWindows();
+    const [ow, oh] = size(m), right = m.x + ow;
+    fn();
+    const [nw, nh] = size(m);
+    for (const o of desk.mons) if (o !== m && o.x >= right - 0.5) o.x += nw - ow;
+    m.y += oh - nh;
+    deskChanged();
+  }
+  // Widen or narrow every gap: each screen moves by the change times the number of
+  // screens chained to its left, so stacked or spaced-out screens keep their shape.
+  function setGap(gap) {
+    const d = gap - desk.gap, order = [...desk.mons].sort((a, b) => a.x - b.x), hops = new Map();
+    for (const m of order) {
+      let n = 0;
+      for (const o of order) if (hops.has(o) && o.x + size(o)[0] <= m.x + 0.5) n = Math.max(n, hops.get(o) + 1);
+      hops.set(m, n);
+    }
+    for (const m of order) m.x += d * hops.get(m);
+    desk.gap = gap;
+  }
+  function drawEditor() { if ($("deskPanel").hidden) return; drawMap(); drawList(); $("gap").value = desk.gap; }
+  let deskT;
+  function deskChanged() {
+    saveDesk(); drawEditor(); drawDeskSum(); drawBar(); drawStage();
+    clearTimeout(deskT); deskT = setTimeout(drawThumbs, 200);
+  }
+  $("editDesk").onclick = () => {
+    const p = $("deskPanel"); p.hidden = !p.hidden;
+    $("editDesk").setAttribute("aria-expanded", String(!p.hidden));
+    drawEditor();
+  };
+
+  // Snap a dragged screen's edges to its neighbours: beside them one bezel gap
+  // away, or flush with their sides; vertically bottoms, tops or centres level.
+  function snap(m, x, y, tol) {
+    const [w, h] = size(m), g = desk.gap;
+    let bx = x, by = y, dx = tol, dy = tol;
+    for (const o of desk.mons) {
+      if (o === m) continue;
+      const [ow, oh] = size(o);
+      for (const c of [o.x + ow + g, o.x - w - g, o.x, o.x + ow - w]) if (Math.abs(c - x) < dx) { dx = Math.abs(c - x); bx = c; }
+      for (const c of [o.y + oh - h, o.y, o.y + (oh - h) / 2, o.y - h - g, o.y + oh + g]) if (Math.abs(c - y) < dy) { dy = Math.abs(c - y); by = c; }
+    }
+    return [bx, by];
+  }
+  let drag = null;
+  const map = $("deskMap");
+  const toCm = (e) => new DOMPoint(e.clientX, e.clientY).matrixTransform(map.getScreenCTM().inverse());
+  map.onpointerdown = (e) => {
+    const el = e.target.closest(".mon");
+    if (!el) return;
+    const m = desk.mons[+el.dataset.i], p = toCm(e);
+    drag = { m, dx: p.x - m.x, dy: p.y - m.y, view: mapView, moved: false };
+    map.setPointerCapture(e.pointerId);
+    e.preventDefault();
+  };
+  map.onpointermove = (e) => {
+    if (!drag) return;
+    const p = toCm(e), tol = 12 * Math.max(drag.view[2] / map.clientWidth, drag.view[3] / map.clientHeight);
+    [drag.m.x, drag.m.y] = snap(drag.m, p.x - drag.dx, p.y - drag.dy, tol);
+    drag.moved = true;
+    drawMap(drag.view);   // the view stays put while dragging so the screen tracks the pointer
+  };
+  map.onpointerup = map.onpointercancel = () => { if (drag) { const moved = drag.moved; drag = null; if (moved) deskChanged(); else drawMap(); } };
+
+  for (const b of document.querySelectorAll("[data-preset]")) b.onclick = () => { desk = pack(DESKS[b.dataset.preset], desk.gap); deskChanged(); };
+  $("gap").onchange = (e) => {
+    const v = +e.target.value;
+    if (v >= 0 && v <= 30) { setGap(v); deskChanged(); } else e.target.value = desk.gap;
+  };
+  $("addMon").onclick = () => {
+    const g = geom(), m = { name: `Screen ${desk.mons.length + 1}`, w: 1920, h: 1080, diag: 24 }, [, h] = size(m);
+    m.x = g.x0 + g.cmW + desk.gap; m.y = g.y0 + g.cmH - h;
+    forgetWindows(); desk.mons.push(m); deskChanged();
+  };
+
+  // ---- detect the real screens (Chrome/Edge: Window Management permission; elsewhere just this one)
+  // Resolution comes back in CSS pixels times each screen's scale; positions are rebuilt from
+  // which screens touch, so mixed scaling still gives Windows' pixel layout. Inches aren't
+  // exposed by any browser, so diagonals are a guess from typical pixel densities.
+  async function detect(quiet) {
+    let list = null;
+    try { if ("getScreenDetails" in window) list = (await window.getScreenDetails()).screens; } catch (e) { list = null; }
+    if (!list || !list.length) {
+      if (!quiet) toast("Your browser only shares this screen. Add the others under Adjust.", 4200);
+      return;
+    }
+    const scr = [...list].sort((a, b) => a.left - b.left || a.top - b.top), rects = [];
+    for (const sc of scr) {
+      const dpr = sc.devicePixelRatio || 1, w = Math.round(sc.width * dpr), h = Math.round(sc.height * dpr);
+      const left = rects.find((r) => Math.abs(r.dipRight - sc.left) < 2 && sc.top < r.dipBottom && sc.top + sc.height > r.dipTop);
+      rects.push({ sc, w, h, x: left ? left.x + left.w : Math.round(sc.left * dpr), y: Math.round(sc.top * dpr),
+        dipRight: sc.left + sc.width, dipTop: sc.top, dipBottom: sc.top + sc.height });
+    }
+    const old = desk.mons;
+    const rows = rects.map((r, i) => {
+      const name = (r.sc.label || "").trim() || (r.sc.isInternal ? "Built-in" : `Screen ${i + 1}`);
+      // Keep a diagonal the user already corrected, but only for the same screen.
+      const prev = old.find((m) => m.name === name && m.w === r.w && m.h === r.h);
+      return [name, r.w, r.h, prev ? prev.diag : guessDiag(r.w, r.h, r.sc.isInternal), ...(prev && prev.cm ? prev.cm : [])];
+    });
+    desk = pack(rows, desk.gap);
+    desk.mons.forEach((m, i) => (m.win = [rects[i].x, rects[i].y]));
+    deskChanged();
+    if (!quiet) toast(list.length > 1 ? `Found ${list.length} screens. Check their sizes under Adjust.` : "Found one screen.", 3600);
+  }
+  $("detect").onclick = () => detect(false);
+
+  drawAll();
+  // Open straight onto the real desk when the browser already allows reading it.
+  if (!demo && desk.auto && "getScreenDetails" in window && navigator.permissions) {
+    navigator.permissions.query({ name: "window-management" }).then((p) => { if (p.state === "granted") detect(true); }).catch(() => {});
+  }
+  window.wallpaperStudio = { SCENES, geom, screenCanvas, optsOf, preview, get desk() { return desk; }, set desk(d) { desk = d; deskChanged(); } };
+})();
+</script>
+<!-- studio-hub theme slider -->
+<div class="hub-theme" title="Light / dark"><button type="button" role="switch" aria-label="Dark theme" aria-checked="false"><i></i></button></div>
+<script>
+(() => {
+  const root = document.documentElement, wrap = document.querySelector(".hub-theme"), btn = wrap.querySelector("button"), knob = btn.querySelector("i");
+  const slot = document.querySelector("[data-hub-theme-slot]");
+  if (slot) { slot.append(wrap); wrap.classList.add("docked"); }  // app pages: sit at the end of the toolbar
+  const sync = () => btn.setAttribute("aria-checked", String(root.dataset.theme === "dark"));
+  const set = (t) => {
+    root.dataset.theme = t; knob.style.left = ""; sync();
+    try { localStorage.setItem("hubTheme", t); } catch (e) {}
+    window.dispatchEvent(new CustomEvent("hubthemechange", { detail: t }));
+  };
+  // Click toggles; a drag snaps to whichever end it is released nearer.
+  let drag = null, skipClick = false;
+  const frac = (e) => { const r = btn.getBoundingClientRect(); return Math.min(1, Math.max(0, (e.clientX - r.left - 10) / (r.width - 20))); };
+  btn.addEventListener("pointerdown", (e) => { drag = { x: e.clientX, moved: false }; btn.setPointerCapture(e.pointerId); });
+  btn.addEventListener("pointermove", (e) => {
+    if (!drag) return;
+    if (Math.abs(e.clientX - drag.x) > 3) { drag.moved = true; wrap.classList.add("dragging"); }
+    if (drag.moved) knob.style.left = 2 + frac(e) * 30 + "px";
+  });
+  btn.addEventListener("pointerup", (e) => {
+    wrap.classList.remove("dragging");
+    if (drag && drag.moved) { set(frac(e) > 0.5 ? "dark" : "light"); skipClick = true; }
+    drag = null;
+  });
+  btn.addEventListener("click", () => { if (skipClick) { skipClick = false; return; } set(root.dataset.theme === "dark" ? "light" : "dark"); });
+  btn.addEventListener("keydown", (e) => { if (e.key === "ArrowLeft") set("light"); if (e.key === "ArrowRight") set("dark"); });
+  // Another tab changed it: follow along.
+  window.addEventListener("storage", (e) => { if (e.key === "hubTheme") { root.dataset.theme = e.newValue === "dark" ? "dark" : "light"; sync(); } });
+  sync();
+})();
+</script>
+<!-- /studio-hub theme slider -->
+</body>
+</html>

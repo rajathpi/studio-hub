@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Snap Studio</title>
+<meta name="description" content="Paste a screenshot, mark it up with pen, marker, box and arrow, copy it back out.">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: var(--h-font);
+    background: var(--h-bg); color: var(--h-text);
+    display: flex; flex-direction: column;
+  }
+  header {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    padding: 10px 14px; background: var(--h-panel); border-bottom: 1px solid var(--h-border);
+  }
+  header h1 { font-size: 15px; font-weight: 600; margin-right: 6px; }
+  .group { display: flex; align-items: center; gap: 4px; }
+  .sep { width: 1px; height: 22px; background: var(--h-border); margin: 0 4px; }
+  .spacer { flex: 1; }
+  button {
+    font: inherit; font-size: 13px; padding: 6px 12px; border-radius: 6px;
+    border: 1px solid var(--h-btn-border); background: var(--h-btn); color: var(--h-text); cursor: pointer;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  button:hover { background: var(--h-btn-hover); }
+  button:disabled { opacity: .4; cursor: default; }
+  button.primary { background: var(--h-accent); border-color: var(--h-accent); color: var(--h-on-accent); font-weight: 600; }
+  button.primary:hover { background: var(--h-accent-h); }
+  button.tool { padding: 6px 9px; }
+  button.tool.on { background: var(--h-accent); border-color: var(--h-accent); color: var(--h-on-accent); }
+  button svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+  kbd { font: 10px "SF Mono", Menlo, Consolas, monospace; opacity: .6; }
+  .swatch { width: 22px; height: 22px; padding: 0; border-radius: 50%; border: 2px solid var(--h-panel); box-shadow: 0 0 0 1px var(--h-btn-border); }
+  .swatch.on { box-shadow: 0 0 0 2px var(--h-text); }
+  .size { width: 28px; height: 28px; padding: 0; justify-content: center; }
+  .size i { display: block; border-radius: 50%; background: currentColor; }
+  .size.on { box-shadow: 0 0 0 2px var(--h-text); }
+
+  main { flex: 1; min-height: 0; overflow: auto; display: grid; place-items: center; padding: 24px; background: var(--h-deep); }
+  main.dropping { outline: 2px dashed var(--h-accent); outline-offset: -10px; }
+  #empty { text-align: center; color: var(--h-muted); line-height: 1.7; font-size: 14px; }
+  #empty b { display: block; font-family: var(--h-head); font-size: 26px; font-weight: 700; color: var(--h-text); margin-bottom: 6px; }
+  #empty .keys { display: inline-flex; gap: 6px; margin: 8px 0 14px; }
+  #empty .keys span { border: 1px solid var(--h-btn-border); background: var(--h-btn); border-radius: 6px; padding: 3px 9px; font-size: 13px; color: var(--h-text); box-shadow: 0 2px 0 var(--h-border2); }
+  #empty a { color: var(--h-text2); cursor: pointer; text-decoration: underline; }
+  #stage { position: relative; display: none; box-shadow: 0 2px 6px rgba(0,0,0,.12), 0 10px 30px rgba(0,0,0,.12); }
+  #stage.show { display: block; }
+  canvas { display: block; max-width: calc(100vw - 48px); max-height: calc(100vh - 110px); cursor: crosshair; touch-action: none; }
+  #toast {
+    position: fixed; left: 50%; bottom: 22px; transform: translate(-50%, 20px); opacity: 0;
+    background: var(--h-accent); color: var(--h-on-accent); font-size: 13px; padding: 8px 14px; border-radius: 8px;
+    transition: opacity .2s, transform .2s; pointer-events: none;
+  }
+  #toast.show { opacity: 1; transform: translate(-50%, 0); }
+</style>
+<!-- studio-hub theme kit v1: fonts, light/dark tokens, title shadow, theme slider. Source: _theme/kit.html, inlined by _theme/apply.py -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource-variable/mona-sans@5.3.0/wdth.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource-variable/hubot-sans@5.3.0/wdth.css">
+<script>(function(){var t=null;try{t=new URLSearchParams(location.search).get("theme")||localStorage.getItem("hubTheme")}catch(e){}document.documentElement.dataset.theme=t==="dark"?"dark":"light"})()</script>
+<style id="hub-kit">
+  :root {
+    color-scheme: light;
+    --h-font: "Mona Sans Variable", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --h-head: "Hubot Sans Variable", var(--h-font);
+    --h-bg: #f1efe9; --h-panel: #faf9f5; --h-panel2: #f4f2ec; --h-deep: #ebe8e1; --h-deep2: #e7e4dc;
+    --h-border: #dedad0; --h-border2: #d3cec2; --h-btn: #ffffff; --h-btn-border: #cfcabe; --h-btn-hover: #f1eee6;
+    --h-text: #18181b; --h-text2: #3f3f46; --h-muted: #6b675f; --h-muted2: #8f8a7f; --h-faint: #aaa59a; --h-code: #27272a;
+    --h-accent: #18181b; --h-accent-h: #3f3f46; --h-accent2: #8f8a7f; --h-accent-bg: #e4e0d6; --h-on-accent: #ffffff; --h-strong: #09090b;
+    --h-yellow: #8a5a00; --h-blue: #0b5cad; --h-blue2: #2f5597; --h-purple: #6b3fa0; --h-green2: #2e7d4f; --h-ok: #1a7f37;
+    --h-green: #1a7f37; --h-red: #cf222e; --h-amber: #9a6700; --h-err-bg: #fde2e4; --h-err-bg2: #f5b8be; --h-err-text: #8b1a2b;
+    --h-title-shadow: 0 2px 3px rgba(24, 24, 27, .16), 0 8px 22px rgba(24, 24, 27, .18);
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --h-bg: #1e1f24; --h-panel: #26272e; --h-panel2: #2e2f37; --h-deep: #1b1c21; --h-deep2: #22232a;
+    --h-border: #3a3b44; --h-border2: #3a3b46; --h-btn: #33343d; --h-btn-border: #4a4b55; --h-btn-hover: #41424d;
+    --h-text: #e6e6e6; --h-text2: #b9bac2; --h-muted: #8a8b94; --h-muted2: #6f7078; --h-faint: #565761; --h-code: #d8dee9;
+    --h-accent: #e6e6e6; --h-accent-h: #ffffff; --h-accent2: #8a8b94; --h-accent-bg: #3a3b44; --h-on-accent: #18181b; --h-strong: #ffffff;
+    --h-yellow: #e8d3a8; --h-blue: #9ecbff; --h-blue2: #9db3d8; --h-purple: #c4a7e7; --h-green2: #a8d5b5; --h-ok: #8fd19e;
+    --h-green: #3fb950; --h-red: #f85149; --h-amber: #e3b341; --h-err-bg: #5c1f2b; --h-err-bg2: #7a2938; --h-err-text: #ffb3c0;
+    --h-title-shadow: 0 2px 3px rgba(0, 0, 0, .45), 0 8px 22px rgba(0, 0, 0, .5);
+  }
+  h1 { font-family: var(--h-head); font-weight: 800; font-stretch: 125%; letter-spacing: -.02em; text-shadow: var(--h-title-shadow); }
+  h1 span, h1 em { text-shadow: inherit; color: var(--h-muted); }
+
+  /* the theme slider: fixed top-right, no labels */
+  .hub-theme { position: fixed; top: 14px; right: 16px; z-index: 9999; }
+  .hub-theme button { all: unset; box-sizing: border-box; position: relative; display: block; width: 52px; height: 22px; border-radius: 999px; cursor: pointer;
+    background: linear-gradient(90deg, #f1efe9, #c9c4b7 38%, #3f3f46 62%, #09090b); border: 1px solid var(--h-border2); touch-action: none; }
+  .hub-theme button:focus-visible { outline: 2px solid var(--h-text); outline-offset: 3px; }
+  .hub-theme i { position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff;
+    box-shadow: 0 1px 2px rgba(0,0,0,.35), 0 0 0 1px rgba(0,0,0,.08); transition: left .4s cubic-bezier(.65, 0, .35, 1); }
+  :root[data-theme="dark"] .hub-theme i { left: 32px; }
+  .hub-theme.dragging i { transition: none; }
+  .hub-theme.docked { position: static; flex: none; display: flex; align-items: center; margin-left: 6px; }
+  [data-hub-theme-slot] { display: contents; }
+  @media (prefers-reduced-motion: reduce) { .hub-theme i { transition: none; } }
+  @media print { .hub-theme { display: none; } }
+</style>
+<!-- /studio-hub theme kit -->
+</head>
+<body>
+<header>
+  <h1>Snap Studio</h1>
+  <div class="group" id="tools">
+    <button class="tool" data-tool="move" title="Move (V) — drag a mark, pull its dots to resize, Delete to remove"><svg viewBox="0 0 24 24"><path d="M5 3l14 8-6 1.5L10 19z"/></svg>Move <kbd>V</kbd></button>
+    <button class="tool on" data-tool="pen" title="Pen (P)"><svg viewBox="0 0 24 24"><path d="M4 20l1-4L16 5l3 3L8 19z"/><path d="M14 7l3 3"/></svg>Pen <kbd>P</kbd></button>
+    <button class="tool" data-tool="marker" title="Marker (M)"><svg viewBox="0 0 24 24"><path d="M9 15l-3 5h6l1-2"/><path d="M8 14l7-10 5 4-7 10z"/></svg>Marker <kbd>M</kbd></button>
+    <button class="tool" data-tool="box" title="Box (B) — hold Shift for a square"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="14" rx="2"/></svg>Box <kbd>B</kbd></button>
+    <button class="tool" data-tool="arrow" title="Arrow (A)"><svg viewBox="0 0 24 24"><path d="M5 19L19 5"/><path d="M10 5h9v9"/></svg>Arrow <kbd>A</kbd></button>
+  </div>
+  <div class="sep"></div>
+  <div class="group" id="colors"></div>
+  <div class="sep"></div>
+  <div class="group" id="sizes"></div>
+  <div class="sep"></div>
+  <div class="group">
+    <button id="undo" title="Undo (Ctrl Z)" disabled><svg viewBox="0 0 24 24"><path d="M9 7L4 12l5 5"/><path d="M4 12h11a5 5 0 010 10h-2"/></svg></button>
+    <button id="redo" title="Redo (Ctrl Shift Z)" disabled><svg viewBox="0 0 24 24"><path d="M15 7l5 5-5 5"/><path d="M20 12H9a5 5 0 000 10h2"/></svg></button>
+    <button id="del" title="Delete selected mark (Del)" disabled><svg viewBox="0 0 24 24"><path d="M5 7h14"/><path d="M10 7V4h4v3"/><path d="M7 7l1 13h8l1-13"/></svg></button>
+    <button id="clear" title="Remove all marks" disabled>Clear</button>
+  </div>
+  <div class="spacer"></div>
+  <button id="open">Open…</button>
+  <button id="save" disabled>Save PNG</button>
+  <button id="copy" class="primary" disabled>Copy <kbd style="opacity:.8" data-mod>Ctrl C</kbd></button>
+  <span data-hub-theme-slot></span>
+</header>
+<main id="main">
+  <div id="empty">
+    <b>Paste a screenshot</b>
+    Take one with <span data-snip>Win Shift S</span>, then press
+    <div><div class="keys"><span data-modkey>Ctrl</span><span>V</span></div></div>
+    or drop an image here, or <a id="pick">open a file</a>.
+  </div>
+  <div id="stage"><canvas id="cv"></canvas></div>
+</main>
+<input type="file" id="file" accept="image/*" hidden>
+<div id="toast"></div>
+
+<script>
+(() => {
+  const isMac = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
+  const MOD = isMac ? "⌘" : "Ctrl";
+  document.querySelectorAll("[data-modkey]").forEach(e => e.textContent = MOD);
+  document.querySelectorAll("[data-mod]").forEach(e => e.textContent = MOD + " C");
+  document.querySelectorAll("[data-snip]").forEach(e => e.textContent = isMac ? "⌘ Ctrl Shift 4" : "Win Shift S");
+
+  const COLORS = ["#e5342b", "#f5a300", "#1e9e4a", "#1f6feb", "#111111", "#ffffff"];
+  const SIZES = [{ px: 2, dot: 5 }, { px: 4, dot: 8 }, { px: 8, dot: 12 }];
+  const $ = id => document.getElementById(id);
+  const cv = $("cv"), ctx = cv.getContext("2d");
+
+  let img = null;          // the pasted screenshot (ImageBitmap)
+  let marks = [];
+  let past = [], future = [];   // undo history: snapshots of `marks`
+  let tool = "pen", color = COLORS[0], sizeIx = 1;
+  let live = null;         // the mark being drawn right now
+  let sel = null;          // the selected mark (Move tool)
+  let drag = null;         // { kind: "move" | handle name, start, orig }
+
+  // ---------- toolbar ----------
+  const colorBox = $("colors");
+  COLORS.forEach(c => {
+    const b = document.createElement("button");
+    b.className = "swatch" + (c === color ? " on" : "");
+    b.style.background = c; b.title = c;
+    b.onclick = () => setColor(c);
+    colorBox.append(b);
+  });
+  const sizeBox = $("sizes");
+  SIZES.forEach((s, i) => {
+    const b = document.createElement("button");
+    b.className = "size" + (i === sizeIx ? " on" : "");
+    b.title = ["Thin", "Medium", "Thick"][i] + " (" + (i + 1) + ")";
+    b.innerHTML = `<i style="width:${s.dot}px;height:${s.dot}px"></i>`;
+    b.onclick = () => setSize(i);
+    sizeBox.append(b);
+  });
+  // With a mark selected, colour and size change that mark too.
+  function setColor(c) {
+    color = c;
+    colorBox.querySelectorAll(".swatch").forEach(s => s.classList.toggle("on", s.title === c));
+    if (sel && sel.color !== c) { commit(); sel.color = c; redraw(); }
+  }
+  function setSize(i) {
+    sizeIx = i;
+    sizeBox.querySelectorAll(".size").forEach((s, j) => s.classList.toggle("on", j === i));
+    if (sel) { commit(); sel.w = widthFor(sel.tool); redraw(); }
+  }
+  function setTool(t) {
+    tool = t;
+    document.querySelectorAll(".tool").forEach(b => b.classList.toggle("on", b.dataset.tool === t));
+    if (t !== "move") select(null);
+    cv.style.cursor = t === "move" ? "default" : "crosshair";
+  }
+  document.querySelectorAll(".tool").forEach(b => b.onclick = () => setTool(b.dataset.tool));
+
+  // ---------- loading an image ----------
+  async function loadBlob(blob) {
+    if (!blob || !blob.type.startsWith("image/")) return toast("That isn't an image");
+    try { img = await createImageBitmap(blob); }
+    catch { return toast("Couldn't read that image"); }
+    cv.width = img.width; cv.height = img.height;
+    marks = []; past = []; future = []; live = sel = drag = null;
+    $("empty").style.display = "none"; $("stage").classList.add("show");
+    redraw(); sync();
+  }
+  document.addEventListener("paste", e => {
+    const item = [...(e.clipboardData?.items || [])].find(i => i.type.startsWith("image/"));
+    if (!item) return toast("No image on the clipboard — take a screenshot first");
+    e.preventDefault();
+    loadBlob(item.getAsFile());
+  });
+  const main = $("main");
+  main.addEventListener("dragover", e => { e.preventDefault(); main.classList.add("dropping"); });
+  main.addEventListener("dragleave", () => main.classList.remove("dropping"));
+  main.addEventListener("drop", e => { e.preventDefault(); main.classList.remove("dropping"); loadBlob(e.dataTransfer.files[0]); });
+  $("open").onclick = $("pick").onclick = () => $("file").click();
+  $("file").onchange = e => { loadBlob(e.target.files[0]); e.target.value = ""; };
+
+  // ---------- geometry ----------
+  // Pointer position in image pixels; marks are stored at image resolution so
+  // the exported PNG is as sharp as the original screenshot.
+  const scale = () => cv.width / cv.getBoundingClientRect().width;
+  function at(e) {
+    const r = cv.getBoundingClientRect(), k = cv.width / r.width;
+    return { x: (e.clientX - r.left) * k, y: (e.clientY - r.top) * k };
+  }
+  const widthFor = t => SIZES[sizeIx].px * scale() * (t === "marker" ? 5 : 1);
+  function segDist(p, a, b) {
+    const dx = b.x - a.x, dy = b.y - a.y, L = dx * dx + dy * dy;
+    const t = L ? Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / L)) : 0;
+    return Math.hypot(p.x - a.x - t * dx, p.y - a.y - t * dy);
+  }
+  function corners(m) {
+    const x0 = Math.min(m.a.x, m.b.x), x1 = Math.max(m.a.x, m.b.x), y0 = Math.min(m.a.y, m.b.y), y1 = Math.max(m.a.y, m.b.y);
+    return [{ x: x0, y: y0 }, { x: x1, y: y0 }, { x: x1, y: y1 }, { x: x0, y: y1 }];
+  }
+  function bounds(m) {
+    const ps = m.pts && m.tool !== "box" && m.tool !== "arrow" ? m.pts : [m.a, m.b];
+    const xs = ps.map(p => p.x), ys = ps.map(p => p.y), pad = m.w / 2 + 4 * scale();
+    return { x: Math.min(...xs) - pad, y: Math.min(...ys) - pad, w: Math.max(...xs) - Math.min(...xs) + 2 * pad, h: Math.max(...ys) - Math.min(...ys) + 2 * pad };
+  }
+  // Is point p on mark m? Boxes are hit on their outline, so you can still pick
+  // whatever you drew inside one.
+  function hits(m, p) {
+    const tol = m.w / 2 + 7 * scale();
+    if (m.tool === "arrow") return segDist(p, m.a, m.b) < tol;
+    if (m.tool === "box") { const c = corners(m); return c.some((q, i) => segDist(p, q, c[(i + 1) % 4]) < tol); }
+    const ps = m.pts;
+    if (ps.length === 1) return Math.hypot(p.x - ps[0].x, p.y - ps[0].y) < tol;
+    for (let i = 1; i < ps.length; i++) if (segDist(p, ps[i - 1], ps[i]) < tol) return true;
+    return false;
+  }
+  const topHit = p => { for (let i = marks.length - 1; i >= 0; i--) if (hits(marks[i], p)) return marks[i]; return null; };
+  // Handles of the selected mark: arrow ends, box corners.
+  function handles(m) {
+    if (!m) return [];
+    if (m.tool === "arrow") return [{ id: "a", ...m.a }, { id: "b", ...m.b }];
+    if (m.tool === "box") return corners(m).map((c, i) => ({ id: "c" + i, ...c }));
+    return [];
+  }
+  const handleAt = p => handles(sel).find(h => Math.hypot(p.x - h.x, p.y - h.y) < 9 * scale());
+
+  // ---------- pointer ----------
+  cv.addEventListener("pointerdown", e => {
+    if (!img || e.button !== 0) return;
+    cv.setPointerCapture(e.pointerId);
+    const p = at(e);
+    if (tool === "move") {
+      const h = handleAt(p);
+      const m = h ? sel : topHit(p);
+      select(m);
+      if (m) drag = { kind: h ? h.id : "move", start: p, orig: JSON.parse(JSON.stringify(m)), moved: false };
+      return;
+    }
+    live = { tool, color, w: widthFor(tool), pts: [p], a: p, b: p };
+  });
+  cv.addEventListener("pointermove", e => {
+    const p = at(e);
+    if (drag) return dragTo(p, e.shiftKey);
+    if (tool === "move" && img) {   // hover feedback
+      cv.style.cursor = handleAt(p) ? "crosshair" : topHit(p) ? "move" : "default";
+    }
+    if (!live) return;
+    if (live.tool === "pen" || live.tool === "marker") {
+      (e.getCoalescedEvents?.() || [e]).forEach(ev => live.pts.push(at(ev)));
+    } else if (live.tool === "box" && e.shiftKey) live.b = square(live.a, p);
+    else live.b = p;
+    redraw();
+  });
+  const square = (a, p) => {
+    const d = Math.max(Math.abs(p.x - a.x), Math.abs(p.y - a.y));
+    return { x: a.x + Math.sign(p.x - a.x || 1) * d, y: a.y + Math.sign(p.y - a.y || 1) * d };
+  };
+  function dragTo(p, shift) {
+    const o = drag.orig, dx = p.x - drag.start.x, dy = p.y - drag.start.y;
+    if (!drag.moved) { if (Math.hypot(dx, dy) < 2 * scale()) return; commitFrom(o); drag.moved = true; }
+    const sh = q => ({ x: q.x + dx, y: q.y + dy });
+    if (drag.kind === "move") {
+      if (o.pts) sel.pts = o.pts.map(sh);
+      sel.a = sh(o.a); sel.b = sh(o.b);
+    } else if (drag.kind === "a" || drag.kind === "b") {
+      sel[drag.kind] = p;
+    } else {   // box corner: the opposite corner stays put
+      const c = corners(o), i = +drag.kind[1], fixed = c[(i + 2) % 4];
+      sel.a = fixed; sel.b = shift ? square(fixed, p) : p;
+    }
+    redraw();
+  }
+  const finish = () => {
+    if (drag) { drag = null; sync(); return; }
+    if (!live) return;
+    const m = live; live = null;
+    const tiny = (m.tool === "box" || m.tool === "arrow") && Math.hypot(m.b.x - m.a.x, m.b.y - m.a.y) < 4;
+    if (!tiny) { commit(); marks.push(m); }
+    redraw(); sync();
+  };
+  cv.addEventListener("pointerup", finish);
+  cv.addEventListener("pointercancel", finish);
+
+  function select(m) { sel = m; redraw(); sync(); }
+
+  // ---------- drawing ----------
+  function stroke(m) {
+    const p = m.pts;
+    ctx.beginPath();
+    ctx.moveTo(p[0].x, p[0].y);
+    if (p.length === 1) ctx.lineTo(p[0].x + .01, p[0].y);
+    for (let i = 1; i < p.length - 1; i++) {   // smooth through midpoints
+      ctx.quadraticCurveTo(p[i].x, p[i].y, (p[i].x + p[i + 1].x) / 2, (p[i].y + p[i + 1].y) / 2);
+    }
+    if (p.length > 1) ctx.lineTo(p[p.length - 1].x, p[p.length - 1].y);
+    ctx.stroke();
+  }
+  function draw(m) {
+    ctx.save();
+    ctx.strokeStyle = ctx.fillStyle = m.color;
+    ctx.lineWidth = m.w; ctx.lineCap = "round"; ctx.lineJoin = "round";
+    if (m.tool === "pen") stroke(m);
+    else if (m.tool === "marker") {
+      ctx.globalAlpha = .35; ctx.globalCompositeOperation = "multiply";
+      if (m.color === "#ffffff") ctx.globalCompositeOperation = "source-over";
+      stroke(m);
+    } else if (m.tool === "box") {
+      const x = Math.min(m.a.x, m.b.x), y = Math.min(m.a.y, m.b.y);
+      const w = Math.abs(m.b.x - m.a.x), h = Math.abs(m.b.y - m.a.y);
+      const r = Math.min(m.w * 1.5, w / 2, h / 2);
+      ctx.lineWidth = m.w * 1.2;
+      ctx.beginPath(); ctx.roundRect(x, y, w, h, r); ctx.stroke();
+    } else if (m.tool === "arrow") {
+      const { a, b } = m, ang = Math.atan2(b.y - a.y, b.x - a.x);
+      const len = Math.hypot(b.x - a.x, b.y - a.y);
+      const head = Math.min(len * .6, Math.max(14, m.w * 4.5));
+      const lw = m.w * 1.3;
+      // shaft stops inside the head so its round cap doesn't poke out of the tip
+      const sx = b.x - Math.cos(ang) * head * .7, sy = b.y - Math.sin(ang) * head * .7;
+      ctx.lineWidth = lw;
+      ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(sx, sy); ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(b.x, b.y);
+      ctx.lineTo(b.x - head * Math.cos(ang - .42), b.y - head * Math.sin(ang - .42));
+      ctx.lineTo(b.x - head * Math.cos(ang + .42), b.y - head * Math.sin(ang + .42));
+      ctx.closePath(); ctx.lineWidth = lw * .5; ctx.fill(); ctx.stroke();
+    }
+    ctx.restore();
+  }
+  function drawSelection() {
+    const k = scale(), b = bounds(sel);
+    ctx.save();
+    ctx.lineWidth = 1.5 * k; ctx.setLineDash([5 * k, 4 * k]);
+    ctx.strokeStyle = "#1f6feb";
+    ctx.strokeRect(b.x, b.y, b.w, b.h);
+    ctx.setLineDash([]);
+    handles(sel).forEach(h => {
+      ctx.beginPath(); ctx.arc(h.x, h.y, 5.5 * k, 0, Math.PI * 2);
+      ctx.fillStyle = "#fff"; ctx.fill(); ctx.lineWidth = 2 * k; ctx.stroke();
+    });
+    ctx.restore();
+  }
+  function redraw(forExport) {
+    if (!img) return;
+    ctx.clearRect(0, 0, cv.width, cv.height);
+    ctx.drawImage(img, 0, 0);
+    marks.forEach(draw);
+    if (live) draw(live);
+    if (sel && !forExport) drawSelection();
+  }
+
+  // ---------- history ----------
+  const snap = () => JSON.stringify(marks);
+  function commit() { past.push(snap()); future = []; sync(); }
+  function commitFrom(origSel) {   // snapshot as it was before a drag began
+    const i = marks.indexOf(sel), now = marks[i];
+    marks[i] = origSel; past.push(snap()); marks[i] = now; future = [];
+  }
+  function restore(s) { marks = JSON.parse(s); sel = null; redraw(); sync(); }
+  function undo() { if (past.length) { future.push(snap()); restore(past.pop()); } }
+  function redo() { if (future.length) { past.push(snap()); restore(future.pop()); } }
+  function remove() { if (!sel) return; commit(); marks.splice(marks.indexOf(sel), 1); select(null); }
+  function sync() {
+    $("undo").disabled = !past.length;
+    $("redo").disabled = !future.length;
+    $("clear").disabled = !marks.length;
+    $("del").disabled = !sel;
+    $("copy").disabled = $("save").disabled = !img;
+  }
+  $("undo").onclick = undo; $("redo").onclick = redo; $("del").onclick = remove;
+  $("clear").onclick = () => { if (!marks.length) return; commit(); marks = []; select(null); };
+
+  // ---------- out ----------
+  // Selection outlines are never part of the exported picture.
+  const png = () => new Promise(r => { redraw(true); cv.toBlob(b => { redraw(); r(b); }, "image/png"); });
+  async function copy() {
+    if (!img) return;
+    try {
+      await navigator.clipboard.write([new ClipboardItem({ "image/png": png() })]);
+      toast("Copied — paste it anywhere");
+    } catch (err) { toast("Copy blocked by the browser — use Save PNG"); }
+  }
+  async function save() {
+    if (!img) return;
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(await png());
+    const d = new Date(), z = n => String(n).padStart(2, "0");
+    a.download = `snap-${d.getFullYear()}${z(d.getMonth() + 1)}${z(d.getDate())}-${z(d.getHours())}${z(d.getMinutes())}${z(d.getSeconds())}.png`;
+    a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  }
+  $("copy").onclick = copy; $("save").onclick = save;
+
+  let tt;
+  function toast(msg) { const t = $("toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(tt); tt = setTimeout(() => t.classList.remove("show"), 1800); }
+
+  // ---------- keys ----------
+  document.addEventListener("keydown", e => {
+    if (e.target.closest?.("input, textarea")) return;
+    const mod = e.ctrlKey || e.metaKey, k = e.key.toLowerCase();
+    if (mod && k === "z") { e.preventDefault(); e.shiftKey ? redo() : undo(); }
+    else if (mod && k === "y") { e.preventDefault(); redo(); }
+    else if (mod && k === "c" && img && !String(getSelection())) { e.preventDefault(); copy(); }
+    else if (mod && k === "s") { e.preventDefault(); save(); }
+    else if ((k === "delete" || k === "backspace") && sel) { e.preventDefault(); remove(); }
+    else if (k === "escape") select(null);
+    else if (sel && k.startsWith("arrow")) {   // nudge; Shift = bigger steps
+      e.preventDefault();
+      const step = (e.shiftKey ? 10 : 1) * scale();
+      const dx = { arrowleft: -step, arrowright: step }[k] || 0, dy = { arrowup: -step, arrowdown: step }[k] || 0;
+      if (!e.repeat) commit();
+      const sh = q => ({ x: q.x + dx, y: q.y + dy });
+      if (sel.pts) sel.pts = sel.pts.map(sh);
+      sel.a = sh(sel.a); sel.b = sh(sel.b);
+      redraw();
+    }
+    else if (!mod && !e.altKey) {
+      const t = { v: "move", p: "pen", m: "marker", b: "box", r: "box", a: "arrow" }[k];
+      if (t) setTool(t);
+      else if (["1", "2", "3"].includes(k)) setSize(+k - 1);
+    }
+  });
+})();
+</script>
+<!-- studio-hub theme slider -->
+<div class="hub-theme" title="Light / dark"><button type="button" role="switch" aria-label="Dark theme" aria-checked="false"><i></i></button></div>
+<script>
+(() => {
+  const root = document.documentElement, wrap = document.querySelector(".hub-theme"), btn = wrap.querySelector("button"), knob = btn.querySelector("i");
+  const slot = document.querySelector("[data-hub-theme-slot]");
+  if (slot) { slot.append(wrap); wrap.classList.add("docked"); }  // app pages: sit at the end of the toolbar
+  const sync = () => btn.setAttribute("aria-checked", String(root.dataset.theme === "dark"));
+  const set = (t) => {
+    root.dataset.theme = t; knob.style.left = ""; sync();
+    try { localStorage.setItem("hubTheme", t); } catch (e) {}
+    window.dispatchEvent(new CustomEvent("hubthemechange", { detail: t }));
+  };
+  // Click toggles; a drag snaps to whichever end it is released nearer.
+  let drag = null, skipClick = false;
+  const frac = (e) => { const r = btn.getBoundingClientRect(); return Math.min(1, Math.max(0, (e.clientX - r.left - 10) / (r.width - 20))); };
+  btn.addEventListener("pointerdown", (e) => { drag = { x: e.clientX, moved: false }; btn.setPointerCapture(e.pointerId); });
+  btn.addEventListener("pointermove", (e) => {
+    if (!drag) return;
+    if (Math.abs(e.clientX - drag.x) > 3) { drag.moved = true; wrap.classList.add("dragging"); }
+    if (drag.moved) knob.style.left = 2 + frac(e) * 30 + "px";
+  });
+  btn.addEventListener("pointerup", (e) => {
+    wrap.classList.remove("dragging");
+    if (drag && drag.moved) { set(frac(e) > 0.5 ? "dark" : "light"); skipClick = true; }
+    drag = null;
+  });
+  btn.addEventListener("click", () => { if (skipClick) { skipClick = false; return; } set(root.dataset.theme === "dark" ? "light" : "dark"); });
+  btn.addEventListener("keydown", (e) => { if (e.key === "ArrowLeft") set("light"); if (e.key === "ArrowRight") set("dark"); });
+  // Another tab changed it: follow along.
+  window.addEventListener("storage", (e) => { if (e.key === "hubTheme") { root.dataset.theme = e.newValue === "dark" ? "dark" : "light"; sync(); } });
+  sync();
+})();
+</script>
+<!-- /studio-hub theme slider -->
+</body>
+</html>

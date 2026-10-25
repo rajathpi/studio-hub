@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Color Studio</title>
+<meta name="description" content="Paste a screenshot, pick colours with a loupe, get its palette, check contrast and export as CSS, JSON or Tailwind.">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: var(--h-font);
+    background: var(--h-bg); color: var(--h-text);
+    display: flex; flex-direction: column;
+  }
+  header {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    padding: 10px 14px; background: var(--h-panel); border-bottom: 1px solid var(--h-border);
+  }
+  header h1 { font-size: 15px; font-weight: 600; margin-right: 6px; }
+  .spacer { flex: 1; }
+  button {
+    font: inherit; font-size: 13px; padding: 6px 12px; border-radius: 6px;
+    border: 1px solid var(--h-btn-border); background: var(--h-btn); color: var(--h-text); cursor: pointer;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  button:hover { background: var(--h-btn-hover); }
+  button:disabled { opacity: .4; cursor: default; }
+  button.primary { background: var(--h-accent); border-color: var(--h-accent); color: var(--h-on-accent); font-weight: 600; }
+  button.primary:hover { background: var(--h-accent-h); }
+  button svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+  kbd { font: 10px "SF Mono", Menlo, Consolas, monospace; opacity: .6; }
+  .mono { font-family: "SF Mono", Menlo, Consolas, monospace; }
+  #readout { font-size: 12px; color: var(--h-muted); display: inline-flex; align-items: center; gap: 6px; min-width: 150px; }
+  #readout i { width: 14px; height: 14px; border-radius: 3px; box-shadow: inset 0 0 0 1px var(--h-btn-border); display: none; }
+
+  .work { flex: 1; min-height: 0; display: flex; }
+  main { flex: 1; min-width: 0; min-height: 0; overflow: hidden; display: grid; place-items: center; padding: 24px; background: var(--h-deep); position: relative; }
+  main.dropping { outline: 2px dashed var(--h-accent); outline-offset: -10px; }
+  #empty { text-align: center; color: var(--h-muted); line-height: 1.7; font-size: 14px; }
+  #empty b { display: block; font-family: var(--h-head); font-size: 26px; font-weight: 700; color: var(--h-text); margin-bottom: 6px; }
+  #empty .keys { display: inline-flex; gap: 6px; margin: 8px 0 14px; }
+  #empty .keys span { border: 1px solid var(--h-btn-border); background: var(--h-btn); border-radius: 6px; padding: 3px 9px; font-size: 13px; color: var(--h-text); box-shadow: 0 2px 0 var(--h-border2); }
+  #empty a { color: var(--h-text2); cursor: pointer; text-decoration: underline; }
+  canvas#cv { display: none; cursor: crosshair; box-shadow: 0 2px 6px rgba(0,0,0,.12), 0 10px 30px rgba(0,0,0,.12); outline: none; }
+  canvas#cv.show { display: block; }
+  canvas#cv.px { image-rendering: pixelated; }
+
+  #loupe { position: fixed; z-index: 50; pointer-events: none; display: none; background: var(--h-panel); border: 1px solid var(--h-border2); border-radius: 10px; padding: 6px; box-shadow: 0 6px 24px rgba(0,0,0,.22); }
+  #loupe.show { display: block; }
+  #loupe canvas { display: block; width: 143px; height: 143px; border-radius: 5px; image-rendering: pixelated; }
+  #loupe div { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 12px; padding: 5px 2px 0; }
+  #loupe div span { color: var(--h-muted); font-size: 11px; }
+
+  aside { width: 360px; flex: none; overflow: auto; background: var(--h-panel); border-left: 1px solid var(--h-border); padding: 14px 16px 40px; display: flex; flex-direction: column; gap: 22px; }
+  section h2 { font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  section h2 small { font-weight: 400; color: var(--h-muted); font-size: 12px; }
+  section h2 .spacer { flex: 1; }
+  section h2 button { font-size: 12px; padding: 3px 9px; font-weight: 400; }
+  .hint { font-size: 12px; color: var(--h-muted); line-height: 1.5; }
+
+  #strip { display: flex; height: 96px; border-radius: 8px; overflow: hidden; box-shadow: inset 0 0 0 1px var(--h-border); }
+  #strip button { all: unset; flex: 1; min-width: 0; cursor: pointer; position: relative; display: flex; flex-direction: column; justify-content: flex-end; padding: 6px; font-size: 11px; line-height: 1.3; }
+  #strip button:hover { flex-grow: 1.6; }
+  #strip button:focus-visible { outline: 2px solid var(--h-text); outline-offset: -4px; }
+  #strip b { font-weight: 600; font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 10px; }
+  #strip span { opacity: .8; }
+  .row { display: flex; align-items: center; gap: 10px; margin-top: 10px; font-size: 12px; color: var(--h-muted); }
+  .row input[type=range] { flex: 1; accent-color: var(--h-accent); }
+  .row output { color: var(--h-text); width: 18px; text-align: right; }
+  #palNames { margin-top: 8px; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 4px 12px; font-size: 12px; }
+  #palNames div { display: flex; align-items: center; gap: 6px; min-width: 0; }
+  #palNames i { width: 10px; height: 10px; border-radius: 2px; flex: none; box-shadow: inset 0 0 0 1px var(--h-btn-border); }
+  #palNames span.mono { color: var(--h-text2); flex: none; }
+  #palNames span { color: var(--h-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  #picked { display: flex; flex-direction: column; gap: 6px; }
+  .pick { display: grid; grid-template-columns: 40px 1fr auto; gap: 10px; align-items: center; padding: 6px; border-radius: 8px; border: 1px solid var(--h-border); background: var(--h-panel2); }
+  .pick.sel { border-color: var(--h-text); }
+  .pick .sw { all: unset; width: 40px; height: 40px; border-radius: 6px; cursor: pointer; box-shadow: inset 0 0 0 1px var(--h-btn-border); }
+  .pick .sw:focus-visible { outline: 2px solid var(--h-text); outline-offset: 2px; }
+  .pick .name { font-size: 12px; color: var(--h-muted); margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .chips { display: flex; flex-wrap: wrap; gap: 4px; }
+  .chip { all: unset; cursor: pointer; font: 11px "SF Mono", Menlo, Consolas, monospace; padding: 2px 6px; border-radius: 4px; background: var(--h-btn); border: 1px solid var(--h-border); color: var(--h-text2); white-space: nowrap; }
+  .chip:hover { background: var(--h-btn-hover); color: var(--h-text); }
+  .pick .acts { display: flex; flex-direction: column; gap: 4px; }
+  .pick .acts button { padding: 3px 6px; font-size: 11px; }
+  .pick .acts button.on { background: var(--h-accent); border-color: var(--h-accent); color: var(--h-on-accent); }
+  .pick .acts svg { width: 12px; height: 12px; }
+
+  #contrast .pair { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; }
+  #sample { border-radius: 8px; padding: 14px; box-shadow: inset 0 0 0 1px var(--h-border); line-height: 1.3; }
+  #sample b { display: block; font-size: 22px; font-weight: 700; }
+  #sample span { font-size: 13px; }
+  #ratio { font-family: var(--h-head); font-size: 26px; font-weight: 700; text-align: right; }
+  #ratio small { display: block; font-family: var(--h-font); font-size: 11px; font-weight: 400; color: var(--h-muted); }
+  .badges { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-top: 8px; }
+  .badges div { font-size: 11px; padding: 5px 4px; text-align: center; border-radius: 5px; border: 1px solid var(--h-border); color: var(--h-muted); }
+  .badges div b { display: block; font-size: 12px; }
+  .badges div.pass b { color: var(--h-ok); }
+  .badges div.fail b { color: var(--h-red); }
+
+  .seg { display: inline-flex; border: 1px solid var(--h-btn-border); border-radius: 6px; overflow: hidden; }
+  .seg button { border: 0; border-radius: 0; padding: 4px 10px; font-size: 12px; }
+  .seg button + button { border-left: 1px solid var(--h-btn-border); }
+  .seg button.on { background: var(--h-accent); color: var(--h-on-accent); }
+  #code { margin-top: 8px; background: var(--h-deep); border: 1px solid var(--h-border); border-radius: 8px; padding: 10px 12px; font: 12px/1.55 "SF Mono", Menlo, Consolas, monospace; color: var(--h-code); white-space: pre; overflow: auto; max-height: 220px; }
+  .btns { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+
+  #toast {
+    position: fixed; left: 50%; bottom: 22px; transform: translate(-50%, 20px); opacity: 0; z-index: 60;
+    background: var(--h-accent); color: var(--h-on-accent); font-size: 13px; padding: 8px 14px; border-radius: 8px;
+    transition: opacity .2s, transform .2s; pointer-events: none;
+  }
+  #toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+  @media (max-width: 820px) {
+    .work { flex-direction: column; overflow: auto; }
+    main { flex: none; height: 60vh; padding: 16px; }
+    aside { width: auto; border-left: 0; border-top: 1px solid var(--h-border); overflow: visible; }
+    #readout { display: none; }
+  }
+</style>
+<!-- studio-hub theme kit v1: fonts, light/dark tokens, title shadow, theme slider. Source: _theme/kit.html, inlined by _theme/apply.py -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource-variable/mona-sans@5.3.0/wdth.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource-variable/hubot-sans@5.3.0/wdth.css">
+<script>(function(){var t=null;try{t=new URLSearchParams(location.search).get("theme")||localStorage.getItem("hubTheme")}catch(e){}document.documentElement.dataset.theme=t==="dark"?"dark":"light"})()</script>
+<style id="hub-kit">
+  :root {
+    color-scheme: light;
+    --h-font: "Mona Sans Variable", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --h-head: "Hubot Sans Variable", var(--h-font);
+    --h-bg: #f1efe9; --h-panel: #faf9f5; --h-panel2: #f4f2ec; --h-deep: #ebe8e1; --h-deep2: #e7e4dc;
+    --h-border: #dedad0; --h-border2: #d3cec2; --h-btn: #ffffff; --h-btn-border: #cfcabe; --h-btn-hover: #f1eee6;
+    --h-text: #18181b; --h-text2: #3f3f46; --h-muted: #6b675f; --h-muted2: #8f8a7f; --h-faint: #aaa59a; --h-code: #27272a;
+    --h-accent: #18181b; --h-accent-h: #3f3f46; --h-accent2: #8f8a7f; --h-accent-bg: #e4e0d6; --h-on-accent: #ffffff; --h-strong: #09090b;
+    --h-yellow: #8a5a00; --h-blue: #0b5cad; --h-blue2: #2f5597; --h-purple: #6b3fa0; --h-green2: #2e7d4f; --h-ok: #1a7f37;
+    --h-green: #1a7f37; --h-red: #cf222e; --h-amber: #9a6700; --h-err-bg: #fde2e4; --h-err-bg2: #f5b8be; --h-err-text: #8b1a2b;
+    --h-title-shadow: 0 2px 3px rgba(24, 24, 27, .16), 0 8px 22px rgba(24, 24, 27, .18);
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --h-bg: #1e1f24; --h-panel: #26272e; --h-panel2: #2e2f37; --h-deep: #1b1c21; --h-deep2: #22232a;
+    --h-border: #3a3b44; --h-border2: #3a3b46; --h-btn: #33343d; --h-btn-border: #4a4b55; --h-btn-hover: #41424d;
+    --h-text: #e6e6e6; --h-text2: #b9bac2; --h-muted: #8a8b94; --h-muted2: #6f7078; --h-faint: #565761; --h-code: #d8dee9;
+    --h-accent: #e6e6e6; --h-accent-h: #ffffff; --h-accent2: #8a8b94; --h-accent-bg: #3a3b44; --h-on-accent: #18181b; --h-strong: #ffffff;
+    --h-yellow: #e8d3a8; --h-blue: #9ecbff; --h-blue2: #9db3d8; --h-purple: #c4a7e7; --h-green2: #a8d5b5; --h-ok: #8fd19e;
+    --h-green: #3fb950; --h-red: #f85149; --h-amber: #e3b341; --h-err-bg: #5c1f2b; --h-err-bg2: #7a2938; --h-err-text: #ffb3c0;
+    --h-title-shadow: 0 2px 3px rgba(0, 0, 0, .45), 0 8px 22px rgba(0, 0, 0, .5);
+  }
+  h1 { font-family: var(--h-head); font-weight: 800; font-stretch: 125%; letter-spacing: -.02em; text-shadow: var(--h-title-shadow); }
+  h1 span, h1 em { text-shadow: inherit; color: var(--h-muted); }
+
+  /* the theme slider: fixed top-right, no labels */
+  .hub-theme { position: fixed; top: 14px; right: 16px; z-index: 9999; }
+  .hub-theme button { all: unset; box-sizing: border-box; position: relative; display: block; width: 52px; height: 22px; border-radius: 999px; cursor: pointer;
+    background: linear-gradient(90deg, #f1efe9, #c9c4b7 38%, #3f3f46 62%, #09090b); border: 1px solid var(--h-border2); touch-action: none; }
+  .hub-theme button:focus-visible { outline: 2px solid var(--h-text); outline-offset: 3px; }
+  .hub-theme i { position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff;
+    box-shadow: 0 1px 2px rgba(0,0,0,.35), 0 0 0 1px rgba(0,0,0,.08); transition: left .4s cubic-bezier(.65, 0, .35, 1); }
+  :root[data-theme="dark"] .hub-theme i { left: 32px; }
+  .hub-theme.dragging i { transition: none; }
+  .hub-theme.docked { position: static; flex: none; display: flex; align-items: center; margin-left: 6px; }
+  [data-hub-theme-slot] { display: contents; }
+  @media (prefers-reduced-motion: reduce) { .hub-theme i { transition: none; } }
+  @media print { .hub-theme { display: none; } }
+</style>
+<!-- /studio-hub theme kit -->
+</head>
+<body>
+<header>
+  <h1>Color Studio</h1>
+  <span id="readout" class="mono"><i></i><b></b></span>
+  <div class="spacer"></div>
+  <button id="eyedrop" hidden title="Pick a colour anywhere on screen"><svg viewBox="0 0 24 24"><path d="M14 4l6 6"/><path d="M17 7l2.5-2.5a1.4 1.4 0 00-2-2L15 5"/><path d="M16 8L7 17l-3 1 1-3 9-9"/></svg>Pick from screen</button>
+  <button id="open">Open…</button>
+  <span data-hub-theme-slot></span>
+</header>
+<div class="work">
+  <main id="main">
+    <div id="empty">
+      <b>Paste a screenshot</b>
+      Take one with <span data-snip>Win Shift S</span>, then press
+      <div><div class="keys"><span data-modkey>Ctrl</span><span>V</span></div></div>
+      or drop an image here, or <a id="pick">open a file</a>.
+    </div>
+    <canvas id="cv" tabindex="0"></canvas>
+  </main>
+  <aside>
+    <section>
+      <h2>Palette <small id="palNote"></small></h2>
+      <div id="strip"></div>
+      <div class="hint" id="palEmpty">The main colours of the image show up here.</div>
+      <div id="palNames"></div>
+      <div class="row">Colours <input type="range" id="k" min="3" max="12" value="6"><output id="kOut">6</output></div>
+    </section>
+    <section>
+      <h2>Picked <small id="pickNote"></small><span class="spacer"></span><button id="clear" disabled>Clear</button></h2>
+      <div id="picked"></div>
+      <div class="hint" id="pickEmpty">Click the image to pick a colour. Arrow keys move 1 px, Enter picks, <span data-modc>Ctrl C</span> copies the last one.</div>
+    </section>
+    <section id="contrast">
+      <h2>Contrast <small>select two picked colours</small></h2>
+      <div id="cBody" hidden>
+        <div class="pair">
+          <div id="sample"><b>Aa Heading</b><span>Body text at regular size.</span></div>
+          <div id="ratio"></div>
+        </div>
+        <div class="badges" id="badges"></div>
+        <div class="btns"><button id="swap">Swap</button></div>
+      </div>
+      <div class="hint" id="cEmpty">Pick at least two colours.</div>
+    </section>
+    <section>
+      <h2>Export <span class="spacer"></span>
+        <span class="seg" id="src"><button data-src="palette" class="on">Palette</button><button data-src="picked">Picked</button></span>
+      </h2>
+      <span class="seg" id="fmt"><button data-fmt="css" class="on">CSS</button><button data-fmt="json">JSON</button><button data-fmt="tw">Tailwind</button></span>
+      <pre id="code"></pre>
+      <div class="btns"><button id="copyCode" class="primary">Copy</button><button id="savePng">Save PNG strip</button></div>
+    </section>
+  </aside>
+</div>
+<div id="loupe"><canvas id="lc" width="143" height="143"></canvas><div><b class="mono" id="lHex"></b><span id="lXY"></span></div></div>
+<input type="file" id="file" accept="image/*" hidden>
+<div id="toast"></div>
+
+<script>
+(() => {
+  const isMac = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
+  const MOD = isMac ? "⌘" : "Ctrl";
+  document.querySelectorAll("[data-modkey]").forEach(e => e.textContent = MOD);
+  document.querySelectorAll("[data-modc]").forEach(e => e.textContent = MOD + " C");
+  document.querySelectorAll("[data-snip]").forEach(e => e.textContent = isMac ? "⌘ Ctrl Shift 4" : "Win Shift S");
+
+  const $ = id => document.getElementById(id);
+  const cv = $("cv"), ctx = cv.getContext("2d", { willReadFrequently: true });
+  const main = $("main");
+
+  let img = null, W = 0, H = 0, data = null;   // data = RGBA pixels of the image
+  let cur = null;                              // pixel under the loupe {x, y}
+  let hovering = false;
+  let palette = [];                            // [{ hex, rgb, share }]
+  let picked = [];                             // [{ id, hex, rgb }], newest first
+  let selIds = [];                             // up to two picked ids for contrast
+  let src = "palette", fmt = "css";
+
+  // ---------- colour maths ----------
+  const hex2 = n => n.toString(16).padStart(2, "0");
+  const toHex = ([r, g, b]) => "#" + hex2(r) + hex2(g) + hex2(b);
+  const fromHex = h => { h = h.replace("#", ""); if (h.length === 3) h = [...h].map(c => c + c).join(""); return [0, 2, 4].map(i => parseInt(h.slice(i, i + 2), 16)); };
+  function parseColor(s) {
+    if (!s) return null;
+    if (s[0] === "#") return fromHex(s.slice(0, 7));
+    const m = s.match(/[\d.]+/g); return m && m.length >= 3 ? m.slice(0, 3).map(v => Math.round(+v)) : null;
+  }
+  function hsl([r, g, b]) {
+    r /= 255; g /= 255; b /= 255;
+    const mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2, d = mx - mn;
+    let h = 0, s = 0;
+    if (d) {
+      s = d / (1 - Math.abs(2 * l - 1));
+      h = mx === r ? ((g - b) / d) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
+      h = (h * 60 + 360) % 360;
+    }
+    return [Math.round(h), Math.round(s * 100), Math.round(l * 100)];
+  }
+  const rgbStr = c => `rgb(${c[0]}, ${c[1]}, ${c[2]})`;
+  const hslStr = c => { const [h, s, l] = hsl(c); return `hsl(${h}, ${s}%, ${l}%)`; };
+  const lin = v => { v /= 255; return v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+  const lum = c => 0.2126 * lin(c[0]) + 0.7152 * lin(c[1]) + 0.0722 * lin(c[2]);
+  const contrast = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+  const inkOn = c => lum(c) > 0.4 ? "#111111" : "#ffffff";
+  // OKLab: distances in it track how different two colours look.
+  const LIN = new Float32Array(256).map((_, i) => lin(i));
+  function oklab(r, g, b, out, o) {
+    r = LIN[r]; g = LIN[g]; b = LIN[b];
+    const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b);
+    const m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b);
+    const s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b);
+    out[o] = 0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * s;
+    out[o + 1] = 1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s;
+    out[o + 2] = 0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s;
+  }
+  function fromOklab(L, A, B) {
+    const l = (L + 0.3963377774 * A + 0.2158037573 * B) ** 3;
+    const m = (L - 0.1055613458 * A - 0.0638541728 * B) ** 3;
+    const s = (L - 0.0894841775 * A - 1.2914855480 * B) ** 3;
+    const f = v => Math.round(255 * Math.min(1, Math.max(0, v <= 0.0031308 ? 12.92 * v : 1.055 * Math.pow(v, 1 / 2.4) - 0.055)));
+    return [f(4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s), f(-1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s), f(-0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s)];
+  }
+
+  // CSS named colours, for a readable name next to each hex.
+  const NAMES = ("aliceblue f0f8ff antiquewhite faebd7 aqua 00ffff aquamarine 7fffd4 azure f0ffff beige f5f5dc bisque ffe4c4 black 000000 blanchedalmond ffebcd blue 0000ff blueviolet 8a2be2 brown a52a2a burlywood deb887 cadetblue 5f9ea0 chartreuse 7fff00 chocolate d2691e coral ff7f50 cornflowerblue 6495ed cornsilk fff8dc crimson dc143c darkblue 00008b darkcyan 008b8b darkgoldenrod b8860b darkgray a9a9a9 darkgreen 006400 darkkhaki bdb76b darkmagenta 8b008b darkolivegreen 556b2f darkorange ff8c00 darkorchid 9932cc darkred 8b0000 darksalmon e9967a darkseagreen 8fbc8f darkslateblue 483d8b darkslategray 2f4f4f darkturquoise 00ced1 darkviolet 9400d3 deeppink ff1493 deepskyblue 00bfff dimgray 696969 dodgerblue 1e90ff firebrick b22222 floralwhite fffaf0 forestgreen 228b22 fuchsia ff00ff gainsboro dcdcdc ghostwhite f8f8ff gold ffd700 goldenrod daa520 gray 808080 green 008000 greenyellow adff2f honeydew f0fff0 hotpink ff69b4 indianred cd5c5c indigo 4b0082 ivory fffff0 khaki f0e68c lavender e6e6fa lavenderblush fff0f5 lawngreen 7cfc00 lemonchiffon fffacd lightblue add8e6 lightcoral f08080 lightcyan e0ffff lightgoldenrodyellow fafad2 lightgray d3d3d3 lightgreen 90ee90 lightpink ffb6c1 lightsalmon ffa07a lightseagreen 20b2aa lightskyblue 87cefa lightslategray 778899 lightsteelblue b0c4de lightyellow ffffe0 lime 00ff00 limegreen 32cd32 linen faf0e6 maroon 800000 mediumaquamarine 66cdaa mediumblue 0000cd mediumorchid ba55d3 mediumpurple 9370db mediumseagreen 3cb371 mediumslateblue 7b68ee mediumspringgreen 00fa9a mediumturquoise 48d1cc mediumvioletred c71585 midnightblue 191970 mintcream f5fffa mistyrose ffe4e1 moccasin ffe4b5 navajowhite ffdead navy 000080 oldlace fdf5e6 olive 808000 olivedrab 6b8e23 orange ffa500 orangered ff4500 orchid da70d6 palegoldenrod eee8aa palegreen 98fb98 paleturquoise afeeee palevioletred db7093 papayawhip ffefd5 peachpuff ffdab9 peru cd853f pink ffc0cb plum dda0dd powderblue b0e0e6 purple 800080 rebeccapurple 663399 red ff0000 rosybrown bc8f8f royalblue 4169e1 saddlebrown 8b4513 salmon fa8072 sandybrown f4a460 seagreen 2e8b57 seashell fff5ee sienna a0522d silver c0c0c0 skyblue 87ceeb slateblue 6a5acd slategray 708090 snow fffafa springgreen 00ff7f steelblue 4682b4 tan d2b48c teal 008080 thistle d8bfd8 tomato ff6347 turquoise 40e0d0 violet ee82ee wheat f5deb3 white ffffff whitesmoke f5f5f5 yellow ffff00 yellowgreen 9acd32")
+    .split(" ").reduce((a, v, i, all) => { if (i % 2 === 0) { const c = fromHex(all[i + 1]), lab = new Float32Array(3); oklab(c[0], c[1], c[2], lab, 0); a.push({ name: v, hex: "#" + all[i + 1], lab }); } return a; }, []);
+  const _lab = new Float32Array(3);
+  function nameOf(c) {
+    oklab(c[0], c[1], c[2], _lab, 0);
+    let best = null, bd = Infinity;
+    for (const n of NAMES) { const d = (n.lab[0] - _lab[0]) ** 2 + (n.lab[1] - _lab[1]) ** 2 + (n.lab[2] - _lab[2]) ** 2; if (d < bd) { bd = d; best = n; } }
+    return (bd < 1e-6 ? "" : "≈ ") + best.name;
+  }
+
+  // ---------- loading an image ----------
+  async function loadBlob(blob) {
+    if (!blob || !blob.type.startsWith("image/")) return toast("That isn't an image");
+    try { img = await createImageBitmap(blob); }
+    catch { return toast("Couldn't read that image"); }
+    W = cv.width = img.width; H = cv.height = img.height;
+    ctx.drawImage(img, 0, 0);
+    data = ctx.getImageData(0, 0, W, H).data;
+    $("empty").style.display = "none"; cv.classList.add("show");
+    cur = null; fit(); buildPalette();
+  }
+  document.addEventListener("paste", e => {
+    if (e.target.closest?.("input, textarea")) return;
+    const item = [...(e.clipboardData?.items || [])].find(i => i.type.startsWith("image/"));
+    if (!item) return toast("No image on the clipboard — take a screenshot first");
+    e.preventDefault();
+    loadBlob(item.getAsFile());
+  });
+  main.addEventListener("dragover", e => { e.preventDefault(); main.classList.add("dropping"); });
+  main.addEventListener("dragleave", () => main.classList.remove("dropping"));
+  main.addEventListener("drop", e => { e.preventDefault(); main.classList.remove("dropping"); loadBlob(e.dataTransfer.files[0]); });
+  $("open").onclick = $("pick").onclick = () => $("file").click();
+  $("file").onchange = e => { loadBlob(e.target.files[0]); e.target.value = ""; };
+
+  // Fit the image to the free space; tiny images are scaled up with hard pixels.
+  function fit() {
+    if (!img) return;
+    const cs = getComputedStyle(main);
+    const aw = main.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+    const ah = main.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+    const k = Math.max(0.01, Math.min(aw / W, ah / H, 8));
+    cv.style.width = Math.max(1, Math.floor(W * k)) + "px";
+    cv.style.height = Math.max(1, Math.floor(H * k)) + "px";
+    cv.classList.toggle("px", k > 1);
+  }
+  new ResizeObserver(() => { fit(); if (cur && loupe.classList.contains("show")) showLoupe(); }).observe(main);
+
+  // ---------- loupe ----------
+  const N = 11, CELL = 13;
+  const lc = $("lc"), lx = lc.getContext("2d"), loupe = $("loupe");
+  const pixel = (x, y) => { const i = (y * W + x) * 4; return [data[i], data[i + 1], data[i + 2]]; };
+  function at(e) {
+    const r = cv.getBoundingClientRect();
+    return { x: Math.min(W - 1, Math.max(0, Math.floor((e.clientX - r.left) * W / r.width))), y: Math.min(H - 1, Math.max(0, Math.floor((e.clientY - r.top) * H / r.height))) };
+  }
+  function showLoupe() {
+    if (!img || !cur) return;
+    const h = (N - 1) / 2;
+    lx.clearRect(0, 0, lc.width, lc.height);
+    for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
+      const x = cur.x + i - h, y = cur.y + j - h;
+      if (x < 0 || y < 0 || x >= W || y >= H) continue;
+      lx.fillStyle = toHex(pixel(x, y));
+      lx.fillRect(i * CELL, j * CELL, CELL, CELL);
+    }
+    lx.strokeStyle = "rgba(128,128,128,.16)"; lx.lineWidth = 1;
+    lx.beginPath();
+    for (let i = 1; i < N; i++) { lx.moveTo(i * CELL + .5, 0); lx.lineTo(i * CELL + .5, N * CELL); lx.moveTo(0, i * CELL + .5); lx.lineTo(N * CELL, i * CELL + .5); }
+    lx.stroke();
+    const c = pixel(cur.x, cur.y), hex = toHex(c);
+    lx.lineWidth = 2; lx.strokeStyle = inkOn(c);
+    lx.strokeRect(h * CELL + 1, h * CELL + 1, CELL - 2, CELL - 2);
+    $("lHex").textContent = hex; $("lXY").textContent = cur.x + ", " + cur.y;
+    const ro = $("readout"); ro.querySelector("i").style.display = "block"; ro.querySelector("i").style.background = hex;
+    ro.querySelector("b").textContent = hex + "  " + cur.x + "," + cur.y;
+    // place beside the pixel, flipping away from the window edges
+    const r = cv.getBoundingClientRect();
+    const px = r.left + (cur.x + .5) * r.width / W, py = r.top + (cur.y + .5) * r.height / H;
+    loupe.classList.add("show");
+    const lw = loupe.offsetWidth, lh = loupe.offsetHeight, gap = 22;
+    let left = px + gap, top = py + gap;
+    if (left + lw > innerWidth - 8) left = px - gap - lw;
+    if (top + lh > innerHeight - 8) top = py - gap - lh;
+    loupe.style.left = Math.max(8, left) + "px"; loupe.style.top = Math.max(8, top) + "px";
+  }
+  function hideLoupe() { loupe.classList.remove("show"); }
+  cv.addEventListener("pointerenter", () => { hovering = true; });
+  cv.addEventListener("pointerleave", () => { hovering = false; if (document.activeElement !== cv) hideLoupe(); });
+  cv.addEventListener("pointermove", e => { if (!img) return; cur = at(e); showLoupe(); });
+  cv.addEventListener("click", e => { if (!img) return; cur = at(e); cv.focus({ preventScroll: true }); showLoupe(); addPick(pixel(cur.x, cur.y)); });
+  cv.addEventListener("blur", () => { if (!hovering) hideLoupe(); });
+
+  // ---------- picked colours ----------
+  let nextId = 1;
+  try { const s = JSON.parse(localStorage.getItem("colorStudioPicked") || "[]"); if (Array.isArray(s)) picked = s.filter(p => /^#[0-9a-f]{6}$/.test(p.hex)).map(p => ({ id: nextId++, hex: p.hex, rgb: fromHex(p.hex) })); } catch {}
+  function save() { try { localStorage.setItem("colorStudioPicked", JSON.stringify(picked.map(p => ({ hex: p.hex })))); } catch {} }
+  function addPick(rgb) {
+    const hex = toHex(rgb);
+    const old = picked.findIndex(p => p.hex === hex);
+    let p;
+    if (old >= 0) { p = picked.splice(old, 1)[0]; } else p = { id: nextId++, hex, rgb };
+    picked.unshift(p);
+    renderPicked(); save();
+    toast(old >= 0 ? hex + " is already picked" : "Picked " + hex);
+  }
+  async function copy(text, label) {
+    try { await navigator.clipboard.writeText(text); toast("Copied " + (label || text)); }
+    catch { toast("Copy blocked by the browser"); }
+  }
+  const X = '<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+  function renderPicked() {
+    const box = $("picked"); box.innerHTML = "";
+    selIds = selIds.filter(id => picked.some(p => p.id === id));
+    picked.forEach(p => {
+      const el = document.createElement("div");
+      el.className = "pick" + (selIds.includes(p.id) ? " sel" : "");
+      el.innerHTML = `<button class="sw" title="Copy ${p.hex}" style="background:${p.hex}"></button>
+        <div style="min-width:0"><div class="name">${nameOf(p.rgb)}</div><div class="chips">
+          <button class="chip" data-v="${p.hex}">${p.hex}</button>
+          <button class="chip" data-v="${rgbStr(p.rgb)}">${rgbStr(p.rgb)}</button>
+          <button class="chip" data-v="${hslStr(p.rgb)}">${hslStr(p.rgb)}</button></div></div>
+        <div class="acts"><button class="selb${selIds.includes(p.id) ? " on" : ""}" title="Use for contrast">A/B</button><button class="rm" title="Remove">${X}</button></div>`;
+      el.querySelector(".sw").onclick = () => copy(p.hex);
+      el.querySelectorAll(".chip").forEach(c => c.onclick = () => copy(c.dataset.v));
+      el.querySelector(".selb").onclick = () => toggleSel(p.id);
+      el.querySelector(".rm").onclick = () => { picked = picked.filter(q => q !== p); renderPicked(); save(); };
+      box.append(el);
+    });
+    $("pickEmpty").style.display = picked.length ? "none" : "";
+    $("pickNote").textContent = picked.length ? picked.length : "";
+    $("clear").disabled = !picked.length;
+    renderContrast(); renderExport();
+  }
+  function toggleSel(id) {
+    if (selIds.includes(id)) selIds = selIds.filter(i => i !== id);
+    else { selIds.push(id); if (selIds.length > 2) selIds.shift(); }
+    renderPicked();
+  }
+  $("clear").onclick = () => { picked = []; selIds = []; renderPicked(); save(); };
+
+  // ---------- contrast ----------
+  // Uses the two colours ticked A/B; until two are ticked, the two newest picks.
+  let swapped = false;
+  function contrastPair() {
+    const ids = selIds.length === 2 ? selIds : picked.slice(0, 2).map(p => p.id);
+    const pair = ids.map(id => picked.find(p => p.id === id)).filter(Boolean);
+    return pair.length === 2 ? (swapped ? pair.reverse() : pair) : null;
+  }
+  function renderContrast() {
+    const pair = contrastPair();
+    $("cBody").hidden = !pair; $("cEmpty").style.display = pair ? "none" : "";
+    if (!pair) return;
+    const [fg, bg] = pair, r = contrast(fg.rgb, bg.rgb);
+    const s = $("sample"); s.style.color = fg.hex; s.style.background = bg.hex;
+    $("ratio").innerHTML = (Math.floor(r * 100) / 100).toFixed(2) + ":1<small>" + fg.hex + " on " + bg.hex + "</small>";
+    const tests = [["AA", "text", 4.5], ["AA", "large", 3], ["AAA", "text", 7], ["AAA", "large", 4.5]];
+    $("badges").innerHTML = tests.map(([lv, kind, min]) => `<div class="${r >= min ? "pass" : "fail"}"><b>${r >= min ? "Pass" : "Fail"}</b>${lv} ${kind}</div>`).join("");
+  }
+  $("swap").onclick = () => { swapped = !swapped; renderContrast(); };
+
+  // ---------- auto palette ----------
+  // k-means in OKLab on up to ~40k evenly spaced pixels, a few spare clusters,
+  // then near-duplicates are dropped and every pixel is reassigned to the rest.
+  function mulberry(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+  let samples = null;   // { lab, rgb, n }
+  function sample() {
+    const step = Math.max(1, Math.ceil(Math.sqrt(W * H / 40000)));
+    const lab = [], rgb = [];
+    const L = new Float32Array(3);
+    for (let y = Math.floor(step / 2); y < H; y += step) for (let x = Math.floor(step / 2); x < W; x += step) {
+      const i = (y * W + x) * 4;
+      if (data[i + 3] < 128) continue;
+      oklab(data[i], data[i + 1], data[i + 2], L, 0);
+      lab.push(L[0], L[1], L[2]); rgb.push(data[i] << 16 | data[i + 1] << 8 | data[i + 2]);
+    }
+    return { lab: Float32Array.from(lab), rgb: Int32Array.from(rgb), n: rgb.length };
+  }
+  const d2 = (a, i, b, j) => (a[i] - b[j]) ** 2 + (a[i + 1] - b[j + 1]) ** 2 + (a[i + 2] - b[j + 2]) ** 2;
+  function assign(S, C, k, lab, cnt) {
+    const asg = new Int32Array(S.n);
+    for (let p = 0; p < S.n; p++) {
+      let best = 0, bd = Infinity;
+      for (let c = 0; c < k; c++) { const d = d2(S.lab, p * 3, C, c * 3); if (d < bd) { bd = d; best = c; } }
+      asg[p] = best;
+    }
+    return asg;
+  }
+  function means(S, asg, k) {
+    const C = new Float32Array(k * 3), cnt = new Int32Array(k);
+    for (let p = 0; p < S.n; p++) { const c = asg[p]; cnt[c]++; C[c * 3] += S.lab[p * 3]; C[c * 3 + 1] += S.lab[p * 3 + 1]; C[c * 3 + 2] += S.lab[p * 3 + 2]; }
+    for (let c = 0; c < k; c++) if (cnt[c]) { C[c * 3] /= cnt[c]; C[c * 3 + 1] /= cnt[c]; C[c * 3 + 2] /= cnt[c]; }
+    return { C, cnt };
+  }
+  function kmeans(S, k) {
+    const rnd = mulberry(7), n = S.n;
+    const C = new Float32Array(k * 3), dist = new Float32Array(n).fill(Infinity);
+    let p0 = Math.floor(rnd() * n); C.set(S.lab.subarray(p0 * 3, p0 * 3 + 3), 0);
+    let got = 1;
+    for (; got < k; got++) {   // k-means++ seeding
+      let sum = 0;
+      for (let p = 0; p < n; p++) { const d = d2(S.lab, p * 3, C, (got - 1) * 3); if (d < dist[p]) dist[p] = d; sum += dist[p]; }
+      if (sum < 1e-9) break;
+      let t = rnd() * sum, p = 0;
+      for (; p < n - 1; p++) { t -= dist[p]; if (t <= 0) break; }
+      C.set(S.lab.subarray(p * 3, p * 3 + 3), got * 3);
+    }
+    k = got;
+    let cen = C.subarray(0, k * 3), asg, cnt;
+    for (let it = 0; it < 14; it++) {
+      asg = assign(S, cen, k);
+      const m = means(S, asg, k);
+      for (let c = 0; c < k; c++) if (!m.cnt[c]) m.C.set(cen.subarray(c * 3, c * 3 + 3), c * 3);
+      cen = m.C; cnt = m.cnt;
+    }
+    return { C: cen, cnt, k };
+  }
+  function buildPalette() {
+    if (!img) return;
+    samples = samples && samples.img === img ? samples : Object.assign(sample(), { img });
+    const S = samples, K = +$("k").value;
+    if (!S.n) { palette = []; return renderPalette(); }
+    const km = kmeans(S, Math.min(S.n, K + 4));
+    // biggest first; drop any centre that looks the same as one already kept
+    const order = [...Array(km.k).keys()].filter(c => km.cnt[c]).sort((a, b) => km.cnt[b] - km.cnt[a]);
+    const keep = [];
+    for (const c of order) {
+      if (keep.length >= K) break;
+      if (keep.every(q => d2(km.C, c * 3, km.C, q * 3) > 0.055 ** 2)) keep.push(c);
+    }
+    const C = new Float32Array(keep.length * 3);
+    keep.forEach((c, i) => C.set(km.C.subarray(c * 3, c * 3 + 3), i * 3));
+    const asg = assign(S, C, keep.length), m = means(S, asg, keep.length);
+    // Flat UI colours: report the exact pixel value when one dominates the cluster.
+    const freq = keep.map(() => new Map());
+    for (let p = 0; p < S.n; p++) { const f = freq[asg[p]]; f.set(S.rgb[p], (f.get(S.rgb[p]) || 0) + 1); }
+    palette = keep.map((_, i) => {
+      let top = 0, tc = 0;
+      freq[i].forEach((v, key) => { if (v > tc) { tc = v; top = key; } });
+      const rgb = tc >= m.cnt[i] * 0.05 ? [top >> 16 & 255, top >> 8 & 255, top & 255] : fromOklab(m.C[i * 3], m.C[i * 3 + 1], m.C[i * 3 + 2]);
+      return { rgb, hex: toHex(rgb), share: m.cnt[i] / S.n };
+    }).sort((a, b) => b.share - a.share)
+      .filter((p, i) => i < 2 || p.share >= 0.0025);   // specks of anti-aliasing are not palette colours
+    renderPalette();
+  }
+  function renderPalette() {
+    const strip = $("strip"); strip.innerHTML = ""; $("palNames").innerHTML = "";
+    $("palEmpty").style.display = palette.length ? "none" : "";
+    strip.style.display = palette.length ? "" : "none";
+    const K = +$("k").value;
+    $("palNote").textContent = palette.length && palette.length < K ? "only " + palette.length + " distinct" : "";
+    palette.forEach(p => {
+      const b = document.createElement("button");
+      b.style.background = p.hex; b.style.color = inkOn(p.rgb); b.title = "Copy " + p.hex;
+      const pct = p.share * 100;
+      b.innerHTML = `<b>${p.hex}</b><span>${pct >= 1 ? Math.round(pct) : pct.toFixed(1)}%</span>`;
+      b.onclick = () => copy(p.hex);
+      strip.append(b);
+      const n = document.createElement("div");
+      n.innerHTML = `<i style="background:${p.hex}"></i><span class="mono">${p.hex}</span><span>${nameOf(p.rgb)}</span>`;
+      $("palNames").append(n);
+    });
+    renderExport();
+  }
+  let pend = 0;
+  $("k").oninput = () => { $("kOut").textContent = $("k").value; cancelAnimationFrame(pend); pend = requestAnimationFrame(buildPalette); };
+
+  // ---------- export ----------
+  const list = () => src === "palette" ? palette.map(p => p.hex) : picked.map(p => p.hex);
+  function twKeys(cols) {
+    const seen = {};
+    return cols.map(h => {
+      let k = nameOf(fromHex(h)).replace("≈ ", "");
+      seen[k] = (seen[k] || 0) + 1;
+      return seen[k] > 1 ? k + "-" + seen[k] : k;
+    });
+  }
+  function exportText() {
+    const cols = list();
+    if (!cols.length) return src === "palette" ? "Paste an image to get a palette." : "Nothing picked yet.";
+    if (fmt === "css") return ":root {\n" + cols.map((h, i) => `  --c${i + 1}: ${h};`).join("\n") + "\n}";
+    if (fmt === "json") return JSON.stringify(cols, null, 2);
+    const keys = twKeys(cols);
+    return "// tailwind.config.js → theme.extend.colors\ncolors: {\n" + cols.map((h, i) => `  '${keys[i]}': '${h}',`).join("\n") + "\n}";
+  }
+  function renderExport() {
+    $("code").textContent = exportText();
+    $("copyCode").disabled = $("savePng").disabled = !list().length;
+  }
+  function seg(id, set) { $(id).querySelectorAll("button").forEach(b => b.onclick = () => { $(id).querySelectorAll("button").forEach(x => x.classList.toggle("on", x === b)); set(b.dataset); renderExport(); }); }
+  seg("src", d => src = d.src);
+  seg("fmt", d => fmt = d.fmt);
+  $("copyCode").onclick = () => copy(exportText(), { css: "CSS variables", json: "JSON", tw: "Tailwind colours" }[fmt]);
+  $("savePng").onclick = () => {
+    const cols = list(); if (!cols.length) return;
+    const bw = 200, bh = 220, lab = 64, c = document.createElement("canvas");
+    c.width = bw * cols.length; c.height = bh + lab;
+    const x = c.getContext("2d");
+    x.fillStyle = "#ffffff"; x.fillRect(0, 0, c.width, c.height);
+    cols.forEach((h, i) => {
+      x.fillStyle = h; x.fillRect(i * bw, 0, bw, bh);
+      x.fillStyle = "#18181b"; x.font = "600 22px Consolas, Menlo, monospace"; x.fillText(h, i * bw + 16, bh + 30);
+      x.fillStyle = "#6b675f"; x.font = "15px system-ui, sans-serif"; x.fillText(nameOf(fromHex(h)).replace("≈ ", ""), i * bw + 16, bh + 52);
+    });
+    c.toBlob(b => {
+      const a = document.createElement("a"); a.href = URL.createObjectURL(b);
+      a.download = (src === "palette" ? "palette" : "picked") + "-" + cols.length + ".png";
+      a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    }, "image/png");
+  };
+
+  // ---------- pick from screen ----------
+  if ("EyeDropper" in window) {
+    $("eyedrop").hidden = false;
+    $("eyedrop").onclick = async () => {
+      try { const r = await new EyeDropper().open(); const c = parseColor(r.sRGBHex); if (c) addPick(c); }
+      catch { /* cancelled with Esc */ }
+    };
+  }
+
+  let tt;
+  function toast(msg) { const t = $("toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(tt); tt = setTimeout(() => t.classList.remove("show"), 1800); }
+
+  // ---------- keys ----------
+  document.addEventListener("keydown", e => {
+    if (e.target.closest?.("input, textarea")) return;
+    const mod = e.ctrlKey || e.metaKey, k = e.key;
+    const onImage = img && cur && (hovering || document.activeElement === cv);
+    if (mod && k.toLowerCase() === "c") {
+      if (String(getSelection()) || !picked.length) return;
+      e.preventDefault(); copy(picked[0].hex);
+    } else if (onImage && k.startsWith("Arrow") && !mod) {
+      e.preventDefault();
+      const s = e.shiftKey ? 10 : 1;
+      cur = { x: Math.min(W - 1, Math.max(0, cur.x + ({ ArrowLeft: -s, ArrowRight: s }[k] || 0))), y: Math.min(H - 1, Math.max(0, cur.y + ({ ArrowUp: -s, ArrowDown: s }[k] || 0))) };
+      showLoupe();
+    } else if (onImage && (k === "Enter" || k === " ") && !mod) {
+      e.preventDefault(); addPick(pixel(cur.x, cur.y));
+    } else if (k === "Escape") { hideLoupe(); cv.blur(); }
+  });
+
+  renderPicked(); renderPalette();
+})();
+</script>
+<!-- studio-hub theme slider -->
+<div class="hub-theme" title="Light / dark"><button type="button" role="switch" aria-label="Dark theme" aria-checked="false"><i></i></button></div>
+<script>
+(() => {
+  const root = document.documentElement, wrap = document.querySelector(".hub-theme"), btn = wrap.querySelector("button"), knob = btn.querySelector("i");
+  const slot = document.querySelector("[data-hub-theme-slot]");
+  if (slot) { slot.append(wrap); wrap.classList.add("docked"); }  // app pages: sit at the end of the toolbar
+  const sync = () => btn.setAttribute("aria-checked", String(root.dataset.theme === "dark"));
+  const set = (t) => {
+    root.dataset.theme = t; knob.style.left = ""; sync();
+    try { localStorage.setItem("hubTheme", t); } catch (e) {}
+    window.dispatchEvent(new CustomEvent("hubthemechange", { detail: t }));
+  };
+  // Click toggles; a drag snaps to whichever end it is released nearer.
+  let drag = null, skipClick = false;
+  const frac = (e) => { const r = btn.getBoundingClientRect(); return Math.min(1, Math.max(0, (e.clientX - r.left - 10) / (r.width - 20))); };
+  btn.addEventListener("pointerdown", (e) => { drag = { x: e.clientX, moved: false }; btn.setPointerCapture(e.pointerId); });
+  btn.addEventListener("pointermove", (e) => {
+    if (!drag) return;
+    if (Math.abs(e.clientX - drag.x) > 3) { drag.moved = true; wrap.classList.add("dragging"); }
+    if (drag.moved) knob.style.left = 2 + frac(e) * 30 + "px";
+  });
+  btn.addEventListener("pointerup", (e) => {
+    wrap.classList.remove("dragging");
+    if (drag && drag.moved) { set(frac(e) > 0.5 ? "dark" : "light"); skipClick = true; }
+    drag = null;
+  });
+  btn.addEventListener("click", () => { if (skipClick) { skipClick = false; return; } set(root.dataset.theme === "dark" ? "light" : "dark"); });
+  btn.addEventListener("keydown", (e) => { if (e.key === "ArrowLeft") set("light"); if (e.key === "ArrowRight") set("dark"); });
+  // Another tab changed it: follow along.
+  window.addEventListener("storage", (e) => { if (e.key === "hubTheme") { root.dataset.theme = e.newValue === "dark" ? "dark" : "light"; sync(); } });
+  sync();
+})();
+</script>
+<!-- /studio-hub theme slider -->
+</body>
+</html>

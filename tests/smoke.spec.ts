@@ -3,13 +3,16 @@ import { existsSync } from 'fs';
 
 // Hosts a page may contact. Everything else breaks the "nothing leaves your machine" claim.
 // jsdelivr serves the Hubot/Mona Sans web fonts (and Mermaid Studio's libraries).
-const ALLOWED_HOSTS = new Set(['127.0.0.1', 'cdn.jsdelivr.net']);
+// api.frankfurter.dev is the ECB exchange-rate feed Time and Convert Studio read; no data goes out with the request.
+const ALLOWED_HOSTS = new Set(['127.0.0.1', 'cdn.jsdelivr.net', 'api.frankfurter.dev']);
 // PDF Studio ships its libraries from vendor/, so it must not touch any third party at all.
 const NO_THIRD_PARTY_SCRIPTS = new Set(['pdf-studio.html']);
 
 const PAGES = [
   'index.html', 'diff-studio.html', 'regex-studio.html', 'merge-studio.html', 'blob-studio.html',
   'pattern-studio.html', 'mermaid-live.html', 'pdf-studio.html', 'markdown-studio.html', 'wallpaper-studio.html',
+  'snap-studio.html', 'color-studio.html', 'qr-studio.html', 'time-studio.html', 'convert-studio.html',
+  // ocr-studio and outfit-studio stream language data and figures from other hosts, so they sit outside this check
 ];
 
 for (const page of PAGES.filter(p => existsSync(p))) {

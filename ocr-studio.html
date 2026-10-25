@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OCR Studio</title>
+<meta name="description" content="Paste a screenshot and get its text back: plain text, or a table you can paste into Excel or Sheets. English and Swedish.">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: var(--h-font);
+    background: var(--h-bg); color: var(--h-text);
+    display: flex; flex-direction: column;
+  }
+  header {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    padding: 10px 14px; background: var(--h-panel); border-bottom: 1px solid var(--h-border);
+  }
+  header h1 { font-size: 15px; font-weight: 600; margin-right: 6px; }
+  .group { display: flex; align-items: center; gap: 4px; }
+  .sep { width: 1px; height: 22px; background: var(--h-border); margin: 0 4px; }
+  .spacer { flex: 1; }
+  button {
+    font: inherit; font-size: 13px; padding: 6px 12px; border-radius: 6px;
+    border: 1px solid var(--h-btn-border); background: var(--h-btn); color: var(--h-text); cursor: pointer;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  button:hover { background: var(--h-btn-hover); }
+  button:disabled { opacity: .4; cursor: default; }
+  button.primary { background: var(--h-accent); border-color: var(--h-accent); color: var(--h-on-accent); font-weight: 600; }
+  button.primary:hover { background: var(--h-accent-h); }
+  button.tool.on { background: var(--h-accent); border-color: var(--h-accent); color: var(--h-on-accent); }
+  button svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+  kbd { font: 10px "SF Mono", Menlo, Consolas, monospace; opacity: .6; }
+  .label { font-size: 12px; color: var(--h-muted); margin-right: 2px; }
+
+  main { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); background: var(--h-deep); }
+  main.dropping { outline: 2px dashed var(--h-accent); outline-offset: -10px; }
+  main.blank { grid-template-columns: 1fr; place-items: center; }
+  main.blank #imgPane, main.blank #out { display: none; }
+  main:not(.blank) #empty { display: none; }
+  #empty { text-align: center; color: var(--h-muted); line-height: 1.7; font-size: 14px; padding: 24px; }
+  #empty b { display: block; font-family: var(--h-head); font-size: 26px; font-weight: 700; color: var(--h-text); margin-bottom: 6px; }
+  #empty .keys { display: inline-flex; gap: 6px; margin: 8px 0 14px; }
+  #empty .keys span { border: 1px solid var(--h-btn-border); background: var(--h-btn); border-radius: 6px; padding: 3px 9px; font-size: 13px; color: var(--h-text); box-shadow: 0 2px 0 var(--h-border2); }
+  #empty a { color: var(--h-text2); cursor: pointer; text-decoration: underline; }
+  #empty small { display: block; margin-top: 10px; font-size: 12px; color: var(--h-muted2); }
+
+  #imgPane { min-height: 0; overflow: auto; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 20px; }
+  #stage { position: relative; box-shadow: 0 2px 6px rgba(0,0,0,.12), 0 10px 30px rgba(0,0,0,.12); }
+  #cv { display: block; max-width: 100%; max-height: calc(100vh - 130px); }
+  #ov { position: absolute; inset: 0; width: 100%; height: 100%; cursor: crosshair; touch-action: none; }
+  .hint { font-size: 12px; color: var(--h-muted); }
+
+  #out { min-height: 0; display: flex; flex-direction: column; background: var(--h-panel); border-left: 1px solid var(--h-border); }
+  .tabs { display: flex; align-items: center; gap: 4px; padding: 8px 12px; border-bottom: 1px solid var(--h-border); }
+  .tab { border-color: transparent; background: none; }
+  .tab.on { background: var(--h-accent-bg); border-color: var(--h-border2); font-weight: 600; }
+  #meta { font-size: 12px; color: var(--h-muted); }
+  #status { display: none; padding: 10px 14px; font-size: 13px; color: var(--h-text2); border-bottom: 1px solid var(--h-border); }
+  #status.show { display: block; }
+  #status small { display: block; color: var(--h-muted); font-size: 12px; margin-top: 2px; }
+  .bar { height: 4px; border-radius: 2px; background: var(--h-deep2); margin-top: 8px; overflow: hidden; }
+  .bar i { display: block; height: 100%; width: 0; background: var(--h-accent); transition: width .15s; }
+  .view { flex: 1; min-height: 0; display: none; flex-direction: column; }
+  .view.on { display: flex; }
+  #text {
+    flex: 1; min-height: 0; resize: none; border: 0; outline: 0; padding: 14px 16px;
+    font: 14px/1.6 "SF Mono", Menlo, Consolas, monospace; background: var(--h-panel); color: var(--h-text);
+  }
+  #text::placeholder { color: var(--h-faint); }
+  .tablebar { display: flex; align-items: center; gap: 6px; padding: 8px 12px; border-bottom: 1px solid var(--h-border); flex-wrap: wrap; }
+  #tableNote { font-size: 12px; color: var(--h-muted); margin-left: 4px; }
+  .tablewrap { flex: 1; min-height: 0; overflow: auto; padding: 14px 16px; }
+  table { border-collapse: collapse; font-size: 13px; }
+  td { border: 1px solid var(--h-border2); padding: 5px 9px; vertical-align: top; white-space: pre-wrap; }
+  tr:first-child td { background: var(--h-panel2); }
+  td:empty::after { content: ""; }
+
+  @media (max-width: 760px) {
+    main { grid-template-columns: 1fr; grid-template-rows: auto minmax(320px, 1fr); overflow: auto; }
+    #out { border-left: 0; border-top: 1px solid var(--h-border); }
+    #cv { max-height: 50vh; }
+  }
+
+  #toast {
+    position: fixed; left: 50%; bottom: 22px; transform: translate(-50%, 20px); opacity: 0;
+    background: var(--h-accent); color: var(--h-on-accent); font-size: 13px; padding: 8px 14px; border-radius: 8px;
+    transition: opacity .2s, transform .2s; pointer-events: none;
+  }
+  #toast.show { opacity: 1; transform: translate(-50%, 0); }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js"></script>
+<!-- studio-hub theme kit v1: fonts, light/dark tokens, title shadow, theme slider. Source: _theme/kit.html, inlined by _theme/apply.py -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource-variable/mona-sans@5.3.0/wdth.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource-variable/hubot-sans@5.3.0/wdth.css">
+<script>(function(){var t=null;try{t=new URLSearchParams(location.search).get("theme")||localStorage.getItem("hubTheme")}catch(e){}document.documentElement.dataset.theme=t==="dark"?"dark":"light"})()</script>
+<style id="hub-kit">
+  :root {
+    color-scheme: light;
+    --h-font: "Mona Sans Variable", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --h-head: "Hubot Sans Variable", var(--h-font);
+    --h-bg: #f1efe9; --h-panel: #faf9f5; --h-panel2: #f4f2ec; --h-deep: #ebe8e1; --h-deep2: #e7e4dc;
+    --h-border: #dedad0; --h-border2: #d3cec2; --h-btn: #ffffff; --h-btn-border: #cfcabe; --h-btn-hover: #f1eee6;
+    --h-text: #18181b; --h-text2: #3f3f46; --h-muted: #6b675f; --h-muted2: #8f8a7f; --h-faint: #aaa59a; --h-code: #27272a;
+    --h-accent: #18181b; --h-accent-h: #3f3f46; --h-accent2: #8f8a7f; --h-accent-bg: #e4e0d6; --h-on-accent: #ffffff; --h-strong: #09090b;
+    --h-yellow: #8a5a00; --h-blue: #0b5cad; --h-blue2: #2f5597; --h-purple: #6b3fa0; --h-green2: #2e7d4f; --h-ok: #1a7f37;
+    --h-green: #1a7f37; --h-red: #cf222e; --h-amber: #9a6700; --h-err-bg: #fde2e4; --h-err-bg2: #f5b8be; --h-err-text: #8b1a2b;
+    --h-title-shadow: 0 2px 3px rgba(24, 24, 27, .16), 0 8px 22px rgba(24, 24, 27, .18);
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --h-bg: #1e1f24; --h-panel: #26272e; --h-panel2: #2e2f37; --h-deep: #1b1c21; --h-deep2: #22232a;
+    --h-border: #3a3b44; --h-border2: #3a3b46; --h-btn: #33343d; --h-btn-border: #4a4b55; --h-btn-hover: #41424d;
+    --h-text: #e6e6e6; --h-text2: #b9bac2; --h-muted: #8a8b94; --h-muted2: #6f7078; --h-faint: #565761; --h-code: #d8dee9;
+    --h-accent: #e6e6e6; --h-accent-h: #ffffff; --h-accent2: #8a8b94; --h-accent-bg: #3a3b44; --h-on-accent: #18181b; --h-strong: #ffffff;
+    --h-yellow: #e8d3a8; --h-blue: #9ecbff; --h-blue2: #9db3d8; --h-purple: #c4a7e7; --h-green2: #a8d5b5; --h-ok: #8fd19e;
+    --h-green: #3fb950; --h-red: #f85149; --h-amber: #e3b341; --h-err-bg: #5c1f2b; --h-err-bg2: #7a2938; --h-err-text: #ffb3c0;
+    --h-title-shadow: 0 2px 3px rgba(0, 0, 0, .45), 0 8px 22px rgba(0, 0, 0, .5);
+  }
+  h1 { font-family: var(--h-head); font-weight: 800; font-stretch: 125%; letter-spacing: -.02em; text-shadow: var(--h-title-shadow); }
+  h1 span, h1 em { text-shadow: inherit; color: var(--h-muted); }
+
+  /* the theme slider: fixed top-right, no labels */
+  .hub-theme { position: fixed; top: 14px; right: 16px; z-index: 9999; }
+  .hub-theme button { all: unset; box-sizing: border-box; position: relative; display: block; width: 52px; height: 22px; border-radius: 999px; cursor: pointer;
+    background: linear-gradient(90deg, #f1efe9, #c9c4b7 38%, #3f3f46 62%, #09090b); border: 1px solid var(--h-border2); touch-action: none; }
+  .hub-theme button:focus-visible { outline: 2px solid var(--h-text); outline-offset: 3px; }
+  .hub-theme i { position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff;
+    box-shadow: 0 1px 2px rgba(0,0,0,.35), 0 0 0 1px rgba(0,0,0,.08); transition: left .4s cubic-bezier(.65, 0, .35, 1); }
+  :root[data-theme="dark"] .hub-theme i { left: 32px; }
+  .hub-theme.dragging i { transition: none; }
+  .hub-theme.docked { position: static; flex: none; display: flex; align-items: center; margin-left: 6px; }
+  [data-hub-theme-slot] { display: contents; }
+  @media (prefers-reduced-motion: reduce) { .hub-theme i { transition: none; } }
+  @media print { .hub-theme { display: none; } }
+</style>
+<!-- /studio-hub theme kit -->
+</head>
+<body>
+<header>
+  <h1>OCR Studio</h1>
+  <div class="group" id="langs">
+    <span class="label">Language</span>
+    <button class="tool" data-lang="eng" title="English">English</button>
+    <button class="tool" data-lang="swe" title="Swedish">Swedish</button>
+    <button class="tool on" data-lang="swe+eng" title="English and Swedish">Both</button>
+  </div>
+  <div class="sep"></div>
+  <div class="group">
+    <button class="tool" id="boxes" title="Show the word boxes on the image (W)">Boxes <kbd>W</kbd></button>
+    <button id="whole" title="Read the whole image again (Esc)" disabled>Whole image</button>
+  </div>
+  <div class="spacer"></div>
+  <button id="open">Open…</button>
+  <button id="copy" class="primary" disabled>Copy text <kbd style="opacity:.8" data-mod>Ctrl C</kbd></button>
+  <span data-hub-theme-slot></span>
+</header>
+<main id="main" class="blank">
+  <div id="empty">
+    <b>Paste a screenshot</b>
+    Take one with <span data-snip>Win Shift S</span>, then press
+    <div><div class="keys"><span data-modkey>Ctrl</span><span>V</span></div></div>
+    or drop an image here, or <a id="pick">open a file</a>.
+    <small>Runs in your browser. The language data downloads once, then it's cached.</small>
+  </div>
+  <section id="imgPane">
+    <div id="stage"><canvas id="cv"></canvas><canvas id="ov"></canvas></div>
+    <p class="hint" id="hint">Drag on the image to read just that part.</p>
+  </section>
+  <section id="out">
+    <div class="tabs">
+      <button class="tab on" data-tab="text">Text</button>
+      <button class="tab" data-tab="table">Table</button>
+      <span class="spacer"></span>
+      <span id="meta"></span>
+    </div>
+    <div id="status"><span id="statusText">Starting…</span><small id="statusSub"></small><div class="bar"><i id="barFill"></i></div></div>
+    <div class="view on" id="view-text">
+      <textarea id="text" spellcheck="false" placeholder="The text shows up here."></textarea>
+    </div>
+    <div class="view" id="view-table">
+      <div class="tablebar">
+        <button id="copyTsv" disabled title="Pastes into Excel or Sheets as cells">Copy as TSV</button>
+        <button id="copyMd" disabled>Copy as Markdown</button>
+        <span id="tableNote"></span>
+      </div>
+      <div class="tablewrap"><table id="tbl"></table></div>
+    </div>
+  </section>
+</main>
+<input type="file" id="file" accept="image/*" hidden>
+<div id="toast"></div>
+
+<script>
+(() => {
+  const isMac = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
+  const MOD = isMac ? "⌘" : "Ctrl";
+  document.querySelectorAll("[data-modkey]").forEach(e => e.textContent = MOD);
+  document.querySelectorAll("[data-mod]").forEach(e => e.textContent = MOD + " C");
+  document.querySelectorAll("[data-snip]").forEach(e => e.textContent = isMac ? "⌘ Ctrl Shift 4" : "Win Shift S");
+
+  const $ = id => document.getElementById(id);
+  const LANG_NAME = { eng: "English", swe: "Swedish" };
+  const cv = $("cv"), ctx = cv.getContext("2d");
+  const ov = $("ov"), octx = ov.getContext("2d");
+  const main = $("main");
+
+  let img = null;          // the pasted image (ImageBitmap)
+  let lang = "swe+eng";
+  let region = null;       // { x, y, w, h } in image pixels, or null for the whole image
+  let drag = null;         // rectangle being dragged
+  let words = [];          // [{ text, conf, x0, y0, x1, y1 }] in image pixels
+  let grid = [];           // table cells, rows of strings
+  let showBoxes = false;
+  let runId = 0;
+
+  // ---------- the worker ----------
+  // One worker is kept alive between runs. Switching language starts a new one
+  // and terminates the old one (which also cancels anything it was doing).
+  let workerP = null, workerLang = null, workerSeq = 0;
+  function getWorker(l) {
+    if (workerP && workerLang === l) return workerP;
+    const old = workerP, seq = ++workerSeq;
+    workerLang = l;
+    workerP = Tesseract.createWorker(l.split("+"), 1, {
+      logger: m => { if (seq === workerSeq) progress(m); },
+      errorHandler: () => {},
+    });
+    workerP.catch(() => { if (seq === workerSeq) { workerP = null; workerLang = null; } });
+    if (old) old.then(w => w.terminate()).catch(() => {});
+    return workerP;
+  }
+
+  // ---------- status ----------
+  function progress(m) {
+    const p = Math.round((m.progress || 0) * 100);
+    const names = workerLang ? workerLang.split("+").map(k => LANG_NAME[k]).join(" + ") : "";
+    let msg, sub = "";
+    switch (m.status) {
+      case "loading tesseract core": msg = "Loading the OCR engine"; break;
+      case "initializing tesseract": msg = "Starting the OCR engine"; break;
+      case "loading language traineddata":
+        msg = "Getting " + names + " language data"; sub = "Downloads once, then it's cached in this browser."; break;
+      case "initializing api": msg = "Getting ready"; break;
+      case "recognizing text": msg = "Reading text"; break;
+      default: msg = m.status ? m.status[0].toUpperCase() + m.status.slice(1) : "Working";
+    }
+    setStatus(msg + (p ? " · " + p + "%" : ""), sub, p);
+  }
+  function setStatus(msg, sub, p) {
+    $("status").classList.toggle("show", !!msg);
+    if (!msg) return;
+    $("statusText").textContent = msg;
+    $("statusSub").textContent = sub || "";
+    $("barFill").style.width = (p || 0) + "%";
+  }
+
+  // ---------- loading an image ----------
+  async function loadBlob(blob) {
+    if (!blob || !blob.type.startsWith("image/")) return toast("That isn't an image");
+    try { img = await createImageBitmap(blob); }
+    catch { return toast("Couldn't read that image"); }
+    cv.width = ov.width = img.width; cv.height = ov.height = img.height;
+    ctx.drawImage(img, 0, 0);
+    region = null; words = []; grid = [];
+    main.classList.remove("blank");
+    $("text").value = ""; renderTable(); drawOverlay();
+    run();
+  }
+  document.addEventListener("paste", e => {
+    const item = [...(e.clipboardData?.items || [])].find(i => i.type.startsWith("image/"));
+    if (!item) {
+      if (e.target.closest?.("textarea, input")) return;   // let text pastes into the editor through
+      return toast("No image on the clipboard. Take a screenshot first");
+    }
+    e.preventDefault();
+    loadBlob(item.getAsFile());
+  });
+  main.addEventListener("dragover", e => { e.preventDefault(); main.classList.add("dropping"); });
+  main.addEventListener("dragleave", () => main.classList.remove("dropping"));
+  main.addEventListener("drop", e => { e.preventDefault(); main.classList.remove("dropping"); loadBlob(e.dataTransfer.files[0]); });
+  $("open").onclick = $("pick").onclick = () => $("file").click();
+  $("file").onchange = e => { loadBlob(e.target.files[0]); e.target.value = ""; };
+
+  // ---------- OCR ----------
+  // Screenshot text is small; Tesseract reads it far better scaled up. The
+  // region (or whole image) is copied onto white at 1-3x, and boxes are mapped back.
+  function prepare() {
+    const r = region || { x: 0, y: 0, w: img.width, h: img.height };
+    const big = Math.max(r.w, r.h);
+    const s = big <= 900 ? 3 : big <= 1800 ? 2 : 1;
+    const c = document.createElement("canvas");
+    c.width = Math.round(r.w * s); c.height = Math.round(r.h * s);
+    const g = c.getContext("2d");
+    g.fillStyle = "#fff"; g.fillRect(0, 0, c.width, c.height);
+    g.imageSmoothingQuality = "high";
+    g.drawImage(img, r.x, r.y, r.w, r.h, 0, 0, c.width, c.height);
+    return { c, s, ox: r.x, oy: r.y };
+  }
+  function wordsOf(data) {
+    let ws = data.words;
+    if (!ws) {
+      ws = [];
+      (data.blocks || []).forEach(b => b.paragraphs.forEach(p => p.lines.forEach(l => ws.push(...l.words))));
+    }
+    return ws;
+  }
+  async function run() {
+    if (!img) return;
+    const my = ++runId;
+    setBusy(true);
+    setStatus("Starting", "", 0);
+    try {
+      const w = await getWorker(lang);
+      if (my !== runId) return;
+      const { c, s, ox, oy } = prepare();
+      const { data } = await w.recognize(c, {}, { text: true, blocks: true });
+      if (my !== runId) return;
+      words = wordsOf(data)
+        .filter(w => w.text.trim())
+        .map(w => ({ text: w.text.trim(), conf: w.confidence,
+          x0: ox + w.bbox.x0 / s, y0: oy + w.bbox.y0 / s, x1: ox + w.bbox.x1 / s, y1: oy + w.bbox.y1 / s }));
+      $("text").value = (data.text || "").replace(/\n{3,}/g, "\n\n").trim();
+      const conf = words.length ? Math.round(words.reduce((a, w) => a + w.conf, 0) / words.length) : 0;
+      $("meta").textContent = words.length ? `${words.length} words · ${conf}% sure` : "No text found";
+      renderTable(); drawOverlay();
+      setStatus("");
+    } catch (err) {
+      if (my !== runId) return;
+      console.warn(err);
+      setStatus("Couldn't run OCR", "Check the connection: the engine and language data load from the web the first time.", 0);
+    } finally {
+      if (my === runId) setBusy(false);
+    }
+  }
+  function setBusy(b) {
+    $("copy").disabled = b || !img;
+    $("whole").disabled = !region;
+    if (b) $("meta").textContent = "";
+  }
+
+  // ---------- table ----------
+  const median = a => { const s = [...a].sort((x, y) => x - y); return s.length ? s[s.length >> 1] : 0; };
+  // Rows: words whose vertical centres are close. Cells: runs of words split at
+  // wide gaps. Columns: x bands where cells of the multi-cell rows overlap.
+  function buildGrid() {
+    if (!words.length) return { rows: [], table: false };
+    const hm = median(words.map(w => w.y1 - w.y0)) || 10;
+    const sorted = [...words].sort((a, b) => (a.y0 + a.y1) - (b.y0 + b.y1));
+    const rows = [];
+    for (const w of sorted) {
+      const cy = (w.y0 + w.y1) / 2, last = rows[rows.length - 1];
+      if (last && Math.abs(cy - last.cy) < hm * .6) { last.ws.push(w); last.cy += (cy - last.cy) / last.ws.length; }
+      else rows.push({ cy, ws: [w] });
+    }
+    rows.forEach(r => {
+      r.ws.sort((a, b) => a.x0 - b.x0);
+      r.cells = [];
+      for (const w of r.ws) {
+        const c = r.cells[r.cells.length - 1];
+        if (c && w.x0 - c.x1 < hm * 1.2) { c.text += " " + w.text; c.x1 = Math.max(c.x1, w.x1); }
+        else r.cells.push({ text: w.text, x0: w.x0, x1: w.x1 });
+      }
+    });
+    const multi = rows.filter(r => r.cells.length > 1);
+    let bands = [];
+    if (multi.length >= 2) {
+      const cells = multi.flatMap(r => r.cells).sort((a, b) => a.x0 - b.x0);
+      for (const c of cells) {
+        const b = bands[bands.length - 1];
+        if (b && c.x0 <= b.x1) b.x1 = Math.max(b.x1, c.x1);
+        else bands.push({ x0: c.x0, x1: c.x1 });
+      }
+    }
+    if (bands.length < 2) return { rows: rows.map(r => [r.cells.map(c => c.text).join("   ")]), table: false };
+    const out = rows.map(r => {
+      const line = bands.map(() => "");
+      r.cells.forEach(c => {
+        // the band this cell starts in (a long line spanning several stays in its first)
+        let k = bands.findIndex(b => c.x0 < b.x1 && c.x1 > b.x0);
+        if (k < 0) k = bands.findIndex(b => c.x1 <= b.x0); if (k < 0) k = bands.length - 1;
+        line[k] = line[k] ? line[k] + " " + c.text : c.text;
+      });
+      return line;
+    });
+    return { rows: out, table: true };
+  }
+  function renderTable() {
+    const { rows, table } = buildGrid();
+    grid = rows;
+    const t = $("tbl");
+    t.replaceChildren(...rows.map(r => {
+      const tr = document.createElement("tr");
+      r.forEach(v => { const td = document.createElement("td"); td.textContent = v; tr.append(td); });
+      return tr;
+    }));
+    $("tableNote").textContent = !rows.length ? "" : table
+      ? `${rows.length} rows × ${rows[0].length} columns`
+      : "Doesn't look like a table, so one line per row";
+    $("copyTsv").disabled = $("copyMd").disabled = !rows.length;
+  }
+  const clean = v => v.replace(/[\t\r\n]+/g, " ");
+  const tsv = () => grid.map(r => r.map(clean).join("\t")).join("\n");
+  function markdown() {
+    const esc = v => clean(v).replace(/\|/g, "\\|");
+    const n = Math.max(...grid.map(r => r.length));
+    const line = r => "| " + Array.from({ length: n }, (_, i) => esc(r[i] || "")).join(" | ") + " |";
+    return [line(grid[0]), "|" + " --- |".repeat(n), ...grid.slice(1).map(line)].join("\n");
+  }
+
+  // ---------- tabs ----------
+  document.querySelectorAll(".tab").forEach(b => b.onclick = () => {
+    document.querySelectorAll(".tab").forEach(x => x.classList.toggle("on", x === b));
+    document.querySelectorAll(".view").forEach(v => v.classList.toggle("on", v.id === "view-" + b.dataset.tab));
+  });
+
+  // ---------- language ----------
+  function setLang(l) {
+    if (l === lang) return;
+    lang = l;
+    document.querySelectorAll("[data-lang]").forEach(b => b.classList.toggle("on", b.dataset.lang === l));
+    run();
+  }
+  document.querySelectorAll("[data-lang]").forEach(b => b.onclick = () => setLang(b.dataset.lang));
+
+  // ---------- overlay: word boxes + region ----------
+  const scale = () => ov.width / ov.getBoundingClientRect().width;
+  function drawOverlay() {
+    octx.clearRect(0, 0, ov.width, ov.height);
+    if (!img) return;
+    const k = scale() || 1;
+    const r = drag ? norm(drag) : region;
+    if (r) {   // dim everything outside the region
+      octx.fillStyle = "rgba(0,0,0,.35)";
+      octx.beginPath(); octx.rect(0, 0, ov.width, ov.height); octx.rect(r.x, r.y, r.w, r.h); octx.fill("evenodd");
+      octx.setLineDash([5 * k, 4 * k]); octx.lineWidth = 1.5 * k; octx.strokeStyle = "#fff";
+      octx.strokeRect(r.x, r.y, r.w, r.h); octx.setLineDash([]);
+    }
+    if (showBoxes && !drag) {
+      octx.lineWidth = Math.max(1, k);
+      words.forEach(w => {
+        octx.strokeStyle = w.conf < 60 ? "rgba(229,52,43,.9)" : "rgba(31,111,235,.85)";
+        octx.fillStyle = w.conf < 60 ? "rgba(229,52,43,.12)" : "rgba(31,111,235,.10)";
+        octx.fillRect(w.x0, w.y0, w.x1 - w.x0, w.y1 - w.y0);
+        octx.strokeRect(w.x0, w.y0, w.x1 - w.x0, w.y1 - w.y0);
+      });
+    }
+  }
+  function at(e) {
+    const r = ov.getBoundingClientRect(), k = ov.width / r.width;
+    return { x: Math.max(0, Math.min(ov.width, (e.clientX - r.left) * k)), y: Math.max(0, Math.min(ov.height, (e.clientY - r.top) * k)) };
+  }
+  const norm = d => ({ x: Math.min(d.a.x, d.b.x), y: Math.min(d.a.y, d.b.y), w: Math.abs(d.b.x - d.a.x), h: Math.abs(d.b.y - d.a.y) });
+  ov.addEventListener("pointerdown", e => {
+    if (!img || e.button !== 0) return;
+    ov.setPointerCapture(e.pointerId);
+    const p = at(e); drag = { a: p, b: p };
+  });
+  ov.addEventListener("pointermove", e => { if (drag) { drag.b = at(e); drawOverlay(); } });
+  const finish = () => {
+    if (!drag) return;
+    const r = norm(drag); drag = null;
+    if (r.w < 8 * scale() || r.h < 6 * scale()) return drawOverlay();   // a click, not a drag
+    region = { x: Math.round(r.x), y: Math.round(r.y), w: Math.round(r.w), h: Math.round(r.h) };
+    words = []; drawOverlay(); run();
+  };
+  ov.addEventListener("pointerup", finish);
+  ov.addEventListener("pointercancel", finish);
+  function wholeImage() { if (!region) return; region = null; words = []; drawOverlay(); run(); }
+  $("whole").onclick = wholeImage;
+  function toggleBoxes() { showBoxes = !showBoxes; $("boxes").classList.toggle("on", showBoxes); drawOverlay(); }
+  $("boxes").onclick = toggleBoxes;
+  window.addEventListener("resize", drawOverlay);
+
+  // ---------- copy ----------
+  async function copyStr(s, done) {
+    if (!s) return toast("Nothing to copy yet");
+    try { await navigator.clipboard.writeText(s); }
+    catch {
+      const t = document.createElement("textarea"); t.value = s; document.body.append(t); t.select();
+      const ok = document.execCommand("copy"); t.remove();
+      if (!ok) return toast("Copy blocked by the browser");
+    }
+    toast(done);
+  }
+  $("copy").onclick = () => copyStr($("text").value, "Text copied");
+  $("copyTsv").onclick = () => copyStr(tsv(), "Copied. Paste into Excel or Sheets");
+  $("copyMd").onclick = () => copyStr(markdown(), "Markdown table copied");
+
+  let tt;
+  function toast(msg) { const t = $("toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(tt); tt = setTimeout(() => t.classList.remove("show"), 1800); }
+
+  // ---------- keys ----------
+  document.addEventListener("keydown", e => {
+    if (e.target.closest?.("input, textarea")) return;
+    const mod = e.ctrlKey || e.metaKey, k = e.key.toLowerCase();
+    if (mod && k === "c" && img && !String(getSelection())) { e.preventDefault(); $("copy").click(); }
+    else if (k === "escape") wholeImage();
+    else if (!mod && !e.altKey && k === "w" && img) toggleBoxes();
+  });
+
+  window.addEventListener("beforeunload", () => { if (workerP) workerP.then(w => w.terminate()).catch(() => {}); });
+})();
+</script>
+<!-- studio-hub theme slider -->
+<div class="hub-theme" title="Light / dark"><button type="button" role="switch" aria-label="Dark theme" aria-checked="false"><i></i></button></div>
+<script>
+(() => {
+  const root = document.documentElement, wrap = document.querySelector(".hub-theme"), btn = wrap.querySelector("button"), knob = btn.querySelector("i");
+  const slot = document.querySelector("[data-hub-theme-slot]");
+  if (slot) { slot.append(wrap); wrap.classList.add("docked"); }  // app pages: sit at the end of the toolbar
+  const sync = () => btn.setAttribute("aria-checked", String(root.dataset.theme === "dark"));
+  const set = (t) => {
+    root.dataset.theme = t; knob.style.left = ""; sync();
+    try { localStorage.setItem("hubTheme", t); } catch (e) {}
+    window.dispatchEvent(new CustomEvent("hubthemechange", { detail: t }));
+  };
+  // Click toggles; a drag snaps to whichever end it is released nearer.
+  let drag = null, skipClick = false;
+  const frac = (e) => { const r = btn.getBoundingClientRect(); return Math.min(1, Math.max(0, (e.clientX - r.left - 10) / (r.width - 20))); };
+  btn.addEventListener("pointerdown", (e) => { drag = { x: e.clientX, moved: false }; btn.setPointerCapture(e.pointerId); });
+  btn.addEventListener("pointermove", (e) => {
+    if (!drag) return;
+    if (Math.abs(e.clientX - drag.x) > 3) { drag.moved = true; wrap.classList.add("dragging"); }
+    if (drag.moved) knob.style.left = 2 + frac(e) * 30 + "px";
+  });
+  btn.addEventListener("pointerup", (e) => {
+    wrap.classList.remove("dragging");
+    if (drag && drag.moved) { set(frac(e) > 0.5 ? "dark" : "light"); skipClick = true; }
+    drag = null;
+  });
+  btn.addEventListener("click", () => { if (skipClick) { skipClick = false; return; } set(root.dataset.theme === "dark" ? "light" : "dark"); });
+  btn.addEventListener("keydown", (e) => { if (e.key === "ArrowLeft") set("light"); if (e.key === "ArrowRight") set("dark"); });
+  // Another tab changed it: follow along.
+  window.addEventListener("storage", (e) => { if (e.key === "hubTheme") { root.dataset.theme = e.newValue === "dark" ? "dark" : "light"; sync(); } });
+  sync();
+})();
+</script>
+<!-- /studio-hub theme slider -->
+</body>
+</html>
