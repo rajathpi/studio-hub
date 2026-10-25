@@ -71,7 +71,16 @@
   .card { background: var(--h-panel); border: 1px solid var(--h-border); border-radius: 10px; padding: 12px; cursor: pointer; transition: box-shadow .15s; }
   .card:hover { box-shadow: 0 0 0 1px var(--h-border2), 0 6px 18px rgba(0,0,0,.08); }
   .card.on { box-shadow: 0 0 0 2px var(--h-text); }
-  .card .prev { height: 210px; display: grid; place-items: center; }
+  .card .prev { height: 210px; display: grid; place-items: center; position: relative; }
+  .seg { position: absolute; top: 0; right: 0; display: flex; z-index: 1; }
+  .seg button { font-size: 11px; padding: 2px 7px; border-radius: 0; margin-left: -1px; }
+  .seg button:first-child { border-radius: 6px 0 0 6px; }
+  .seg button:last-child { border-radius: 0 6px 6px 0; }
+  .seg button.on { background: var(--h-accent); border-color: var(--h-accent); color: var(--h-on-accent); }
+  .sw { display: flex; height: 16px; border-radius: 5px; overflow: hidden; border: 1px solid var(--h-border); margin: -2px 0 10px; }
+  .sw i { flex: 1; }
+  .credit { font-size: 11px; color: var(--h-muted); margin-top: 16px; }
+  .credit a { color: inherit; }
   .card .prev canvas { max-width: 100%; max-height: 100%; display: block; }
   .card .foot { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; font-size: 13px; }
   .mark { font-size: 11px; display: inline-flex; align-items: center; gap: 4px; color: var(--h-muted); }
@@ -171,7 +180,7 @@
   <div class="group" data-for="make">
     <button id="print" title="A printable card with the network name and password" hidden>Print card</button>
     <button id="svg" title="Download SVG">SVG</button>
-    <button id="png" title="Download PNG, 1024 px (Ctrl S)">PNG</button>
+    <button id="png" title="Download PNG (Ctrl S)">PNG</button>
     <button id="copy" class="primary">Copy <kbd style="opacity:.8" data-mod>Ctrl C</kbd></button>
   </div>
   <div class="group" data-for="scan">
@@ -192,6 +201,7 @@
   <div id="gridWrap">
     <div id="grid"></div>
     <div id="gridEmpty" hidden>Fill in the form to see your codes.</div>
+    <p class="credit">Garden scene after <a href="https://github.com/nguyenhanhatminh0105-hue/voxel-qr-tree" target="_blank" rel="noopener noreferrer">voxel-qr-tree</a>, MIT</p>
   </div>
 </div>
 
@@ -212,6 +222,1966 @@
 <input type="file" id="logoFile" accept="image/*" hidden>
 <div id="toast"></div>
 
+<script>window.WADA = {"colors":[["Hermosa Pink","#f9c1ce"],["Corinthian Pink","#f8b6ba"],["Cameo Pink","#e0b3b6"],["Fawn","#d1b0a7"],["Light Brown Drab","#b59392"],["Coral Red","#f58e84"],["Fresh Color","#f6917e"],["Grenadine Pink","#f48067"],["Eosine Pink","#f37f94"],["Spinel Red","#f27291"],["Old Rose","#d46d7a"],["Eugenia Red | A","#e2625e"],["Eugenia Red | B","#da525d"],["Raw Sienna","#bb7125"],["Vinaceous Tawny","#c56127"],["Jasper Red","#eb5324"],["Spectrum Red","#e31f26"],["Red Orange","#dd4027"],["Etruscan Red","#c55347"],["Burnt Sienna","#ae5224"],["Ochre Red","#ab544d"],["Scarlet","#cb2f43"],["Carmine","#cc1236"],["Indian Lake","#c53c69"],["Rosolanc Purple","#b73f74"],["Pomegranite Purple","#b71f57"],["Hydrangea Red","#a94151"],["Brick Red","#a84222"],["Carmine Red","#a62c37"],["Pompeian Red","#ab2439"],["Red","#a72144"],["Brown","#7c4226"],["Hay's Russet","#793327"],["Vandyke Red","#82241f"],["Pansy Purple","#7d133a"],["Pale Burnt Lake","#802626"],["Violet Red","#642d5e"],["Vistoris Lake","#6d4145"],["Sulpher Yellow","#f5ecc2"],["Pale Lemon Yellow","#ffefae"],["Naples Yellow","#fbe6a0"],["Ivory Buff","#ebd3a2"],["Seashell Pink","#fdd4bd"],["Light Pinkish Cinnamon","#fcc79b"],["Pinkish Cinnamon","#eeb480"],["Cinnamon Buff","#fdc57e"],["Cream Yellow","#fdbf68"],["Golden Yellow","#f3a257"],["Vinaceous Cinnamon","#eea78c"],["Ochraceous Salmon","#d8a37b"],["Isabella Color","#c5a56e"],["Maple","#c59f6b"],["Olive Buff","#c1c494"],["Ecru","#c2ae93"],["Yellow","#fff200"],["Lemon Yellow","#f8ed43"],["Apricot Yellow","#ffdd00"],["Pyrite Yellow","#cab356"],["Olive Ocher","#d6b43e"],["Yellow Ocher","#e2b540"],["Orange Yellow","#fcb315"],["Yellow Orange","#f99d1b"],["Apricot Orange","#f68c50"],["Orange","#f37420"],["Peach Red","#f15a30"],["English Red","#d96629"],["Cinnamon Rufous","#c27544"],["Orange Rufous","#c16b27"],["Sulphine Yellow","#c19f2c"],["Khaki","#bc892b"],["Citron Yellow","#b2b73e"],["Citrine","#b09f36"],["Buffy Citrine","#96874d"],["Dark Citrine","#8b835b"],["Light Grayish Olive","#848061"],["Krongbergs Green","#84875e"],["Olive","#837e31"],["Orange Citrine","#986f2d"],["Sudan Brown","#a36752"],["Olive Green","#6b7140"],["Light Brownish Olive","#806e4b"],["Deep Grayish Olive","#635a3a"],["Pale Raw Umber","#71502f"],["Sepia","#644b1e"],["Madder Brown","#762c19"],["Mars Brown Tobacco","#653514"],["Vandyke Brown","#4b3317"],["Turquoise Green","#b5decc"],["Glaucous Green","#b4cdc2"],["Dark Greenish Glaucous","#b7c2a9"],["Yellow Green","#afd472"],["Light Green Yellow","#c7d14f"],["Night Green","#87c540"],["Olive Yellow","#a6a159"],["Artemesia Green","#709390"],["Andover Green","#6d7e77"],["Rainette Green","#8fa071"],["Chromium Green","#719470"],["Pistachio Green","#648f7b"],["Sea Green","#00b49b"],["Benzol Green","#00978d"],["Light Porcelain Green","#00908a"],["Green","#489b6e"],["Dull Viridian Green","#009465"],["Oil Green","#819238"],["Diamine Green","#1a7444"],["Cossack Green","#437742"],["Lincoln Green","#555832"],["Blackish Olive","#42533e"],["Deep Slate Olive","#253122"],["Nile Blue","#bce4e5"],["Pale King's Blue","#a7d4e4"],["Light Glaucous Blue","#a5c8d1"],["Salvia Blue","#97acc8"],["Cobalt Green","#96d1aa"],["Calamine BLue","#78cdd0"],["Venice Green","#62c6bf"],["Cerulian Blue","#0093a5"],["Peacock Blue","#00939b"],["Green Blue","#099197"],["Olympic Blue","#5a82b3"],["Blue","#006eb8"],["Antwarp Blue","#007190"],["Helvetia Blue","#005b8d"],["Dark Medici Blue","#547076"],["Dusky Green","#004f46"],["Deep Lyons Blue","#1c4286"],["Violet Blue","#40456a"],["Vandar Poel's Blue","#064f6e"],["Dark Tyrian Blue","#12354e"],["Dull Violet Black","#1e0e3f"],["Deep Indigo","#051230"],["Deep Slate Green","#112f2c"],["Grayish Lavender - A","#b5b1d8"],["Grayish Lavender - B","#c0a9b3"],["Laelia Pink","#ca92a8"],["Lilac","#b984af"],["Eupatorium Purple","#bf5892"],["Light Mauve","#9a72aa"],["Aconite Violet","#a36aa5"],["Dull Blue Violet","#80719e"],["Dark Soft Violet","#66629c"],["Blue Violet","#6450a1"],["Purple Drab","#84565b"],["Deep Violet / Plumbeous","#70727c"],["Veronia Purple","#8c4c62"],["Dark Slate Purple","#704357"],["Taupe Brown","#7a4456"],["Violet Carmine","#713b4c"],["Violet","#4f4086"],["Red Violet","#59256a"],["Cotinga Purple","#501345"],["Dusky Madder Violet","#4e1d4c"],["White","#ffffff"],["Neutral Gray","#b6bfc1"],["Mineral Gray","#a2b0ad"],["Warm Gray","#a1a39a"],["Slate Color","#34454c"],["Black","#111314"]],"combos":[[1,[65,117]],[2,[61,129]],[3,[13,39]],[4,[50,150]],[5,[106,128]],[6,[7,131]],[7,[63,88]],[8,[66,133]],[9,[36,140]],[10,[66,73]],[11,[41,155]],[12,[50,119]],[13,[13,145]],[14,[9,40]],[15,[100,133]],[16,[33,111]],[17,[12,99]],[18,[3,152]],[19,[85,92]],[20,[115,135]],[21,[7,99]],[22,[54,126]],[23,[45,138]],[24,[83,145]],[25,[18,110]],[26,[47,82]],[27,[1,157]],[28,[84,131]],[29,[75,113]],[30,[29,155]],[31,[17,39]],[32,[49,92]],[33,[13,157]],[34,[8,154]],[35,[4,28]],[36,[68,87]],[37,[27,150]],[38,[105,126]],[39,[22,123]],[40,[14,70]],[41,[73,115]],[42,[59,149]],[43,[1,139]],[44,[101,120]],[45,[42,55]],[46,[63,158]],[47,[18,134]],[48,[24,123]],[49,[111,121]],[50,[41,152]],[51,[28,121]],[52,[38,158]],[53,[61,152]],[54,[100,112]],[55,[10,153]],[56,[134,149]],[57,[147,157]],[58,[32,99]],[59,[8,71]],[60,[39,129]],[61,[91,151]],[62,[54,158]],[63,[37,117]],[64,[139,141]],[65,[68,115]],[66,[58,79]],[67,[120,129]],[68,[4,54]],[69,[156,158]],[70,[13,107]],[71,[29,49]],[72,[38,111]],[73,[82,96]],[74,[87,119]],[75,[111,127]],[76,[39,156]],[77,[12,128]],[78,[44,116]],[79,[84,119]],[80,[38,138]],[81,[47,156]],[82,[32,152]],[83,[52,127]],[84,[42,132]],[85,[14,122]],[86,[13,99]],[87,[1,70]],[88,[42,121]],[89,[61,127]],[90,[8,139]],[91,[37,67]],[92,[5,100]],[93,[71,112]],[94,[41,125]],[95,[32,130]],[96,[59,76]],[97,[1,18]],[98,[84,127]],[99,[39,117]],[100,[72,140]],[101,[2,126]],[102,[41,67]],[103,[66,152]],[104,[28,38]],[105,[2,97]],[106,[122,130]],[107,[56,74]],[108,[8,27]],[109,[39,108]],[110,[31,86]],[111,[39,90]],[112,[7,158]],[113,[42,86]],[114,[60,122]],[115,[40,64]],[116,[2,142]],[117,[22,158]],[118,[59,86]],[119,[112,129]],[120,[2,29]],[121,[31,49,107]],[122,[22,46,100]],[123,[5,55,147]],[124,[35,59,93]],[125,[3,117,127]],[126,[41,59,126]],[127,[45,98,141]],[128,[1,116,138]],[129,[56,69,113]],[130,[13,28,149]],[131,[13,65,118]],[132,[38,47,71]],[133,[33,71,99]],[134,[8,138,150]],[135,[38,106,113]],[136,[21,103,150]],[137,[18,45,98]],[138,[47,55,116]],[139,[113,131,154]],[140,[47,122,157]],[141,[63,90,129]],[142,[26,68,113]],[143,[121,136,156]],[144,[24,63,158]],[145,[31,70,130]],[146,[69,81,105]],[147,[9,33,87]],[148,[58,60,117]],[149,[58,63,132]],[150,[42,70,88]],[151,[38,61,128]],[152,[18,32,112]],[153,[8,60,70]],[154,[22,54,121]],[155,[15,100,131]],[156,[58,114,149]],[157,[34,58,120]],[158,[55,66,92]],[159,[69,115,133]],[160,[68,82,124]],[161,[31,44,123]],[162,[10,96,136]],[163,[56,87,122]],[164,[17,60,149]],[165,[2,9,37]],[166,[7,40,132]],[167,[53,111,128]],[168,[55,128,145]],[169,[1,39,156]],[170,[24,60,150]],[171,[35,61,88]],[172,[66,122,150]],[173,[55,84,87]],[174,[1,134,147]],[175,[44,52,142]],[176,[0,42,115]],[177,[35,72,133]],[178,[41,112,119]],[179,[17,47,126]],[180,[45,138,154]],[181,[28,149,151]],[182,[13,86,131]],[183,[144,145,150]],[184,[9,41,74]],[185,[4,18,39]],[186,[32,49,121]],[187,[123,134,139]],[188,[96,113,114]],[189,[55,109,116]],[190,[41,65,158]],[191,[4,59,121]],[192,[46,86,144]],[193,[7,40,101]],[194,[15,42,120]],[195,[9,39,154]],[196,[70,111,142]],[197,[8,141,154]],[198,[19,56,102]],[199,[20,80,126]],[200,[28,52,97]],[201,[7,76,114]],[202,[87,114,157]],[203,[39,48,107]],[204,[24,66,112]],[205,[35,48,149]],[206,[1,47,66]],[207,[78,88,158]],[208,[38,119,122]],[209,[41,61,113]],[210,[45,55,107]],[211,[62,93,131]],[212,[29,77,113]],[213,[48,56,111]],[214,[41,78,149]],[215,[46,121,137]],[216,[15,102,158]],[217,[35,49,105]],[218,[123,133,144]],[219,[15,97,125]],[220,[25,49,139]],[221,[28,154,158]],[222,[59,61,67]],[223,[4,49,87]],[224,[9,124,147]],[225,[22,125,146]],[226,[37,46,149]],[227,[0,112,117]],[228,[28,39,154]],[229,[47,109,154]],[230,[7,87,114]],[231,[2,32,120]],[232,[22,44,131]],[233,[28,72,127]],[234,[45,82,111]],[235,[41,61,134]],[236,[69,126,143]],[237,[28,84,113]],[238,[49,151,156]],[239,[4,57,88]],[240,[6,54,117]],[241,[17,39,50,124]],[242,[8,19,105,158]],[243,[13,41,79,157]],[244,[4,14,95,122]],[245,[28,104,129,157]],[246,[1,27,38,45]],[247,[13,56,100,126]],[248,[8,69,133,146]],[249,[32,53,58,124]],[250,[57,64,99,110]],[251,[30,54,105,157]],[252,[12,13,68,119]],[253,[55,62,151,157]],[254,[1,38,76,135]],[255,[13,57,115,158]],[256,[48,63,103,158]],[257,[16,60,121,139]],[258,[35,44,76,122]],[259,[55,119,123,156]],[260,[10,48,88,99]],[261,[30,39,115,156]],[262,[12,41,71,106]],[263,[19,44,87,157]],[264,[1,17,89,117]],[265,[10,56,93,130]],[266,[16,41,96,100]],[267,[46,61,100,121]],[268,[4,13,109,110]],[269,[13,35,139,158]],[270,[12,38,79,106]],[271,[25,114,119,132]],[272,[39,63,87,113]],[273,[0,34,78,154]],[274,[64,73,120,138]],[275,[18,53,84,147]],[276,[8,42,90,158]],[277,[9,24,76,130]],[278,[46,58,106,125]],[279,[13,48,53,129]],[280,[12,107,135,147]],[281,[39,100,114,122]],[282,[12,51,114,136]],[283,[20,35,97,116]],[284,[11,56,99,125]],[285,[4,19,64,87]],[286,[19,60,118,127]],[287,[8,57,111,115]],[288,[61,83,147,158]],[289,[55,91,127,130]],[290,[37,39,107,114]],[291,[91,99,114,115]],[292,[39,44,50,53]],[293,[13,87,94,102]],[294,[38,46,106,113]],[295,[46,54,121,130]],[296,[38,49,82,157]],[297,[19,61,79,127]],[298,[13,55,64,158]],[299,[23,48,104,122]],[300,[7,46,87,115]],[301,[16,41,96,139]],[302,[46,53,110,122]],[303,[40,64,109,154]],[304,[32,46,73,100]],[305,[44,56,70,87]],[306,[55,100,103,110]],[307,[22,133,139,151]],[308,[3,21,65,114]],[309,[47,62,127,128]],[310,[38,44,76,109]],[311,[29,46,89,91]],[312,[19,61,94,123]],[313,[22,54,105,158]],[314,[8,32,126,152]],[315,[7,38,47,137]],[316,[33,103,149,150]],[317,[43,53,55,87]],[318,[80,108,125,132]],[319,[13,56,61,106]],[320,[5,38,104,112]],[321,[4,38,109,113]],[322,[16,27,137,142]],[323,[45,70,84,158]],[324,[29,120,139,154]],[325,[12,40,59,132]],[326,[38,64,90,92]],[327,[8,13,53,134]],[328,[27,62,86,101]],[329,[46,134,151,157]],[330,[52,110,113,119]],[331,[23,130,138,149]],[332,[5,21,109,125]],[333,[19,55,114,121]],[334,[42,76,90,122]],[335,[33,61,149,157]],[336,[8,32,39,108]],[337,[37,135,148,158]],[338,[28,60,125,134]],[339,[49,65,112,127]],[340,[64,99,154,158]],[341,[7,106,109,112]],[342,[1,46,77,109]],[343,[19,41,81,128]],[344,[45,126,139,158]],[345,[32,110,116,142]],[346,[24,87,91,95]],[347,[93,99,123,136]],[348,[52,106,109,151]]]}; window.PEOPLE = {"Adults":["Female_Adult_01","Female_Adult_02","Female_Adult_03","Female_Adult_04","Female_Adult_05","Female_Adult_06","Female_Adult_07","Female_Adult_08","Female_Adult_09","Female_Adult_10","Female_Adult_11","Female_Adult_12","Female_Adult_13","Female_Adult_14","Female_Adult_15","Female_Adult_16","Female_Adult_17","Female_Party_01","Female_Party_02","Male_Adult_01","Male_Adult_02","Male_Adult_03","Male_Adult_04","Male_Adult_05","Male_Adult_06","Male_Adult_07","Male_Adult_08","Male_Adult_09","Male_Adult_10","Male_Adult_11","Male_Adult_12","Male_Adult_13","Male_Adult_14","Male_Adult_15","Male_Adult_16","Male_Adult_17","Male_Adult_18","Male_Adult_19","Male_Adult_20","Male_Adult_21"],"Professions":["Business_Female_01","Business_Female_02","Business_Female_03","Business_Female_04","Business_Male_01","Business_Male_02","Business_Male_03","Business_Male_04","Business_Male_05","Business_Male_06","Business_Male_07","Chef_Female_01","Construction_Female_01","Construction_Male_01","Construction_Male_02","Construction_Male_03","Construction_Male_04","Construction_Male_05","Construction_Male_06","Construction_Male_07","Construction_Male_08","Delivery_Male_01","Fire_Female_01","Fire_Female_02","Fire_Female_03","Fire_Male_01","Fire_Male_02","Fire_Male_03","Fire_Male_04","Fire_Male_05","Fire_Male_06","Fire_Male_07","Gardener_Male_01","Medical_Female_01","Medical_Female_02","Medical_Female_03","Medical_Male_01","Medical_Male_02","Medical_Male_03","Medical_Male_04","Medical_Male_05","Military_Female_01","Military_Female_02","Military_Male_01","Military_Male_02","Military_Male_03","Military_Male_04","Military_Male_05","Military_Male_06","Pilot_Female_01","Pilot_Female_02","Pilot_Male_01","Pilot_Male_02","Pilot_Male_03","Police_Female_01","Police_Male_01","Police_Male_02","Police_Male_03","Police_Male_04","Police_Male_05","Police_Male_06","Police_Male_07","Security_Female_01","Security_Male_01","Sports_Female_01","Sports_Female_02","Sports_Male_01","Sports_Male_02","Sports_Male_03","Sports_Male_04","Wood_Male_01"]}
+;</script>
+<!-- Garden scene: the Palette, Scene and Render modules below are taken unchanged from
+voxel-qr-tree (canvas.html) by Nguyen Ha Nhat Minh, https://github.com/nguyenhanhatminh0105-hue/voxel-qr-tree
+
+MIT License
+
+Copyright (c) 2026 Nguyen Ha Nhat Minh
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+-->
+<script>
+/* ===========================================================================
+   palette.js - colour, and the contrast floor that governs it.
+
+   The whole diorama is a QR code seen from above, so every surface that can
+   land on a dark module competes with the paving for a scanner's attention.
+   WCAG-style relative luminance contrast is the working proxy: anything that
+   can sit over a dark module must clear MIN_RATIO against the paving colour.
+
+   That floor is not a style guide, it is a hard constraint. Pastel sakura pink
+   is about 1.2:1 against pale paving and simply will not scan.
+
+   But the floor is 3:1, and shipping colours at 5:1 or 8:1 spends headroom on
+   nothing while making the whole scene read as dark wine. Every foliage swatch
+   here sits just above 3.2:1, picked as a saturated hue AT that luminance
+   rather than a pastel multiplied toward black - see SWATCHES for why the
+   difference matters.
+
+   Two further rules keep the two colour families from converging:
+     - a surface that can sit on a DARK module may only ever be varied DARKER
+     - a surface on PAVING may only ever be varied LIGHTER
+   Violate those and the render still looks fine while the code quietly dies.
+
+   Side faces are exempt. They are never visible from straight overhead, so
+   they can carry colour the code could not survive on its top faces - that is
+   what lets the ginkgo have near-white bark.
+   =========================================================================== */
+(function (root, factory) {
+  var api = factory();
+  if (typeof module === 'object' && module.exports) module.exports = api;
+  else root.Palette = api;
+})(typeof self !== 'undefined' ? self : this, function () {
+  'use strict';
+
+  /* MIN_RATIO is the floor for a dark module's area-weighted MEAN. It is 2.45,
+     not 3.0, and that is measured rather than assumed: pushed through module
+     reconstruction, ZBar and the camera simulation, autumn golds hold at zero
+     module errors and 12/12 camera all the way down to 2.44:1, then fall off a
+     cliff - 26 module errors at 2.18 and 166 at 1.78.
+
+     This is the third time the same lesson has landed. The tone ladder, the
+     area-mean sampling and now the floor itself: the rule that protects
+     scanning is about the MODULE, not the surface, and a per-surface floor has
+     left headroom on the table every time it has been measured. The reference's
+     own rose sits at 2.1:1.
+
+     SOLID_MIN stays at 3.0 for grass, soil and bark - single-tone surfaces
+     covering a whole module, with no averaging to lean on. */
+  var MIN_RATIO = 2.45;         // sub-module surfaces, judged on their mean
+  var SOLID_MIN = 3.0;          // whole-module single-tone surfaces
+  var TONE_FLOOR = 1.75;        // no single tone may be lighter than this
+
+  /* WHAT ACTUALLY HAS TO CLEAR THE FLOOR is a module's area-weighted mean, not
+     every individual face. A scanner thresholds a module; it never sees a
+     voxel. Holding each surface at or above MIN_RATIO is stricter than
+     scanning requires, and it is what collapsed the canopy to a single tone:
+     any lighter variant got darkened straight back to the floor, leaving
+     nothing to dapple with. Uniform tone across a lattice of cubes is exactly
+     what reads as stacked bricks.
+
+     So there are two rules, not one:
+
+       SUB-MODULE surfaces (leaves) may use a tone ladder whose weighted MEAN
+       clears MIN_RATIO. Individual rungs may sit below it - the reference's
+       own code view mixes tones at 2.07:1, 2.53:1 and 3.21:1 and still
+       decodes - but none may go lighter than TONE_FLOOR, so a run of
+       highlights inside one module cannot lift it over.
+
+       WHOLE-MODULE surfaces (grass, soil, bark) keep the per-surface floor
+       exactly as before. One block covers one module, so there is no
+       averaging to rely on and every tone must clear MIN_RATIO by itself. */
+
+  // --- colour maths ------------------------------------------------------
+  function parseHex(hex) {
+    var h = hex.replace('#', '');
+    if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+    return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
+  }
+
+  function toHex(rgb) {
+    return '#' + rgb.map(function (v) {
+      var c = Math.max(0, Math.min(255, Math.round(v))).toString(16);
+      return c.length === 1 ? '0' + c : c;
+    }).join('');
+  }
+
+  function srgbToLinear(c) {
+    c /= 255;
+    return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+  }
+
+  function luminance(hex) {
+    var p = parseHex(hex);
+    return 0.2126 * srgbToLinear(p[0]) + 0.7152 * srgbToLinear(p[1]) + 0.0722 * srgbToLinear(p[2]);
+  }
+
+  function contrast(a, b) {
+    var la = luminance(a), lb = luminance(b);
+    var hi = Math.max(la, lb), lo = Math.min(la, lb);
+    return (hi + 0.05) / (lo + 0.05);
+  }
+
+  // Multiply toward black. Only ever used on dark-module surfaces.
+  function darken(hex, amount) {
+    var p = parseHex(hex);
+    var k = 1 - amount;
+    return toHex([p[0] * k, p[1] * k, p[2] * k]);
+  }
+
+  // Blend toward white. Only ever used on paving.
+  function lighten(hex, amount) {
+    var p = parseHex(hex);
+    return toHex([
+      p[0] + (255 - p[0]) * amount,
+      p[1] + (255 - p[1]) * amount,
+      p[2] + (255 - p[2]) * amount
+    ]);
+  }
+
+  /* Darken until the colour clears the floor against `paving`. Returns the
+     colour plus whether it had to move, so the UI/tests can report which
+     choices the contrast floor overrode rather than silently "fixing" them. */
+  function enforceContrast(hex, paving, minRatio) {
+    /* A floor below MIN_RATIO is almost certainly a mistake, and it fails
+       silently: the while loop simply never runs, the colour comes back
+       untouched, and `forced` reads false - indistinguishable from a colour
+       that was already dark enough. `enforceContrast('#ffffff', PAVING, 1)`
+       returned white, at 1.20:1, reporting success.
+
+       Note that 0 was already safe, because `|| MIN_RATIO` treats it as
+       absent, while 1 was not - the value that looks like "off" was the
+       harmless one and the innocuous-looking one disabled the check. Reject
+       anything under the floor rather than leaving that inverted. */
+    if (minRatio === undefined || minRatio === null || minRatio !== minRatio) {
+      minRatio = MIN_RATIO;
+    }
+    if (typeof minRatio !== 'number' || minRatio < MIN_RATIO) {
+      throw new Error('contrast floor ' + minRatio + ' is below MIN_RATIO ' +
+        MIN_RATIO + '; a lower floor silently disables the check');
+    }
+    var out = hex, steps = 0;
+    while (contrast(out, paving) < minRatio && steps < 60) {
+      out = darken(out, 0.05);
+      steps++;
+    }
+    return { hex: out, forced: steps > 0, steps: steps, ratio: contrast(out, paving) };
+  }
+
+  // --- ground ------------------------------------------------------------
+  // Paving is the light module and also the canvas background, so the 4-module
+  // quiet zone is the same colour as the light paving and reads as margin.
+  var PAVING = '#EDEAE3';
+  /* Ground sits just above the 3:1 floor, not the near-black 10:1 it is
+     tempting to reach for. The ground layer alone reproduces the matrix, so
+     the instinct is to make it as dark as possible - but every stop past the
+     floor is headroom spent on nothing, and a dark floor competes with the
+     tree. The plot should recede as a plaza, not read as a second pattern
+     fighting the canopy.
+
+     Soil and grass also sit close to each other in weight. Two ground tones of
+     clearly different lightness make the floor read as a busy checkerboard;
+     near-equal luminance lets it read as one surface with variation in it. */
+  /* Ground surfaces carry a night variant. Hue is free for a QR code -
+     scanners threshold on LUMINANCE, which is why every surface here is
+     measured with contrast() against PAVING rather than by eye. What is not
+     free is polarity: dark modules on a light ground is what a scanner
+     assumes, so the paving never moves and these stay above SOLID_MIN.
+
+     Foliage deliberately does NOT get a night variant. Sakura pink, ginkgo
+     gold and willow teal are the species identity; a night sakura that is not
+     pink has stopped being a sakura. The ground is scenery, so it can cool to
+     moonlight without touching what the tree is. */
+  var SOIL_DAY = '#8d826e';    // warm stone, 3.15:1
+  var SOIL_NIGHT = '#7c7f8e';  // cool stone,  3.31:1
+  var GRASS_DAY = '#698d57';   // 3.15:1
+  var GRASS_NIGHT = '#4f7d6b'; // moonlit green, 3.90:1
+  var NIGHT = false;
+  function setNight(on) { NIGHT = !!on; }
+  function SOIL_() { return NIGHT ? SOIL_NIGHT : SOIL_DAY; }
+  function GRASS_() { return NIGHT ? GRASS_NIGHT : GRASS_DAY; }
+  var SLAB_SIDE = '#6E6152';  // never seen from overhead
+
+  /* Six foliage swatches, each sitting just above MIN_RATIO rather than well
+     past it.
+
+     HOW THESE WERE PICKED, because the obvious method produces mud. Taking a
+     pastel and darkening it toward black until it clears the floor also drains
+     its saturation: #F8C8DC treated that way lands on #947884, a grey mauve
+     that reads as dead wine rather than blossom. The multiply is the problem -
+     it scales all three channels together, so chroma collapses along with
+     luminance.
+
+     Instead each swatch is a SATURATED hue chosen AT the target luminance:
+     fix hue and saturation, then solve lightness for the ratio. That keeps the
+     colour vivid at 3.2:1 where the darkened version was muddy at 5.4:1.
+
+     `wanted` keeps the pastel a designer would reach for, so the report can
+     still show what the floor rules out. */
+  var SWATCHES = [
+    { id: 'rose', name: 'Rose', wanted: '#F8C8DC', hex: '#c1647d' },
+    { id: 'jade', name: 'Jade', wanted: '#7BC47F', hex: '#4b8f5b' },
+    { id: 'amber', name: 'Amber', wanted: '#F2B441', hex: '#9c7c51' },
+    { id: 'indigo', name: 'Indigo', wanted: '#8FA8DE', hex: '#6182ba' },
+    { id: 'plum', name: 'Plum', wanted: '#C79BE0', hex: '#ae64c0' },
+    { id: 'moss', name: 'Moss', wanted: '#AFC46B', hex: '#738947' }
+  ];
+
+  /* Leaf tone ladder: offsets from the base (positive lightens) and the share
+     of voxels each takes. Sub-module, so the weighted mean is what matters. */
+  /* The ladder is asymmetric: capped at +0.13 on the light side, running to
+     -0.32 on the dark. A symmetric +/-0.26 ladder looks better in isolation
+     but its highlight rung crosses the threshold the matrix-reconstruction
+     test samples at, on four of the six swatches - and that test duly caught
+     it, 12 modules flipping light. ZBar still read those codes, because real
+     scanners threshold locally; the fixed-threshold test is the stricter
+     canary and is worth keeping strict.
+
+     Weights were then solved so the area-weighted mean is unchanged despite
+     the asymmetry - it drifts by at most 0.009 across the six swatches. */
+  var LEAF_LADDER = [
+    { d: 0.13, w: 0.14 },   // highlight
+    { d: 0.065, w: 0.24 },  // light
+    { d: 0.00, w: 0.44 },   // base
+    { d: -0.16, w: 0.12 },  // shade
+    { d: -0.32, w: 0.06 }   // deep
+  ];
+  /* Grass gets five rungs like the leaves, with pale tips at the light end -
+     that is what makes the reference's grass read as grass rather than green
+     paint. Blades are sub-module so the mean is what counts, but the tile
+     underneath is whole-module, so enforceContrast still gates each rung. */
+  var GRASS_LADDER = [
+    { d: 0.22, w: 0.12 },
+    { d: 0.11, w: 0.22 },
+    { d: 0.00, w: 0.34 },
+    { d: -0.10, w: 0.20 },
+    { d: -0.20, w: 0.12 }
+  ];
+  // Narrower, and every rung must clear the floor on its own.
+  var GROUND_LADDER = [
+    { d: 0.05, w: 0.28 },
+    { d: 0.00, w: 0.40 },
+    { d: -0.10, w: 0.32 }
+  ];
+
+  /* Each species has its own foliage colour, so the four are distinguishable
+     without touching a swatch. The swatch overrides this only when the user
+     picks one - previously the swatch drove colour and species set only bark,
+     so all four trees were the same shade. All verified at the floor. */
+  var SPECIES_FOLIAGE = {
+    sakura: '#eb6a8c',   // blossom pink      2.51:1
+    oak:    '#4ba660',   // deep summer green 2.52:1
+    ginkgo: '#ad914e',   // autumn gold       2.52:1
+    willow: '#49a391'    // sage              2.52:1
+  };
+
+  // Per-species surfaces that are not the swatch colour.
+  var SPECIES_COLOURS = {
+    sakura: { barkTop: '#4A3328', barkSide: '#7A5A46' },
+    oak:    { barkTop: '#3E2F22', barkSide: '#6B513A' },
+    // The ginkgo is the reason side faces are worth treating separately: a dark
+    // top face keeps the code alive while near-white sides read as the pale
+    // ribboned bark the tree is known for.
+    ginkgo: { barkTop: '#413B30', barkSide: '#E4DED2' },
+    willow: { barkTop: '#3A3B2E', barkSide: '#6E6A55' }
+  };
+
+  /* Build the full colour set for a species + swatch, with every dark-module
+     surface pushed through the contrast floor. */
+  function build(speciesId, swatchId) {
+    // Fail loudly on an unknown species. A `|| SPECIES_COLOURS.oak` fallback
+    // here once let a stale species name in the test harness silently render a
+    // second oak, so a sweep reported 100% while never testing one species.
+    if (!SPECIES_FOLIAGE[speciesId]) throw new Error('unknown species: ' + speciesId);
+    // swatchId null/'auto' means "use the species default"
+    var swatch = SWATCHES.filter(function (s) { return s.id === swatchId; })[0];
+    var foliage = swatch ? swatch.hex : SPECIES_FOLIAGE[speciesId];
+    if (!swatch) swatch = { id: 'auto', name: 'Species', hex: foliage, wanted: foliage };
+    var sp = SPECIES_COLOURS[speciesId];
+    var forced = [];
+
+    function gate(label, hex, floor) {
+      var r = enforceContrast(hex, PAVING, floor || MIN_RATIO);
+      if (r.forced) forced.push({ label: label, from: hex, to: r.hex, ratio: r.ratio });
+      return r.hex;
+    }
+
+    var pal = {
+      paving: PAVING,
+      soil: gate('soil', SOIL_(), SOLID_MIN),
+      slabSide: SLAB_SIDE,
+      foliageTop: gate('foliage', foliage),
+      barkTop: gate('bark', sp.barkTop, SOLID_MIN),
+      barkSide: sp.barkSide,          // side face: exempt from the floor
+      grassTop: gate('grass', GRASS_(), SOLID_MIN),
+      swatch: swatch,
+      forced: forced
+    };
+    /* Side shading. Two tones per material, one per visible side face, so the
+       3-D view reads as volume.
+
+       Sides go DARKER than the top, which is the opposite of the first thing
+       you would try. The contrast floor has already forced every top face to
+       be dark; if the sides are then made lighter, every leaf reads as a dark
+       cap on a pale stalk and the crown looks like a field of mushrooms. Since
+       side faces are exempt from the floor, shading them down instead restores
+       ordinary top-lit form for free. The ginkgo is the exception - its pale bark
+       is the whole point, so it keeps light sides. */
+    function sides(top, a, b) {
+      return { top: top, sideA: darken(top, a), sideB: darken(top, b) };
+    }
+    pal.mat = {
+      leaf: sides(pal.foliageTop, 0.16, 0.32),
+      grass: sides(pal.grassTop, 0.16, 0.32),
+      soil: sides(pal.soil, 0.16, 0.32),
+      bark: { top: pal.barkTop, sideA: pal.barkSide, sideB: darken(pal.barkSide, 0.16) }
+    };
+
+    /* Tone ladders. Every leaf carrying one colour is what makes a crown read
+       as a grid of identical bricks rather than a mass of foliage; the
+       reference has roughly 24 tone families against our 4. Weights are chosen
+       so the area-weighted mean luminance is unchanged - the module is exactly
+       as dark as it was, it simply is not flat. */
+    pal.mat.leaf.ladder = LEAF_LADDER.map(function (r) {
+      var hex = r.d > 0 ? lighten(pal.foliageTop, r.d) : darken(pal.foliageTop, -r.d);
+      return { top: hex, sideA: darken(hex, 0.16), sideB: darken(hex, 0.32), w: r.w };
+    });
+    /* Ground blocks cover a whole module each, so their rungs stay above the
+       per-surface floor and the spread is deliberately narrow. */
+    ['grass', 'soil'].forEach(function (k) {
+      var baseHex = k === 'grass' ? pal.grassTop : pal.soil;
+      var rungs = k === 'grass' ? GRASS_LADDER : GROUND_LADDER;
+      pal.mat[k].ladder = rungs.map(function (r) {
+        var hex = r.d > 0 ? lighten(baseHex, r.d) : darken(baseHex, -r.d);
+        hex = enforceContrast(hex, PAVING, SOLID_MIN).hex;   // whole-module
+        return { top: hex, sideA: darken(hex, 0.16), sideB: darken(hex, 0.32), w: r.w };
+      });
+    });
+
+    /* Fallen blossom. Ground under the crown is carpeted with these rather
+       than left as bare soil: leaf cubes are smaller than their module, so
+       from overhead the gaps would show brown and the crown would read as
+       speckle on dirt instead of a solid block of colour. Both tones are
+       DARKER than the leaves above them, so they clear the floor by more
+       than the foliage does - the carpet costs nothing in contrast.
+
+       Together with the two side tones this is the five-tone ladder:
+         top 0   right -16%   fallen -24%   left -32%   fallen2 -34%  */
+    /* Kept close to the foliage rather than well below it. The point of the
+       carpet is that a crown module reads SOLID from overhead - leaf cube
+       where there is a leaf, fallen petal where there is not, in one colour.
+       Pushing the carpet far darker reintroduced it as a third weight on the
+       floor competing with the tree. */
+    // plain stone under the canopy; the backing plate carries the module
+    pal.mat.plaza = sides(pal.soil, 0.16, 0.32);
+    pal.mat.fallen = sides(darken(pal.foliageTop, 0.08), 0.16, 0.32);
+    pal.mat.fallen2 = sides(darken(pal.foliageTop, 0.16), 0.16, 0.32);
+    pal.foliageSide = pal.mat.leaf.sideA;
+    pal.grassSide = pal.mat.grass.sideA;
+    pal.soilSide = darken(pal.soil, 0.10);
+    return pal;
+  }
+
+  // Report every top-face colour against the floor. Used by the test harness
+  // and by the in-page contrast readout.
+  // Area-weighted mean contrast of a ladder against the paving.
+  function ladderMeanRatio(rungs) {
+    var L = 0, W = 0;
+    for (var i = 0; i < rungs.length; i++) {
+      L += luminance(rungs[i].top) * rungs[i].w;
+      W += rungs[i].w;
+    }
+    return (luminance(PAVING) + 0.05) / (L / W + 0.05);
+  }
+
+  function audit() {
+    var rows = [];
+    function add(label, hex, exempt, floor) {
+      rows.push({
+        label: label, hex: hex, ratio: contrast(hex, PAVING),
+        pass: exempt || contrast(hex, PAVING) >= (floor || MIN_RATIO), exempt: !!exempt
+      });
+    }
+    add('paving (reference)', PAVING, true);
+    add('soil', SOIL_(), false, SOLID_MIN);
+    add('grass', GRASS_(), false, SOLID_MIN);
+    SWATCHES.forEach(function (s) {
+      add('foliage ' + s.name, s.hex);
+      rows.push({
+        label: 'foliage ' + s.name + ' (natural choice, rejected)',
+        hex: s.wanted, ratio: contrast(s.wanted, PAVING),
+        pass: contrast(s.wanted, PAVING) >= MIN_RATIO, rejected: true
+      });
+    });
+    Object.keys(SPECIES_COLOURS).forEach(function (k) {
+      add(k + ' bark top', SPECIES_COLOURS[k].barkTop, false, SOLID_MIN);
+      add(k + ' bark side (side face, exempt)', SPECIES_COLOURS[k].barkSide, true);
+    });
+    /* Ladder checks. Leaves are judged on their weighted mean, with a
+       per-tone backstop; ground ladders are judged per rung. */
+    SWATCHES.forEach(function (sw) {
+      var pal = build('sakura', sw.id);
+      var mean = ladderMeanRatio(pal.mat.leaf.ladder);
+      var lightest = Math.min.apply(null, pal.mat.leaf.ladder.map(function (r) {
+        return contrast(r.top, PAVING);
+      }));
+      rows.push({
+        label: 'leaf ladder ' + sw.name + ' (weighted mean of 5 tones)',
+        hex: pal.mat.leaf.top, ratio: mean, pass: mean >= MIN_RATIO, ladder: true
+      });
+      rows.push({
+        label: 'leaf ladder ' + sw.name + ' lightest tone (backstop ' + TONE_FLOOR + ':1)',
+        hex: pal.mat.leaf.ladder[0].top, ratio: lightest,
+        pass: lightest >= TONE_FLOOR, ladder: true
+      });
+    });
+    var gp = build('sakura', 'rose');
+    ['grass', 'soil'].forEach(function (k) {
+      gp.mat[k].ladder.forEach(function (r, i) {
+        rows.push({
+          label: k + ' ladder rung ' + i + ' (whole module: hard floor)',
+          hex: r.top, ratio: contrast(r.top, PAVING),
+          pass: contrast(r.top, PAVING) >= SOLID_MIN
+        });
+      });
+    });
+    return rows;
+  }
+
+  return {
+    SPECIES_FOLIAGE: SPECIES_FOLIAGE,
+    MIN_RATIO: MIN_RATIO,
+    SOLID_MIN: SOLID_MIN,
+    TONE_FLOOR: TONE_FLOOR,
+    ladderMeanRatio: ladderMeanRatio,
+    PAVING: PAVING,
+    SOIL: SOIL_DAY,
+    setNight: setNight,
+    SWATCHES: SWATCHES,
+    SPECIES_COLOURS: SPECIES_COLOURS,
+    luminance: luminance,
+    contrast: contrast,
+    darken: darken,
+    lighten: lighten,
+    enforceContrast: enforceContrast,
+    build: build,
+    audit: audit
+  };
+});
+
+</script>
+<script>
+/* ===========================================================================
+   scene.js - planting. Turns a QR matrix into a list of voxels.
+
+   THE CENTRAL RULE: every voxel above ground sits on a dark module. Nothing
+   else about the planting matters to the code, because darkness is a property
+   of (x, y) only - it does not vary with height. Two consequences shape all
+   four species:
+
+     - A vertical column planted on a dark cell is dark at every level, so
+       trunks and willow tendrils are never eroded.
+     - Anything that spreads in x/y - crowns, limbs, foliage - gets carved by
+       the matrix. That carving IS the look. Do not "repair" it.
+
+   Gaps in foliage are safe. A rule forcing foliage to fill its module would
+   turn every crown into a stack of crates. What the gaps must NOT show is
+   bare brown ground: see the fallen-blossom carpet in groundBlocks() below.
+
+   Every dark module becomes a RAISED block, never a flat tile. Flat tiles
+   make the plot read as ink printed on a floor; raised blocks make it read as
+   terrain the tree is growing out of.
+
+   A cube may be smaller than its module and offset within it, but must never
+   cross the edge - see place(), which is the only way voxels are created.
+
+   Dimensions are fractions of n, the matrix size, so a version 2 code and a
+   version 10 code grow trees of the same proportion.
+   =========================================================================== */
+(function (root, factory) {
+  var api = factory(
+    typeof require === 'function' ? require('./palette.js') : root.Palette
+  );
+  if (typeof module === 'object' && module.exports) module.exports = api;
+  else root.Scene = api;
+})(typeof self !== 'undefined' ? self : this, function (Palette) {
+  'use strict';
+
+  // --- deterministic randomness -----------------------------------------
+  // Same URL + species + swatch always grows the same tree.
+  function hashString(str) {
+    var h = 2166136261 >>> 0;
+    for (var i = 0; i < str.length; i++) {
+      h ^= str.charCodeAt(i);
+      h = Math.imul(h, 16777619) >>> 0;
+    }
+    return h >>> 0;
+  }
+
+  function mulberry32(seed) {
+    var a = seed >>> 0;
+    return function () {
+      a = (a + 0x6D2B79F5) >>> 0;
+      var t = a;
+      t = Math.imul(t ^ (t >>> 15), 1 | t);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  /* Wind phase, hashed from the COLUMN - deliberately not from z.
+
+     Including z gave every voxel in a vertical stack its own phase, so the
+     nine bark voxels of a trunk displaced independently and the trunk split at
+     its seams instead of bending: two abutting segments could sit at +0.193
+     and -0.018 at the same instant, a 0.21-module tear. The same defect made
+     the canopy boil rather than sway, because every leaf ran on its own clock.
+
+     Phase per column means a column moves as one piece and neighbouring
+     columns lag into a wave, which is what reads as wind. */
+  function phaseAt(x, y) {
+    var h = Math.imul(((x * 73856093) ^ (y * 19349663)) >>> 0, 2654435761) >>> 0;
+    return (h / 4294967296) * Math.PI * 2;
+  }
+
+  /* Tone hash for dappling. Deliberately hashed on the VOXEL - position and
+     height - not the column. Wind phase wants a whole column to move together;
+     dappling wants the opposite, neighbours differing, so a crown reads as a
+     mass of foliage rather than a grid of identical bricks. Pure position, so
+     it never consumes the random stream and stays stable across rebuilds. */
+  function toneHash(x, y, z) {
+    var h = ((x * 2654435761) ^ (y * 40503) ^ (z * 3266489917)) >>> 0;
+    h = Math.imul(h ^ (h >>> 15), 2246822519) >>> 0;
+    return (h >>> 8) / 16777216;
+  }
+
+  function pickRung(ladder, r) {
+    var acc = 0;
+    for (var i = 0; i < ladder.length; i++) {
+      acc += ladder[i].w;
+      if (r < acc) return ladder[i];
+    }
+    return ladder[ladder.length - 1];
+  }
+
+  // Stable per-module noise, for picking between tones without consuming the
+  // random sequence (so tone choice does not shift when density changes).
+  function cellNoise(x, y) {
+    var h = Math.imul(((x * 374761393) ^ (y * 668265263)) >>> 0, 1274126177) >>> 0;
+    return (h >>> 8) / 16777216;
+  }
+
+  // The slab spans SLAB_BOTTOM..SLAB_TOP; ground blocks are seated on its top
+  // face so no sliver of paving shows beneath them. Their bottom face is never
+  // drawn, so being coplanar with the slab top cannot z-fight.
+  var SLAB_BOTTOM = -1.5, SLAB_TOP = -0.02;
+
+  /* Per-kind wind stiffness. Bark and leaf obeying the same law made trunks
+     sway like saplings; a trunk should barely move while its foliage does. */
+  var STIFFNESS = {
+    bark: 0.15, leaf: 1.0, tendril: 1.0, blade: 0.4, grass: 0.4, ground: 0
+  };
+
+  /* Vertical depth of canopy actually filled per column. A flat minimum plus
+     a fraction of the span: rim columns (short spans) fill completely, while
+     interior columns keep a proportional body rather than a thin lid, which is
+     what stopped the crown reading as a hanging curtain. Capped so very large
+     codes stay affordable. */
+  /* SHELL_MAX caps how deep the shell goes so an enormous crown cannot
+     generate unbounded voxels. At 9.0 that cap was distorting SHAPE rather
+     than bounding cost: the ginkgo's columns span 19 modules on average, so
+     span * SHELL_FRAC wanted 13.4 and got clipped to 9.0, leaving 26% of every
+     column hollow. A wide crown hides that behind the columns in front - the
+     oak is 33 modules across - but the ginkgo is only 18 wide and you looked
+     straight through the middle of it. 13.5 lets the proportional rule run to
+     the spans this project actually produces: hollow columns fall from 45/130
+     to 9/130 on the ginkgo and 6/329 to 0 on the oak, for 7% more voxels. */
+  var SHELL_MIN = 4.2, SHELL_FRAC = 0.70, SHELL_MAX = 22.0;
+  /* The crown needs an underside too. Filling only downward from the top left
+     each column a cap on a much longer span - a hollow dome with nothing
+     beneath it, which is why the crown looked unmoored from the plot.
+
+     The defence for a top-only shell was that deeper leaves are occluded by
+     the columns in front. That premise is false at 35 degrees elevation: the
+     columns in front were shelled away as well, so nothing is left to do the
+     occluding and you look straight under the dome and out the other side.
+
+     The lower shell is thinner than the upper one because less of the
+     underside is ever seen. Both scale with span, so the fill still tracks
+     crown FOOTPRINT rather than volume and the 45,000-leaf case stays gone.
+
+     This ratio is also the cheapest lever on voxel count: you see far less of
+     the underside than the top, so thinning it costs little visually. */
+  var SHELL_LOWER = 0.58;
+  var BRIDGE = 2.5;       // vertical slack merged away rather than left hollow
+
+  var SPECIES = [
+    { id: 'sakura', season: 'Spring', name: 'Sakura', fall: 'petals' },
+    { id: 'oak', season: 'Summer', name: 'Oak', fall: 'seeds' },
+    { id: 'ginkgo', season: 'Autumn', name: 'Ginkgo', fall: 'leaves' },
+    { id: 'willow', season: 'Winter', name: 'Willow', fall: 'snow' }
+  ];
+
+  /* --- the one voxel constructor ----------------------------------------
+     Places a box inside module (mx, my). `size` is the plan footprint as a
+     fraction of a module; the offset is chosen so the box is strictly inside
+     its module. Crossing a module edge would put dark pixels over a paving
+     module and corrupt the code, so the clamp here is load-bearing, not
+     defensive tidiness. */
+  /* The ONE voxel constructor, and the one place both planting invariants are
+     enforced:
+
+       1. a voxel never crosses its module edge - structural, via the slack
+          left over from the clamped size;
+       2. a voxel only ever sits on a DARK module.
+
+     Rule 2 used to live in the five callers (addSpan, trunk, limb, tendril,
+     groundBlocks) by convention, while the comment above this function claimed
+     the invariant was "enforced in exactly one place". It was not: only rule 1
+     was. A new planting helper written against that comment would have called
+     place() directly, planted foliage on paving, and produced a code that ZBar
+     still decodes most of the time - the exact shape of failure this project
+     has already shipped twice. Taking the Ctx instead of its output array
+     makes the matrix reachable, so the rule can be checked where it belongs. */
+  function place(ctx, mx, my, z, size, height, mat, kind, rnd) {
+    if (!ctx.isDark(mx, my)) {
+      throw new Error('place() on a light module at ' + mx + ',' + my +
+        ' (' + kind + '): every voxel above ground must sit on a dark module');
+    }
+    var out = ctx.out;
+    size = Math.max(0.06, Math.min(1, size));
+    var slack = 1 - size;
+    /* Bark is centred, never jittered. place()'s positional jitter is right
+       for foliage and wrong for a trunk: applied to nine stacked bark
+       segments it made the trunk centre wander 0.26 modules in x and 0.35 in
+       y, a visible zig-zag. A trunk is one axis, top to bottom. */
+    /* Bark and blades are centred, never jittered. Bark because a trunk is
+       one axis top to bottom. Blades because a tuft splays from a common
+       root - and because centring is what makes the splay clamp exact: from
+       the centre there is (1 - size)/2 of room on every side, so a lean
+       within that can never carry the tip over a module edge. */
+    var centred = kind === 'bark';
+    var ox = slack > 0 ? (centred ? slack / 2 : rnd() * slack) : 0;
+    var oy = slack > 0 ? (centred ? slack / 2 : rnd() * slack) : 0;
+    // Dapple: pick a rung of the material's tone ladder from the voxel's own
+    // position, so adjacent voxels differ. See toneHash.
+    var tone = mat.ladder
+      ? pickRung(mat.ladder, toneHash(mx, my, Math.round(z * 16)))
+      : mat;
+    out.push({
+      x: mx + ox, y: my + oy, z: z,
+      w: size, d: size, h: height,
+      top: tone.top, side: tone.sideA, sideA: tone.sideA, sideB: tone.sideB,
+      kind: kind,
+      shape: SHAPE[kind] || 'box',
+      // static splay, in modules, applied at the top like the wind shear
+      leanX: 0, leanY: 0,
+      phase: phaseAt(mx, my)
+    });
+  }
+
+  /* Nothing in the reference is a cube. Voxels carry a shape so each renderer
+     can draw the right solid: a tapered cylinder for bark, a rounded blob for
+     blossom, a splayed spike for a grass blade, and a flat quad for ground.
+     The code invariant is unchanged - it is about what a module looks like
+     from directly overhead, not about anything being a box. */
+  var SHAPE = {
+    bark: 'cyl', leaf: 'blob', tendril: 'blob',
+    blade: 'blade', ground: 'tile', grass: 'tile'
+  };
+
+  // --- helpers -----------------------------------------------------------
+  function makeDark(matrix) {
+    var n = matrix.length;
+    return function (mx, my) {
+      return mx >= 0 && my >= 0 && mx < n && my < n && matrix[my][mx];
+    };
+  }
+
+  // The dark cell nearest a target, so trunks land on solid ground.
+  function nearestDark(matrix, tx, ty) {
+    var n = matrix.length, best = null, bestD = Infinity;
+    for (var y = 0; y < n; y++) {
+      for (var x = 0; x < n; x++) {
+        if (!matrix[y][x]) continue;
+        var d = (x - tx) * (x - tx) + (y - ty) * (y - ty);
+        if (d < bestD) { bestD = d; best = [x, y]; }
+      }
+    }
+    return best || [Math.floor(n / 2), Math.floor(n / 2)];
+  }
+
+  /* A planting context. `claimed` records every module that ends up with
+     foliage overhead; groundBlocks() later carpets those with fallen blossom
+     instead of leaving them bare soil. */
+  function Ctx(matrix, pal, rnd, species) {
+    this.species = species;
+    this.matrix = matrix;
+    this.n = matrix.length;
+    this.pal = pal;
+    this.rnd = rnd;
+    this.isDark = makeDark(matrix);
+    this.out = [];
+    this.spans = {};
+    this.crownZ = {};        // per module: [lowest leaf z, highest leaf z]
+    this.crownTop = -Infinity;
+    this.crownBottom = Infinity;
+    this.claimed = [];
+    for (var i = 0; i < this.n; i++) this.claimed.push(new Array(this.n).fill(false));
+  }
+
+  Ctx.prototype.claim = function (mx, my) {
+    if (mx >= 0 && my >= 0 && mx < this.n && my < this.n) this.claimed[my][mx] = true;
+  };
+
+  /* --- canopy -----------------------------------------------------------
+
+     Crowns are built in two phases: each cloud RECORDS a vertical span per
+     column, then growCanopy() fills every column once. Three reasons.
+
+     1. COLUMNS, NOT SAMPLES. The old version scattered points through a ball
+        and discarded any landing on a light module. Survivors were Poisson
+        distributed per column, so some dark columns got one leaf and some got
+        none - and an empty column is a hole you can see straight through. That
+        speckle, not the matrix carving, is what made the canopy read as lace.
+        A column filled continuously is either solid or absent, never speckled.
+        It also stops throwing away the ~50% of samples that landed on paving.
+
+     2. VOLUME, NOT FOOTPRINT. Leaf count used to scale with PI*r*r and ignore
+        halfH entirely, so making a crown taller - which is the actual fix for
+        see-through foliage - spread the same leaves through more volume and
+        made the lattice worse. Filling by column makes count track volume
+        automatically, so height and density stop fighting each other.
+
+     3. OVERLAPPING CLOUDS DON'T DOUBLE UP. Species stack several clouds; where
+        they overlap, per-cloud filling would stack two sets of leaves in the
+        same column. Merging spans first means one pass, one stack.
+
+     The carving is untouched: light modules still produce nothing. What changes
+     is that surviving columns are opaque, and a crown with real depth along the
+     view axis puts foliage behind every gap. */
+  Ctx.prototype.addSpan = function (mx, my, zBot, zTop) {
+    if (!this.isDark(mx, my)) return;
+    if (zTop - zBot < 0.15) return;
+    this.claim(mx, my);
+    var k = my * this.n + mx;
+    (this.spans[k] || (this.spans[k] = [])).push([zBot, zTop]);
+  };
+
+  /* Record one ellipsoid. `lowBound` is -1 for a full ellipsoid or 0 for a
+     dome (upper half only). */
+  Ctx.prototype.cloud = function (cx, cy, cz, r, halfH, lowBound) {
+    if (lowBound === undefined) lowBound = -1;
+    var x0 = Math.floor(cx - r), x1 = Math.ceil(cx + r);
+    var y0 = Math.floor(cy - r), y1 = Math.ceil(cy + r);
+    for (var my = y0; my <= y1; my++) {
+      for (var mx = x0; mx <= x1; mx++) {
+        var dx = (mx + 0.5 - cx) / r, dy = (my + 0.5 - cy) / r;
+        var q = dx * dx + dy * dy;
+        if (q >= 1) continue;
+        var span = halfH * Math.sqrt(1 - q);   // ellipsoid half-extent here
+        this.addSpan(mx, my, cz + lowBound * span, cz + span);
+      }
+    }
+  };
+
+  /* A cluster of small clouds rather than one big ellipsoid. One cloud reads
+     as a ball; several overlapping at jittered offsets read as foliage. The
+     core is drawn first and is deliberately large enough to keep the interior
+     continuous - canopy only materialises over dark modules, so a lobe pushed
+     out on its own can land over a light region and leave a bite out of the
+     crown. The core is what stops that. */
+  Ctx.prototype.clump = function (cx, cy, cz, r, halfH, count, lowBound) {
+    var rnd = this.rnd;
+    this.cloud(cx, cy, cz, r * 0.80, halfH * 0.94, lowBound);
+    for (var i = 0; i < count; i++) {
+      var a = rnd() * Math.PI * 2;
+      var d = r * (0.26 + rnd() * 0.40);
+      this.cloud(cx + Math.cos(a) * d, cy + Math.sin(a) * d,
+                 cz + halfH * (rnd() - 0.5) * 0.70,
+                 r * (0.40 + rnd() * 0.26), halfH * (0.54 + rnd() * 0.32), lowBound);
+    }
+  };
+
+  Ctx.prototype.dome = function (cx, cy, cz, r, halfH) {
+    this.cloud(cx, cy, cz, r, halfH, 0);
+  };
+
+  // One continuous run of leaves up a column between two heights.
+  Ctx.prototype.stack = function (mx, my, z, zTop, pack, sizeLo, sizeHi) {
+    var rnd = this.rnd;
+    var k = my * this.n + mx;
+    var cz = this.crownZ[k] || (this.crownZ[k] = [Infinity, -Infinity]);
+    if (z < cz[0]) cz[0] = z;
+    if (zTop > cz[1]) cz[1] = zTop;
+    while (z < zTop) {
+      var size = sizeLo + rnd() * (sizeHi - sizeLo);
+      var h = size * (0.95 + rnd() * 0.6);
+      place(this, mx, my, z, size, h, this.pal.mat.leaf, 'leaf', rnd);
+      z += h * pack;
+    }
+  };
+
+  /* Merge each column's spans and stack leaves up them continuously.
+     `pack` is the vertical advance as a fraction of leaf height: below 1 the
+     stack overlaps, which is what makes a column opaque. */
+  Ctx.prototype.growCanopy = function (pack, sizeLo, sizeHi) {
+    var rnd = this.rnd, n = this.n;
+    var keys = Object.keys(this.spans).map(Number).sort(function (a, b) { return a - b; });
+    for (var i = 0; i < keys.length; i++) {
+      var k = keys[i], mx = k % n, my = (k - mx) / n;
+      var iv = this.spans[k].slice().sort(function (a, b) { return a[0] - b[0]; });
+      var merged = [], cur = iv[0].slice();
+      for (var j = 1; j < iv.length; j++) {
+        /* Bridge a small gap rather than starting a new span. Two clumps that
+           miss each other by a module leave a slot of clear air up the column,
+           and on a narrow crown - the ginkgo is 18 modules across, with nothing
+           in front to hide it - that slot reads as a bite taken out of the tree
+           rather than as foliage texture. Anything wider than BRIDGE is left
+           alone, so real separation between lobes survives. */
+        if (iv[j][0] <= cur[1] + BRIDGE) cur[1] = Math.max(cur[1], iv[j][1]);
+        else { merged.push(cur); cur = iv[j].slice(); }
+      }
+      merged.push(cur);
+      for (var m = 0; m < merged.length; m++) {
+        var zBot = merged[m][0], zTop = merged[m][1];
+        if (zBot < this.crownBottom) this.crownBottom = zBot;
+        if (zTop > this.crownTop) this.crownTop = zTop;
+        /* Fill a shell at each end of the span, not the whole span, and not
+           only the top - see SHELL_LOWER. */
+        var span = zTop - zBot;
+        var upper = Math.min(SHELL_MAX, Math.max(SHELL_MIN, span * SHELL_FRAC));
+        var topStart = Math.max(zBot, zTop - upper);
+        this.stack(mx, my, topStart, zTop, pack, sizeLo, sizeHi);
+        if (topStart > zBot) {
+          var botEnd = Math.min(topStart, zBot + upper * SHELL_LOWER);
+          if (botEnd > zBot) this.stack(mx, my, zBot, botEnd, pack, sizeLo, sizeHi);
+        }
+      }
+    }
+  };
+
+  Ctx.prototype.trunk = function (mx, my, z0, height, width) {
+    if (!this.isDark(mx, my)) return false;
+    // One column on a dark cell is dark at every height, so the trunk is
+    // always whole. Segmented so the wind shear reads along its length.
+    var seg = Math.max(0.6, height / 9);
+    for (var z = z0; z < z0 + height - 1e-6; z += seg) {
+      var h = Math.min(seg, z0 + height - z);
+      var size = width * (1 - 0.12 * (z - z0) / Math.max(1, height));
+      place(this, mx, my, z, size, h, this.pal.mat.bark, 'bark', this.rnd);
+    }
+    return true;
+  };
+
+  Ctx.prototype.limb = function (cx, cy, ang, len, z0, rise, w0) {
+    var steps = Math.max(3, Math.round(len * 1.8));
+    /* A branch is a connected thing, so it ENDS at a carved module - it does
+       not skip across and resume in mid-air. `continue` here left a dotted
+       line of bark cubes hanging over nothing: half of all bark on the sakura
+       (30 of 59) and the oak (58 of 123), with 7-9 modules of clear air
+       beneath them. They read as fence posts standing on the plot.
+
+       Segment height has to cover the per-step rise as well. At a fixed 0.6
+       against a rise of ~0.66 per step, even two consecutive segments pulled
+       apart on their own. */
+    var segH = Math.max(0.6, rise / steps + 0.2);
+    for (var k = 1; k <= steps; k++) {
+      var f = k / steps;
+      var mx = Math.floor(cx + Math.cos(ang) * len * f);
+      var my = Math.floor(cy + Math.sin(ang) * len * f);
+      if (!this.isDark(mx, my)) break;
+      this.claim(mx, my);                       // limbs shade the ground too
+      place(this, mx, my, z0 + f * rise, w0 * (1 - 0.3 * f), segH,
+        this.pal.mat.bark, 'bark', this.rnd);
+    }
+  };
+
+  /* Willow tendril: narrow in plan, continuous in z. A scatter of cubes here
+     reads as a bush, not a hanging branch, so this is its own primitive - a
+     few tall jointed segments, each staying inside its module. */
+  Ctx.prototype.tendril = function (mx, my, zTop, length) {
+    if (!this.isDark(mx, my)) return;
+    this.claim(mx, my);
+    var rnd = this.rnd;
+    var joints = 2 + Math.floor(rnd() * 3);
+    var remaining = length, z = zTop;
+    for (var j = 0; j < joints && remaining > 0.3; j++) {
+      var segLen = j === joints - 1 ? remaining : remaining * (0.35 + rnd() * 0.4);
+      segLen = Math.min(segLen, remaining);
+      place(this, mx, my, z - segLen, 0.13 + rnd() * 0.09, segLen,
+        this.pal.mat.leaf, 'tendril', rnd);
+      z -= segLen;
+      remaining -= segLen;
+    }
+  };
+
+  /* One thin backing plate per crown module.
+
+     The crown does not actually cover its modules. Rounded blossoms cover only
+     pi/4 of their footprint, and measured across links and species the WORST
+     module sits at 34% plan-view coverage even while the mean is 99% - and it
+     is the worst that breaks. Without a plate, clearing the carpet from under
+     the tree lets paving show through those gaps and lifts the module toward
+     light.
+
+     The plate is a FULL-MODULE FLAT BOX, deliberately not the leaf primitive:
+     a rounded solid would cover only ~79% of its own footprint and reintroduce
+     the problem it exists to solve. It is grid-aligned with no jitter, buried
+     at mid-crown height where the surrounding foliage hides it from the side,
+     and a deep foliage tone so it reads as shadow within the canopy from
+     above. */
+  /* KEEP. Deleting this was tried and measured: with the carpet back under the
+     crown the plate looks redundant, and on the WebGL build it is - 144/144
+     ZBar, 0 module diffs without it. The canvas build fails, 136/144, and the
+     failures are payload-specific: six of eight are the willow, whose worst
+     module covers 5% of its own footprint because a tendril is one narrow
+     column. Module reconstruction, Aruco and the camera simulation ALL still
+     passed at 144/144 - only real ZBar disagreed, which is what a module
+     sitting on the right side of the threshold with no margin left looks
+     like. */
+  Ctx.prototype.backingPlates = function () {
+    var pal = this.pal, n = this.n, rnd = this.rnd;
+    /* Tinted inside the leaf ladder's own range rather than as a distinct
+       shadow. At -0.30 the plate reads as a separate flat plane wherever a rim
+       column's foliage is too sparse to hide it; at -0.12 it passes for one of
+       the ladder's darker rungs and the eye stops separating it. Still well
+       clear of the floor, and it covers the whole module either way. */
+    var deep = { top: Palette.darken(pal.foliageTop, 0.12),
+                 sideA: Palette.darken(pal.foliageTop, 0.26),
+                 sideB: Palette.darken(pal.foliageTop, 0.38) };
+    var keys = Object.keys(this.crownZ).map(Number).sort(function (a, b) { return a - b; });
+    for (var i = 0; i < keys.length; i++) {
+      var k = keys[i], mx = k % n, my = (k - mx) / n;
+      var cz = this.crownZ[k];
+      if (!isFinite(cz[0]) || !isFinite(cz[1])) continue;
+      /* Sits LOW in the column, not at mid-height. At mid-height the plate
+         sticks out past the foliage on rim columns, where the crown is thin,
+         and reads as a flat lozenge - fine when leaves were boxes covering
+         their whole footprint, visible now that they are rounded. Down at the
+         crown's underside the whole canopy is above it, and at 35 degrees of
+         elevation the crown hides its own underside. */
+      /* Back at mid-crown. It was pushed down to the underside because a
+         full-module plate stuck out past the rounded leaves on thin rim
+         columns - but that was measured against leaves of 0.48-0.74 at
+         pack 0.95. Foliage is now 0.55-0.82 at pack 0.84, dense enough to
+         swallow it, and at the underside the overhang read as a flat shelf
+         protruding below the crown's lower rim. */
+      /* Tucked just under the crown's top surface, not at 42% of the column.
+         At mid-height a full-module square sticks out past the rounded leaves
+         on every thin rim column and reads as a floating platform under the
+         foliage - the squares are grid-aligned and flat while everything
+         around them is round and jittered, so the eye finds them instantly.
+         The top of the column is where the shell packs leaves densest, so a
+         plate two modules below it has foliage above and around it from any
+         side angle, while still backstopping every gap below it from
+         overhead - which is the only direction it exists for. */
+      var mid = cz[0] + (cz[1] - cz[0]) * 0.50;
+      this.out.push({
+        x: mx, y: my, z: mid,
+        w: 1, d: 1, h: 0.12,
+        top: deep.top, side: deep.sideA, sideA: deep.sideA, sideB: deep.sideB,
+        kind: 'leaf', shape: 'plate', leanX: 0, leanY: 0,
+        phase: phaseAt(mx, my)
+      });
+    }
+  };
+
+  /* Ground. Every dark module becomes a raised block.
+
+     Under the crown the block is coloured with fallen blossom rather than
+     soil. Leaves are smaller than their module, so without this the gaps
+     between them show brown from overhead and the crown reads as speckle on
+     dirt; with it the module reads solid - leaf cube where there is a leaf,
+     fallen petal where there is not, both in the same colour family. From the
+     isometric view it also gives the drift of petals under the tree.
+
+     Contrast is unaffected: both fallen tones are darker than the leaves
+     above them, so they clear the floor by more than the foliage does. */
+  /* Ground, drawn as MERGED REGIONS rather than one tile per module.
+
+     One quad per module leaves a grid line between every pair of neighbours,
+     and that grid is most of why the floor still read as squares - the
+     reference has no visible cells at all, just flat regions of stone. So the
+     matrix is first partitioned into colour categories, then greedily merged
+     into maximal rectangles, and one quad is emitted per rectangle. The same
+     pixels stay the same colour, so the code is untouched; every grid line
+     interior to a rectangle simply disappears.
+
+     Rectangles are capped rather than unbounded. An uncapped merge gives a few
+     enormous flat quads, which trades a grid for cut paper; capping keeps the
+     tone ladder varying at a coarser scale than the module grid, which is the
+     texture the reference has. */
+  var MERGE_CAP = 4;
+
+  Ctx.prototype.groundBlocks = function () {
+    var pal = this.pal, n = this.n, rnd = this.rnd;
+
+    // 1. category per module, and the blade gate, decided per module as before
+    var cat = [], grassAt = [];
+    for (var y = 0; y < n; y++) {
+      cat.push(new Array(n).fill(null));
+      grassAt.push(new Array(n).fill(false));
+      for (var x = 0; x < n; x++) {
+        if (!this.matrix[y][x]) continue;
+        var nz = cellNoise(x, y);
+        if (this.claimed[y][x]) {
+          cat[y][x] = this.species === 'ginkgo'
+            ? (nz > 0.5 ? 'fallen' : 'fallen2') : 'plaza';
+        } else {
+          var rx = (x + 0.5) / n - 0.5, ry = (y + 0.5) / n - 0.5;
+          var rad = Math.sqrt(rx * rx + ry * ry) / 0.7071;
+          var isGrass = nz < (rad - 0.35) * 1.6;
+          cat[y][x] = isGrass ? 'grass' : 'soil';
+          grassAt[y][x] = isGrass;
+        }
+      }
+    }
+
+    // 2. greedy maximal rectangles per category
+    var mats = { plaza: pal.mat.plaza, soil: pal.mat.soil, grass: pal.mat.grass,
+                 fallen: pal.mat.fallen, fallen2: pal.mat.fallen2 };
+    var used = [];
+    for (var u = 0; u < n; u++) used.push(new Array(n).fill(false));
+    for (var my = 0; my < n; my++) {
+      for (var mx = 0; mx < n; mx++) {
+        var c = cat[my][mx];
+        if (!c || used[my][mx]) continue;
+        var w = 1;
+        while (w < MERGE_CAP && mx + w < n && cat[my][mx + w] === c && !used[my][mx + w]) w++;
+        var h = 1;
+        outer: while (h < MERGE_CAP && my + h < n) {
+          for (var k = 0; k < w; k++) {
+            if (cat[my + h][mx + k] !== c || used[my + h][mx + k]) break outer;
+          }
+          h++;
+        }
+        for (var a = 0; a < h; a++) for (var b = 0; b < w; b++) used[my + a][mx + b] = true;
+        var mat = mats[c];
+        var tone = mat.ladder
+          ? pickRung(mat.ladder, toneHash(mx, my, 7)) : mat;
+        this.out.push({
+          x: mx, y: my, z: SLAB_TOP, w: w, d: h, h: 0.02,
+          top: tone.top, side: tone.sideA, sideA: tone.sideA, sideB: tone.sideB,
+          kind: 'ground', shape: 'tile', leanX: 0, leanY: 0,
+          phase: phaseAt(mx, my)
+        });
+      }
+    }
+
+    // 3. blades, still per module - a tuft belongs to its own square metre
+    for (var gy = 0; gy < n; gy++) {
+      for (var gx = 0; gx < n; gx++) {
+        if (!grassAt[gy][gx]) continue;
+        var nz2 = cellNoise(gx, gy);
+        var patch = cellNoise(Math.floor(gx / 3) + 71, Math.floor(gy / 3) + 131);
+        var dens = patch * 0.62 + nz2 * 0.38;
+        var blades = 2 + Math.floor(Math.pow(dens, 1.7) * 6);   // long tail
+        var tcx = 0.30 + rnd() * 0.40, tcy = 0.30 + rnd() * 0.40;
+        for (var bi = 0; bi < blades; bi++) {
+          var bw = 0.09 + rnd() * 0.08;
+          var sx = Math.max(0, Math.min(1 - bw, tcx + (rnd() - 0.5) * 0.46 - bw / 2));
+          var sy = Math.max(0, Math.min(1 - bw, tcy + (rnd() - 0.5) * 0.46 - bw / 2));
+          var dx = sx + bw / 2 - tcx, dy = sy + bw / 2 - tcy;
+          var dist = Math.min(1, Math.hypot(dx, dy) / 0.33);
+          var bh2 = (0.34 + rnd() * 0.22) * (1.35 - 0.65 * dist);
+          var before = this.out.length;
+          place(this, gx, gy, SLAB_TOP + 0.02, bw, bh2, pal.mat.grass, 'blade', rnd);
+          var v = this.out[before];
+          v.x = gx + sx; v.y = gy + sy;
+          var ang = Math.atan2(dy, dx) + (rnd() - 0.5) * 0.8;
+          var lim = 0.98;
+          v.leanX = Math.max(-sx * lim, Math.min(((1 - bw) - sx) * lim, Math.cos(ang) * 0.34));
+          v.leanY = Math.max(-sy * lim, Math.min(((1 - bw) - sy) * lim, Math.sin(ang) * 0.34));
+        }
+      }
+    }
+  };
+
+  // --- species -----------------------------------------------------------
+  /* CROWN WIDTH. Three of the four species converged on the same correction -
+     radius x1.15, heights x0.85-0.95 - when swept against the reference. The
+     crowns were uniformly about 15% too narrow and slightly too tall, which is
+     why they read as tall lumps rather than canopies. Crown width over plot
+     width lands near 0.60, matching the reference.
+
+     The ginkgo is deliberately excluded. Its best fit is x1.40, but the target is
+     borrowed: the reference only ever shows the cherry, and a eucalyptus
+     genuinely is sparse and open-crowned. Widening it to match would cost the
+     one thing that distinguishes its silhouette. Match the family, not the
+     cherry's exact numbers - the willow likewise sits broader than tall.
+
+     Only the RADIUS correction is applied. The accompanying height reduction
+     was derived against a taller baseline than this one; applied here it drove
+     the silhouette to 0.874-0.888, under the floor. Widening alone brings the
+     crown aspect down without touching the silhouette, which is the part that
+     was actually wrong.
+
+     Proportions are tuned against a measured silhouette aspect (rendered
+     diorama height / plot width at t=0), not by eye. The target band is
+     0.90-1.05; a crown that tops out around 0.9n lands there. Anything much
+     flatter reads as a disc floating over a plaza, and - because a flat crown
+     has nothing behind its gaps - it is also what makes the matrix carving
+     show through as lace.
+
+     Every species leaves clear air between the ground blocks and the crown's
+     underside, so the trunk is visible for roughly a fifth of tree height. */
+
+  /* Spring. Short trunk, broad crown of overlapping puffs at staggered
+     heights - layered rather than one ball, which is what separates its
+     silhouette from the oak. */
+  function plantSakura(c, n, cx, cy) {
+    var rnd = c.rnd;
+    var trunkH = n * 0.26;
+    var R = n * 0.350;                       // the reference tree; the anchor
+    c.trunk(cx, cy, 0, trunkH, 0.62);
+
+    /* A cherry is TIERED, not spherical: broad horizontal shelves of blossom
+       with the limbs showing between them. The previous crown was one cloud of
+       radius R with four satellites at 0.55R and radius 0.66R - they sat
+       entirely inside the parent, so the union was a smooth ellipsoid and read
+       as a ball. Satellites now ride at 0.78R and are smaller than the gap
+       they leave, so the outline is lobed and the sky comes through. */
+    var LOBES = 7;
+    // core: continuous, so the crown never shows a bite
+    c.clump(cx + 0.5, cy + 0.5, trunkH + n * 0.33, R * 0.88, n * 0.24, 6);
+    for (var i = 0; i < LOBES; i++) {
+      var a = (i / LOBES) * Math.PI * 2 + rnd() * 0.45;
+      var lift = (i % 2) ? 0.05 : 0.0;       // alternate heights = tiered outline
+      c.clump(cx + 0.5 + Math.cos(a) * R * 0.60,
+              cy + 0.5 + Math.sin(a) * R * 0.60,
+              trunkH + n * (0.25 + lift), R * 0.40, n * 0.135, 3);
+      // a limb out to each lobe, so the branching reads in the gaps
+      c.limb(cx + 0.5, cy + 0.5, a, R * 0.72, trunkH * 0.92, n * 0.045, 0.34);
+    }
+    c.clump(cx + 0.5, cy + 0.5, trunkH + n * 0.62, R * 0.46, n * 0.155, 4);
+  }
+
+  /* Summer. Thick trunk, heavy forking limbs, deep rounded crown - taller and
+     lumpier than the sakura. */
+  function plantOak(c, n, cx, cy) {
+    var rnd = c.rnd;
+    var trunkH = n * 0.28;
+    var R = n * 0.467;                       // biggest and broadest
+    c.trunk(cx, cy, 0, trunkH, 0.82);
+    c.trunk(cx + 1, cy, 0, trunkH * 0.7, 0.42);
+    c.trunk(cx, cy + 1, 0, trunkH * 0.7, 0.42);
+
+    var limbs = 5 + Math.floor(rnd() * 2);
+    for (var i = 0; i < limbs; i++) {
+      c.limb(cx + 0.5, cy + 0.5, (i / limbs) * Math.PI * 2 + rnd() * 0.6,
+        R * (0.5 + rnd() * 0.4), trunkH * 0.66, n * 0.10, 0.48);
+    }
+    /* An oak crown is a cluster of heavy masses, not one dome. The lobes are
+       deliberately uneven in radius and height - an oak is the lumpiest
+       silhouette of the four and that irregularity is the species read. */
+    c.clump(cx + 0.5, cy + 0.5, trunkH + n * 0.34, R * 0.82, n * 0.27, 7);
+    var OLOBES = 7;
+    for (var j = 0; j < OLOBES; j++) {
+      var a = (j / OLOBES) * Math.PI * 2 + rnd() * 0.6;
+      var far = 0.52 + rnd() * 0.18;             // uneven reach, but overlapping
+      var rr = R * (0.36 + rnd() * 0.16);        // uneven mass
+      c.clump(cx + 0.5 + Math.cos(a) * R * far,
+              cy + 0.5 + Math.sin(a) * R * far,
+              trunkH + n * (0.26 + rnd() * 0.20), rr, n * (0.17 + rnd() * 0.09), 3);
+      c.limb(cx + 0.5, cy + 0.5, a, R * (far + 0.16), trunkH * 0.80, n * 0.085, 0.40);
+    }
+    c.clump(cx + 0.5, cy + 0.5, trunkH + n * 0.66, R * 0.42, n * 0.19, 4);
+  }
+
+  /* Autumn ginkgo. Columnar and distinctly taller than wide - it holds the far
+     end of the silhouette range, which is why a broad maple would be the wrong
+     swap however good crimson looks: it would collide with the oak and the
+     willow and collapse the spread. Sparse, open branching, brilliant gold,
+     and the one species that keeps a fallen-leaf carpet under it. */
+  function plantGinkgo(c, n, cx, cy) {
+    var rnd = c.rnd;
+    /* Upright and narrow, which is the ginkgo's whole silhouette. The first
+       version reached its 1.15 aspect target with a 0.95n trunk carrying a
+       small ball: 59% of the tree was bare pole and the crown itself measured
+       WIDER than tall (0.91). It passed the assertion and looked like a
+       lollipop, because the assertion measures the diorama, not the crown. */
+    var trunkH = n * 0.58;              // a clear bole, but the crown is the tree
+    c.trunk(cx, cy, 0, trunkH, 0.56);   // wide enough for the pale bark to read
+
+    /* Clumps ride a vertical axis and their offset radius tapers toward the
+       apex, so the crown closes to a point instead of a flat top. Height is
+       the loop index, not a random draw: every other clump sits at a random
+       radius, so letting height be random too made whether the crown reached
+       its nominal top depend on which columns the matrix happens to leave
+       dark - which spread the measured silhouette across links by 0.14, most
+       of the assertion band. Indexing height pins the apex and the random
+       radii only ever fill in around it. */
+    /* crownH carries the species' height. Shortening the bole from 0.95n cost
+       0.10 of silhouette aspect and collapsed the four-species spread to 0.208,
+       under the 0.22 assertion; the height has to come back, but through the
+       crown rather than the pole, or it is a lollipop again. Clump count scales
+       with it so the axis keeps the same ~0.048n spacing and does not thin. */
+    var crownH = n * 0.70;
+    var clumps = 19 + Math.floor(rnd() * 4);
+    for (var i = 0; i < clumps; i++) {
+      var u = i / (clumps - 1);          // 0 at the crown base, 1 at the apex
+      var taper = 1 - 0.62 * u * u;
+      var a = rnd() * Math.PI * 2;
+      /* A ginkgo is a FAN: narrow at the bole and widening toward the top,
+         the opposite of a conifer. Radius grows with u before the apex taper
+         pulls it back, which is what separates it from a column of blobs. */
+      var flare = 0.55 + 0.85 * u;
+      var rx = n * (0.205 - 0.060 * u);          // this clump's own radius
+      /* The offset may never approach the clump's own radius. Uncapped, taper
+         and flare peak together around u = 0.6-0.7 and push it to 0.97 * rx -
+         a clump sitting so far off the axis that it barely touches it, with
+         the next clump thrown to the opposite side. 81 of 134 columns ended up
+         with disconnected runs averaging 5.4 modules of clear air, and on a
+         crown only 18 modules across there is nothing in front to hide that:
+         you look straight through the middle of the tree. Capping at 0.62 * rx
+         guarantees consecutive clumps overlap across the axis whatever angles
+         they draw. */
+      var rad = Math.min(rx * 0.62,
+                         (0.03 + rnd() * 0.17) * n * taper * flare);
+      /* Radius and sub-count both up: on a narrow axis, consecutive clumps
+         were not overlapping, and a gap on a columnar crown reads as a bite
+         taken out of the tree rather than as foliage texture. */
+      c.clump(cx + 0.5 + Math.cos(a) * rad,
+              cy + 0.5 + Math.sin(a) * rad,
+              trunkH + n * 0.02 + u * crownH,
+              rx, n * (0.160 - 0.030 * u), 3);
+    }
+    /* A continuous central spine. The offset clumps above shape the fan, but
+       they ride a narrow axis at random angles: on a columnar crown that
+       leaves the axis itself hollow, and a hole through the middle of a
+       ginkgo reads as a bite out of the tree rather than as foliage texture.
+       Widening the offset clumps twice did not close it because the gap is on
+       the centre line, where none of them reach. */
+    var spine = 11;
+    for (var sp = 0; sp < spine; sp++) {
+      var us = sp / (spine - 1);
+      c.clump(cx + 0.5, cy + 0.5, trunkH + n * 0.02 + us * crownH,
+              n * (0.150 - 0.055 * us), n * (0.135 - 0.030 * us), 2);
+    }
+
+    // The apex clump sits on the trunk column, which is dark by construction.
+    c.cloud(cx + 0.5, cy + 0.5, trunkH + n * 0.02 + crownH, n * 0.085, n * 0.120);
+
+    // Ascending limbs, the ginkgo's other signature: rise is most of the
+    // branch length rather than a third of it.
+    for (var b = 0; b < 5; b++) {
+      c.limb(cx + 0.5, cy + 0.5, rnd() * Math.PI * 2, n * 0.11,
+        trunkH * 0.72, n * 0.20, 0.30);
+    }
+  }
+
+  /* Winter. A dome of foliage with long jointed tendrils falling from beneath
+     its outer rim, nearly to the ground. */
+  function plantWillow(c, n, cx, cy) {
+    var rnd = c.rnd;
+    var trunkH = n * 0.30;
+    var R = n * 0.468;                       // broad and low, but not a ball
+    var domeZ = trunkH + n * 0.215;  // low dome: willow anchors the low end
+                                     // of the four-species silhouette spread
+    c.trunk(cx, cy, 0, trunkH, 0.66);
+    // flat-bottomed rather than a true dome: -0.75 keeps the underside high
+    // enough to leave the trunk visible while still reading as a canopy.
+    // -0.75 keeps the underside high enough to leave the trunk visible
+    c.clump(cx + 0.5, cy + 0.5, domeZ, R * 1.02, n * 0.235, 8, -0.75);
+
+    var strands = Math.round(n * 1.4);
+    for (var t = 0; t < strands; t++) {
+      var a = rnd() * Math.PI * 2;
+      /* Strands hang from the rim rather than the whole underside, and fall
+         further: a willow is read by the curtain, not by the dome. */
+      var r = R * (0.72 + rnd() * 0.34);
+      var top = domeZ - n * 0.02;
+      c.tendril(Math.floor(cx + 0.5 + Math.cos(a) * r),
+                Math.floor(cy + 0.5 + Math.sin(a) * r),
+                top, Math.max(1.0, top - (0.05 + rnd() * 0.11) * n));
+    }
+  }
+
+  var PLANTERS = {
+    sakura: plantSakura, oak: plantOak, ginkgo: plantGinkgo, willow: plantWillow
+  };
+
+  /* Drop tiny foliage clumps that touch nothing.
+
+     The matrix carves whole columns out of a crown, so a crown legitimately
+     breaks into large chunks - that carving IS the look and must be left
+     alone. What is not the look is a speck of two or three leaves hanging in
+     clear air under the canopy. Measured on the four species, components of
+     five voxels or fewer account for 36-104 voxels (1-2% of the canopy) but
+     11-44 separate specks, so the threshold buys the cleanup cheaply and
+     leaves every real chunk standing.
+
+     Safe for scanning by construction: the ground layer alone reproduces the
+     matrix, and this only ever REMOVES dark material sitting on an
+     already-dark module. It can never lighten a module that must read dark. */
+  var MIN_CLUMP = 6;                 // components smaller than this are debris
+
+  function pruneFloaters(out) {
+    var body = [], i, j;
+    for (i = 0; i < out.length; i++) {
+      var k = out[i].kind;
+      if (k !== 'ground' && k !== 'grass' && k !== 'blade') body.push(i);
+    }
+    var GAP = 0.35;                  // vertical slack that still reads as touching
+    var col = {}, keyOf = {};
+    for (i = 0; i < body.length; i++) {
+      var v = out[body[i]];
+      var key = Math.floor(v.x) + ',' + Math.floor(v.y);
+      keyOf[body[i]] = key;
+      (col[key] || (col[key] = [])).push(body[i]);
+    }
+    var parent = {};
+    function find(a) { while (parent[a] !== a) { parent[a] = parent[parent[a]]; a = parent[a]; } return a; }
+    function union(a, b) { a = find(a); b = find(b); if (a !== b) parent[b] = a; }
+    for (i = 0; i < body.length; i++) parent[body[i]] = body[i];
+    function touches(a, b) {
+      return !(a.z > b.z + b.h + GAP || b.z > a.z + a.h + GAP);
+    }
+    var seen = {};
+    for (var key2 in col) {
+      var parts = key2.split(','), cx = +parts[0], cy = +parts[1];
+      var here = col[key2];
+      for (i = 0; i < here.length; i++)
+        for (j = i + 1; j < here.length; j++)
+          if (touches(out[here[i]], out[here[j]])) union(here[i], here[j]);
+      var nb = [(cx + 1) + ',' + cy, cx + ',' + (cy + 1)];
+      for (var d = 0; d < nb.length; d++) {
+        var other = col[nb[d]];
+        if (!other) continue;
+        for (i = 0; i < here.length; i++)
+          for (j = 0; j < other.length; j++)
+            if (touches(out[here[i]], out[other[j]])) union(here[i], other[j]);
+      }
+    }
+    var size = {};
+    for (i = 0; i < body.length; i++) {
+      var r = find(body[i]);
+      size[r] = (size[r] || 0) + 1;
+    }
+    var drop = {}, dropped = 0;
+    for (i = 0; i < body.length; i++) {
+      if (size[find(body[i])] < MIN_CLUMP) { drop[body[i]] = 1; dropped++; }
+    }
+    if (!dropped) return 0;
+    var kept = [];
+    for (i = 0; i < out.length; i++) if (!drop[i]) kept.push(out[i]);
+    out.length = 0;
+    for (i = 0; i < kept.length; i++) out.push(kept[i]);
+    return dropped;
+  }
+
+  function build(opts) {
+    var matrix = opts.matrix;
+    var n = matrix.length;
+    var pal = Palette.build(opts.species, opts.swatch);
+    var rnd = mulberry32(hashString(opts.seed + '|' + opts.species + '|' + opts.swatch));
+    var c = new Ctx(matrix, pal, rnd, opts.species);
+
+    var centre = nearestDark(matrix, (n - 1) / 2, (n - 1) / 2);
+    // Plant first, so groundBlocks knows which modules are under the crown.
+    /* Fail loudly on an unknown species. This used to fall back to the oak,
+       which meant a stale name in the harness silently rendered a second oak -
+       the sweep tested the oak twice, never tested the new species at all, and
+       the only symptom was a species-spread assertion failing for what looked
+       like a tuning problem. A silent fallback on a typo is worse than a
+       crash. */
+    var planter = PLANTERS[opts.species];
+    if (!planter) throw new Error('unknown species: ' + opts.species);
+    planter(c, n, centre[0], centre[1]);
+    // One pass over the merged spans, after every cloud has been recorded.
+    /* pack 0.95 -> 0.84 overlaps each leaf further onto the one below, and
+       bigger leaves close the gaps between columns: the crown reads as
+       foliage rather than as a scatter with the plot showing through. */
+    c.growCanopy(0.84, 0.55, 0.82);
+    c.backingPlates();
+    var floaters = pruneFloaters(c.out);   // before the ground exists to anchor them
+    var canopy = c.out.length;
+    c.groundBlocks();
+
+    var maxZ = 0, claimedCount = 0;
+    for (var i = 0; i < c.out.length; i++) maxZ = Math.max(maxZ, c.out[i].z + c.out[i].h);
+    for (var y = 0; y < n; y++) for (var x = 0; x < n; x++) if (c.claimed[y][x]) claimedCount++;
+
+    /* Crown-only geometry. heightFraction covers the whole diorama including
+       the fallen carpet, so it can look healthy while the crown itself is a
+       flat disc - which is exactly the failure that made the canopy lacy.
+       These measure the crown alone. */
+    var cxMin = Infinity, cxMax = -Infinity, cyMin = Infinity, cyMax = -Infinity;
+    for (var v = 0; v < c.out.length; v++) {
+      var vx = c.out[v];
+      if (vx.kind !== 'leaf') continue;
+      if (vx.x < cxMin) cxMin = vx.x;
+      if (vx.x + vx.w > cxMax) cxMax = vx.x + vx.w;
+      if (vx.y < cyMin) cyMin = vx.y;
+      if (vx.y + vx.d > cyMax) cyMax = vx.y + vx.d;
+    }
+    /* Bake the wind response into each voxel, so both renderers share one law
+       instead of each reimplementing pow(z, 1.4).
+
+       Height is normalised by maxZ. Using absolute z made displacement grow
+       with the tree, so a version 10 code swayed harder than a version 2 one -
+       2.22 modules of crown sway at n=25 rising to 3.26 at n=33, roughly 9% of
+       plot width either way. As a fraction of tree height it is scale-free.
+       The renderer multiplies these by WIND_AMP, which is now a displacement
+       in modules at the crown top. */
+    var mz = maxZ > 0 ? maxZ : 1;
+    for (var w = 0; w < c.out.length; w++) {
+      var vw = c.out[w];
+      var stiff = STIFFNESS[vw.kind];
+      if (stiff === undefined) stiff = 1;
+      vw.swayLo = stiff * Math.pow(Math.max(0, vw.z) / mz, 1.4);
+      vw.swayHi = stiff * Math.pow(Math.max(0, vw.z + vw.h) / mz, 1.4);
+    }
+
+    var crownW = isFinite(cxMin) ? Math.max(cxMax - cxMin, cyMax - cyMin) : 0;
+    var crownH = isFinite(c.crownTop) ? c.crownTop - c.crownBottom : 0;
+    var groundTop = SLAB_TOP + 0.82;
+
+    var crownTops = [];
+    var ckeys = Object.keys(c.crownZ);
+    for (var ci = 0; ci < ckeys.length; ci++) {
+      var ck = Number(ckeys[ci]);
+      var czz = c.crownZ[ck];
+      if (!czz || !isFinite(czz[1])) continue;
+      crownTops.push({ x: ck % n, y: (ck - (ck % n)) / n, z: czz[1] });
+    }
+
+    return {
+      matrix: matrix, n: n, palette: pal, voxels: c.out, maxZ: maxZ,
+      /* Top of each crown column. Used to sit snow on a winter canopy as a
+         decorative layer: the audited TOP FACE of a leaf is the surface the
+         code is read from, so tinting it white would lift dark modules toward
+         light and break scanning. Caps are drawn over it and faded out with
+         the weather, long before the plan view. */
+      crownTops: crownTops,
+      centre: centre, species: opts.species,
+      stats: {
+        total: c.out.length,
+        canopy: canopy,
+        ground: c.out.length - canopy,
+        claimed: claimedCount,
+        heightFraction: maxZ / n,
+        crownTop: isFinite(c.crownTop) ? c.crownTop : 0,
+        crownBottom: isFinite(c.crownBottom) ? c.crownBottom : 0,
+        crownWidth: crownW,
+        // 1.0 is a ball; well under 1 is a disc you can see through
+        crownAspect: crownW > 0 ? crownH / crownW : 0,
+        // clear air between the ground blocks and the crown's underside
+        trunkGap: (isFinite(c.crownBottom) ? c.crownBottom : 0) - groundTop,
+        trunkVisibleFraction: maxZ > 0
+          ? ((isFinite(c.crownBottom) ? c.crownBottom : 0) - groundTop) / maxZ : 0
+      }
+    };
+  }
+
+  return {
+    SPECIES: SPECIES,
+    STIFFNESS: STIFFNESS,
+    SLAB_BOTTOM: SLAB_BOTTOM,
+    SLAB_TOP: SLAB_TOP,
+    build: build,
+    hashString: hashString,
+    mulberry32: mulberry32,
+    phaseAt: phaseAt
+  };
+});
+
+</script>
+<script>
+/* ===========================================================================
+   render.js - axonometric voxel renderer on canvas 2D.
+
+   ORIGIN CONVENTION (read before touching the slab): world coordinates are
+   module units, and every box is given by its MINIMUM corner plus extents.
+   There is no implicit half-module shift anywhere in this file. The full-plot
+   slab is therefore exactly (0, 0) to (n, n). If a -0.5 shift is ever added to
+   the drawing code, the slab's own x/y must cancel it, or the slab juts past
+   two edges of the plot and eats into the quiet zone.
+
+   DRAW ORDER, and why it is not one sorted list:
+     1. Canvas is flooded with the paving colour, so the quiet zone is light.
+     2. The base slab is drawn FIRST, outside the sort. It spans the whole plot
+        and sits under every block, so no single depth key can order it against
+        them - a centre-point key puts it in the middle of the run and it
+        paints over the back half of the ground.
+     3. Steps 1-2 are cached to an offscreen canvas and redrawn only when the
+        camera or palette changes. Wind forces a full repaint of the sorted
+        list every frame, so the cache still earns its place.
+     4. Everything else - including the dark modules, which are raised blocks
+        rather than flat tiles - is depth sorted and painted back to front.
+        Raised blocks genuinely overlap what stands on them, so unlike flat
+        tiles they cannot be painted wholesale ahead of the sort.
+
+   WIND: amplitude is scaled by (1 - t)^2, so it reaches exactly zero in the
+   code view - any horizontal sway there would slide leaves off their modules
+   and break the code. Each voxel is SHEARED between its base and its top
+   rather than translated, so trees bend instead of sliding. Displacement grows
+   as height^1.4 with a per-voxel phase hashed from position.
+   =========================================================================== */
+(function (root, factory) {
+  var api = factory(typeof require === 'function' ? require('./palette.js') : root.Palette);
+  if (typeof module === 'object' && module.exports) module.exports = api;
+  else root.Render = api;
+})(typeof self !== 'undefined' ? self : this, function (Palette) {
+  'use strict';
+
+  var DEG = Math.PI / 180;
+  var YAW_START = 45 * DEG, YAW_END = 0;
+  // atan(1/sqrt(2)) is the true isometric elevation, where the three axes
+  // foreshorten equally.
+  var PITCH_START = Math.atan(1 / Math.SQRT2), PITCH_END = 90 * DEG;
+  var QUIET = 4;                  // modules of quiet zone in the code view
+  var SLAB_BOTTOM = -1.5, SLAB_TOP = -0.02;   // slab spans these, in module units
+  var EPS_FACE = 1e-6;            // below this a face is edge-on: do not draw
+  var EPS_AREA = 1e-4;            // projected area floor, catches degenerate quads
+  var WIND_FREQ = 0.0011;
+  // Displacement in modules at the crown top, for a leaf (stiffness 1).
+  var WIND_AMP = 0.50;
+  var WIND_DIR = [0.82, 0.57];
+
+  function easeInOutCubic(t) {
+    return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+  }
+
+  /* --- camera ------------------------------------------------------------
+     `e` is eased flip progress in [0, 1]. At e = 1 the yaw and the pitch
+     cosine are snapped to exact zero rather than left as 6e-17, so the code
+     view is exactly a plan view and the wind term is exactly zero. */
+  function makeCamera(n, maxZ, e, W, H) {
+    var atEnd = e >= 1;
+    var yaw = atEnd ? 0 : YAW_START + (YAW_END - YAW_START) * e;
+    var pitch = atEnd ? PITCH_END : PITCH_START + (PITCH_END - PITCH_START) * e;
+    var cy = atEnd ? 1 : Math.cos(yaw);
+    var sy = atEnd ? 0 : Math.sin(yaw);
+    var cp = atEnd ? 0 : Math.cos(pitch);
+    var sp = atEnd ? 1 : Math.sin(pitch);
+
+    // Projected bounds of the scene's bounding volume, at unit scale.
+    var minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    for (var i = 0; i < 8; i++) {
+      var x = (i & 1) ? n : 0;
+      var y = (i & 2) ? n : 0;
+      var z = (i & 4) ? maxZ : SLAB_BOTTOM;
+      var vx = x * cy - y * sy;
+      var vy = x * sy + y * cy;
+      var px = vx, py = vy * sp - z * cp;
+      if (px < minX) minX = px;
+      if (px > maxX) maxX = px;
+      if (py < minY) minY = py;
+      if (py > maxY) maxY = py;
+    }
+    var extent = Math.max(maxX - minX, maxY - minY);
+    // Margin lands on exactly QUIET modules at e = 1, where extent is exactly n.
+    var margin = 2 + (QUIET - 2) * e;
+    var scale = Math.min(W, H) / (extent + margin * 2);
+
+    return {
+      e: e, yaw: yaw, pitch: pitch, cy: cy, sy: sy, cp: cp, sp: sp,
+      scale: scale,
+      ox: W / 2 - (minX + maxX) / 2 * scale,
+      oy: H / 2 - (minY + maxY) / 2 * scale,
+      n: n,
+      // Only the top face survives a plan view; both side normals go edge-on.
+      showSideY: cy * cp > EPS_FACE,
+      showSideX: sy * cp > EPS_FACE
+    };
+  }
+
+  function projX(cam, x, y) { return (x * cam.cy - y * cam.sy) * cam.scale + cam.ox; }
+  function projY(cam, x, y, z) {
+    return ((x * cam.sy + y * cam.cy) * cam.sp - z * cam.cp) * cam.scale + cam.oy;
+  }
+
+  /* Horizontal displacement of the wind field.
+
+     `sway` is precomputed per voxel end in scene.js: stiffness x (z/maxZ)^1.4.
+     Keeping the law there means both renderers obey it rather than each
+     reimplementing pow(z, 1.4), and normalising by maxZ makes the sway a
+     fraction of tree height so a big code does not get a windier tree.
+     Ground blocks carry stiffness 0, so the ground never moves and the cache
+     stays valid. Returns exactly 0 when amp is 0. */
+  function windAt(sway, phase, time, amp) {
+    if (amp === 0) return 0;
+    return amp * sway * Math.sin(time * WIND_FREQ + phase);
+  }
+
+  function shoelace(pts) {
+    var a = 0;
+    for (var i = 0, j = pts.length - 2; i < pts.length; j = i, i += 2) {
+      a += (pts[j] * pts[i + 1]) - (pts[i] * pts[j + 1]);
+    }
+    return a / 2;
+  }
+
+  /* Collect the drawable faces of one box as flat [x0,y0,x1,y1,...] arrays.
+     Exposed (via collectFaces) so the test harness can sweep every link x
+     species x swatch combination for malformed geometry without rasterising. */
+  function ring(out, cx, cy, rx, ry, n) {
+    for (var i = 0; i < n; i++) {
+      var a = (i / n) * Math.PI * 2;
+      out.push(cx + Math.cos(a) * rx, cy + Math.sin(a) * ry);
+    }
+    return out;
+  }
+
+  /* Emit the drawable faces of one voxel. Dispatches on shape: the reference
+     is not a voxel renderer, so bark is a cylinder, blossom a rounded blob,
+     grass a splayed blade and ground a flat tile. The canvas build
+     approximates each with polygons - a ten-gon reads as round at these
+     scales - while the WebGL build uses real solids. Both agree on the only
+     thing the code depends on: what a module looks like from overhead. */
+  function boxFaces(out, cam, v, time, amp) {
+    var bd = windAt(v.swayLo || 0, v.phase, time, amp);
+    var td = windAt(v.swayHi || 0, v.phase, time, amp);
+    var bx = bd * WIND_DIR[0], by = bd * WIND_DIR[1];
+    var tx = td * WIND_DIR[0] + (v.leanX || 0), ty = td * WIND_DIR[1] + (v.leanY || 0);
+
+    var x0 = v.x, y0 = v.y, x1 = v.x + v.w, y1 = v.y + v.d;
+    var zb = v.z, zt = v.z + v.h;
+    var shape = v.shape || 'box';
+
+    if (shape === 'tile') {
+      // flat ground: the top surface is all there is
+      out.push({ pts: [
+        projX(cam, x0, y0), projY(cam, x0, y0, zt),
+        projX(cam, x1, y0), projY(cam, x1, y0, zt),
+        projX(cam, x1, y1), projY(cam, x1, y1, zt),
+        projX(cam, x0, y1), projY(cam, x0, y1, zt)
+      ], col: v.top });
+      return;
+    }
+
+    if (shape === 'blob') {
+      // a sphere projects to a circle under an orthographic camera
+      var mcx = (x0 + x1) / 2 + tx, mcy = (y0 + y1) / 2 + ty, mcz = (zb + zt) / 2;
+      var px = projX(cam, mcx, mcy), py = projY(cam, mcx, mcy, mcz);
+      var r = v.w / 2 * cam.scale;
+      out.push({ pts: ring([], px, py, r, r, 10), col: v.sideA || v.side });
+      // a smaller disc offset up-sun keeps the audited top tone facing the sky
+      out.push({ pts: ring([], px - r * 0.16, py - r * 0.20, r * 0.74, r * 0.74, 10),
+                 col: v.top });
+      return;
+    }
+
+    if (shape === 'cyl') {
+      // body, then an elliptical cap - no vertical edges, no jitter
+      var cx0 = projX(cam, x0 + bx, (y0 + y1) / 2 + by);
+      var cx1 = projX(cam, x1 + bx, (y0 + y1) / 2 + by);
+      var byy = projY(cam, (x0 + x1) / 2 + bx, (y0 + y1) / 2 + by, zb);
+      var tyy = projY(cam, (x0 + x1) / 2 + tx, (y0 + y1) / 2 + ty, zt);
+      var tcx0 = projX(cam, x0 + tx, (y0 + y1) / 2 + ty);
+      var tcx1 = projX(cam, x1 + tx, (y0 + y1) / 2 + ty);
+      /* The body is a vertical surface, so it goes edge-on in the plan view.
+         Emit it only when the camera can actually see it - the box path
+         already gates its sides the same way, and a zero-area polygon is a
+         geometry-sweep failure even though the painter skips it. */
+      if (cam.cp > EPS_FACE) {
+        out.push({ pts: [cx0, byy, cx1, byy, tcx1, tyy, tcx0, tyy], col: v.sideA || v.side });
+      }
+      var ccx = (tcx0 + tcx1) / 2, crx = (tcx1 - tcx0) / 2;
+      /* A horizontal circle foreshortens by sin(pitch), not cos: it is a full
+         circle looking straight down and squashed at isometric. Using cos had
+         it exactly backwards - the cap collapsed to a zero-area line in the
+         plan view, which is the one view the code is read from. */
+      out.push({ pts: ring([], ccx, tyy, crx, crx * cam.sp, 10), col: v.top });
+      return;
+    }
+
+    if (shape === 'blade') {
+      // tapered spike leaning along its splay
+      var ax = projX(cam, x0 + bx, y0 + by), ay = projY(cam, x0 + bx, y0 + by, zb);
+      var b2x = projX(cam, x1 + bx, y1 + by), b2y = projY(cam, x1 + bx, y1 + by, zb);
+      var tipx = projX(cam, (x0 + x1) / 2 + tx, (y0 + y1) / 2 + ty);
+      var tipy = projY(cam, (x0 + x1) / 2 + tx, (y0 + y1) / 2 + ty, zt);
+      // a blade with no splay is edge-on from directly overhead
+      var ar = Math.abs((b2x - ax) * (tipy - ay) - (tipx - ax) * (b2y - ay)) / 2;
+      if (ar > EPS_AREA) out.push({ pts: [ax, ay, b2x, b2y, tipx, tipy], col: v.top });
+      return;
+    }
+
+    // top face - always visible, and the only face that survives the plan view
+    var top = [
+      projX(cam, x0 + tx, y0 + ty), projY(cam, x0 + tx, y0 + ty, zt),
+      projX(cam, x1 + tx, y0 + ty), projY(cam, x1 + tx, y0 + ty, zt),
+      projX(cam, x1 + tx, y1 + ty), projY(cam, x1 + tx, y1 + ty, zt),
+      projX(cam, x0 + tx, y1 + ty), projY(cam, x0 + tx, y1 + ty, zt)
+    ];
+    if (cam.showSideY) {
+      out.push({ pts: [
+        projX(cam, x0 + bx, y0 + by), projY(cam, x0 + bx, y0 + by, zb),
+        projX(cam, x1 + bx, y0 + by), projY(cam, x1 + bx, y0 + by, zb),
+        projX(cam, x1 + tx, y0 + ty), projY(cam, x1 + tx, y0 + ty, zt),
+        projX(cam, x0 + tx, y0 + ty), projY(cam, x0 + tx, y0 + ty, zt)
+      ], col: v.sideA || v.side });
+    }
+    if (cam.showSideX) {
+      out.push({ pts: [
+        projX(cam, x0 + bx, y0 + by), projY(cam, x0 + bx, y0 + by, zb),
+        projX(cam, x0 + bx, y1 + by), projY(cam, x0 + bx, y1 + by, zb),
+        projX(cam, x0 + tx, y1 + ty), projY(cam, x0 + tx, y1 + ty, zt),
+        projX(cam, x0 + tx, y0 + ty), projY(cam, x0 + tx, y0 + ty, zt)
+      ], col: v.sideB || v.side });
+    }
+    out.push({ pts: top, col: v.top });
+  }
+
+  // Depth key. The far corner in plan, and the TOP of the box in z: in the
+  // plan view the visible surface is the top face, so the box whose top is
+  // highest must be painted last.
+  function depthKey(cam, v) {
+    var vy = (v.x + v.w) * cam.sy + (v.y + v.d) * cam.cy;
+    return vy * cam.cp - (v.z + v.h) * cam.sp;
+  }
+
+  function fillPoly(ctx, pts, col) {
+    ctx.beginPath();
+    ctx.moveTo(pts[0], pts[1]);
+    for (var i = 2; i < pts.length; i += 2) ctx.lineTo(pts[i], pts[i + 1]);
+    ctx.closePath();
+    ctx.fillStyle = col;
+    ctx.fill();
+  }
+
+  /* Ground: background flood, slab, paving, dark tiles. Nothing here moves in
+     the wind and nothing here overlaps, so the whole thing is one cacheable
+     image. */
+  function drawGround(ctx, scene, cam, W, H) {
+    var pal = scene.palette, n = scene.n;
+    ctx.save();
+    ctx.fillStyle = pal.paving;
+    ctx.fillRect(0, 0, W, H);
+
+    /* --- slab, first and outside the sort -------------------------------
+       It spans the whole plot and sits under every block, so no single depth
+       key can order it against them - a centre-point key puts it in the middle
+       of the run and it paints over the back half of the ground.
+
+       Exactly (0,0)-(n,n): no half-module shift is applied anywhere in this
+       file. If one is ever added, the slab's own x/y must cancel it or the
+       slab juts past two edges and eats the quiet zone.
+
+       The dark modules themselves are NOT drawn here. They are raised blocks,
+       which genuinely overlap what stands on them, so they live in the sorted
+       voxel list like everything else. That leaves this cache holding just the
+       background flood and one box - still worth keeping, since wind forces a
+       full repaint of the sorted list every frame. */
+    var slab = { x: 0, y: 0, z: SLAB_BOTTOM, w: n, d: n, h: SLAB_TOP - SLAB_BOTTOM,
+                 phase: 0, top: pal.paving, side: pal.slabSide,
+                 sideA: pal.slabSide, sideB: Palette.darken(pal.slabSide, 0.14) };
+    var faces = [];
+    boxFaces(faces, cam, slab, 0, 0);
+    for (var f = 0; f < faces.length; f++) {
+      if (Math.abs(shoelace(faces[f].pts)) > EPS_AREA) fillPoly(ctx, faces[f].pts, faces[f].col);
+    }
+
+    ctx.restore();
+  }
+
+  // Faces of every standing voxel, depth sorted, ready to paint.
+  function collectFaces(scene, cam, time, amp) {
+    var vox = scene.voxels;
+    var order = new Array(vox.length);
+    for (var i = 0; i < vox.length; i++) order[i] = i;
+    order.sort(function (a, b) { return depthKey(cam, vox[b]) - depthKey(cam, vox[a]); });
+
+    var faces = [];
+    for (var k = 0; k < order.length; k++) boxFaces(faces, cam, vox[order[k]], time, amp);
+    return faces;
+  }
+
+  function drawVoxels(ctx, scene, cam, time, amp) {
+    var faces = collectFaces(scene, cam, time, amp);
+    for (var i = 0; i < faces.length; i++) {
+      var f = faces[i];
+      if (Math.abs(shoelace(f.pts)) <= EPS_AREA) continue;   // edge-on or degenerate
+      fillPoly(ctx, f.pts, f.col);
+    }
+    return faces.length;
+  }
+
+  /* The stage carries cursor:pointer and a click handler but was tabIndex -1,
+     so the on-screen hint instructed a gesture keyboard users could not
+     perform. This gives it focus and a key path without changing the camera. */
+  function attachStageKeys(el, onTap) {
+    el.tabIndex = 0;
+    el.setAttribute('role', 'button');
+    el.setAttribute('aria-label',
+      'Voxel tree. Press Enter to flip between the tree and the scannable code.');
+    el.addEventListener('keydown', function (ev) {
+      if (ev.key === 'Enter' || ev.key === ' ') { onTap(); ev.preventDefault(); }
+    });
+  }
+
+  /* Ambient life. Both renderers read these so the two builds agree on what
+     the weather is doing; each draws it with its own primitives.
+
+     Fall is expressed as descents per second: the old 0.6-1.7 meant a petal
+     crossed the whole scene in well under two seconds, which read as rain
+     rather than drift. Winter is snow - slower, larger, and it wanders. */
+  /* kind drives the silhouette, and each one is its season: a cherry petal,
+     a winged samara, a ginkgo fan, a six-spoke flake. SPECIES already declared
+     these (petals / seeds / leaves / snow) and the renderers were drawing a
+     square for three of the four. Counts come down as the sizes go up - the
+     brief is a moderate amount of weather, not a blizzard. */
+  var WEATHER = {
+    sakura:  { kind: 'petal', fall: 0.13, spread: 0.10, size: 0.98, sway: 0.9, count: 54, snow: false },
+    oak:     { kind: 'seed',  fall: 0.17, spread: 0.12, size: 0.90, sway: 1.2, count: 46, snow: false },
+    ginkgo:  { kind: 'leaf',  fall: 0.15, spread: 0.11, size: 1.08, sway: 1.4, count: 50, snow: false },
+    willow:  { kind: 'flake', fall: 0.10, spread: 0.07, size: 1.02, sway: 1.7, count: 66, snow: true }
+  };
+  /* Snow has to read against the paving, which is itself pale and warm
+     (#edeae3). Near-white snow was invisible on it. A cool blue-grey
+     separates by temperature rather than by lightness. */
+  var SNOW_TINT = '#c3d1de';
+
+  function weatherFor(species) { return WEATHER[species] || WEATHER.sakura; }
+
+  /* One shape definition, both renderers. The canvas build calls this per
+     particle; the WebGL build paints it once into an offscreen canvas and uses
+     that as the point sprite, so the two builds cannot drift apart.
+     Draws into a box of side `s` centred on (cx, cy). The caller sets
+     fillStyle and strokeStyle. */
+  function paintFallShape(ctx, kind, cx, cy, s, rot) {
+    var r = s / 2;
+    ctx.save();
+    ctx.translate(cx, cy);
+    if (rot) ctx.rotate(rot);
+    if (kind === 'cap') {
+      // a soft mound, wider than tall: snow lying on a leaf
+      ctx.beginPath();
+      ctx.ellipse(0, 0, r * 0.98, r * 0.56, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+      return;
+    }
+    if (kind === 'flake') {
+      ctx.lineWidth = Math.max(1, s * 0.15);
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      for (var i = 0; i < 3; i++) {
+        var a = i * Math.PI / 3;
+        ctx.moveTo(-Math.cos(a) * r, -Math.sin(a) * r);
+        ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r);
+      }
+      // short barbs, which is what separates a flake from an asterisk
+      for (var j = 0; j < 6; j++) {
+        var b = j * Math.PI / 3, bx = Math.cos(b) * r * 0.62, by = Math.sin(b) * r * 0.62;
+        ctx.moveTo(bx, by);
+        ctx.lineTo(bx + Math.cos(b + 0.9) * r * 0.28, by + Math.sin(b + 0.9) * r * 0.28);
+        ctx.moveTo(bx, by);
+        ctx.lineTo(bx + Math.cos(b - 0.9) * r * 0.28, by + Math.sin(b - 0.9) * r * 0.28);
+      }
+      ctx.stroke();
+    } else if (kind === 'leaf') {
+      // ginkgo: a fan, notched at the crown, on a short stalk
+      ctx.beginPath();
+      ctx.moveTo(0, r * 0.96);
+      ctx.quadraticCurveTo(-r * 0.98, r * 0.18, -r * 0.66, -r * 0.74);
+      ctx.quadraticCurveTo(-r * 0.22, -r * 0.46, 0, -r * 0.58);
+      ctx.quadraticCurveTo(r * 0.22, -r * 0.46, r * 0.66, -r * 0.74);
+      ctx.quadraticCurveTo(r * 0.98, r * 0.18, 0, r * 0.96);
+      ctx.fill();
+    } else if (kind === 'seed') {
+      // samara: a seed body with one wing, the thing that spins as it falls
+      ctx.beginPath();
+      ctx.ellipse(0, r * 0.46, r * 0.32, r * 0.27, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(0, r * 0.34);
+      ctx.quadraticCurveTo(r * 0.88, -r * 0.10, r * 0.22, -r * 0.96);
+      ctx.quadraticCurveTo(-r * 0.06, -r * 0.18, 0, r * 0.34);
+      ctx.fill();
+    } else {
+      // cherry petal: rounded, with the characteristic notch at the tip
+      ctx.beginPath();
+      ctx.moveTo(0, r * 0.92);
+      ctx.bezierCurveTo(-r * 1.0, r * 0.40, -r * 0.82, -r * 0.58, -r * 0.16, -r * 0.90);
+      ctx.quadraticCurveTo(0, -r * 0.62, r * 0.16, -r * 0.90);
+      ctx.bezierCurveTo(r * 0.82, -r * 0.58, r * 1.0, r * 0.40, 0, r * 0.92);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  /* Birds: a few crossing the sky on slow circular arcs, well above the crown
+     and outside the plot footprint, so they stay small disconnected blobs that
+     the silhouette measurement discards. Deterministic in `time` - no state,
+     so both renderers and the test harness agree frame for frame. */
+  var BIRD_COUNT = 3;
+  var BIRD_PERIOD = 26000;        // ms for a full circuit
+  var BIRD_SPAN = 0.62;           // orbit radius, as a fraction of plot width
+
+  function birdsAt(n, maxZ, time) {
+    var out = [];
+    for (var i = 0; i < BIRD_COUNT; i++) {
+      var ph = (time / BIRD_PERIOD + i / BIRD_COUNT) * Math.PI * 2;
+      var r = n * BIRD_SPAN * (0.82 + 0.18 * Math.sin(ph * 0.7 + i));
+      out.push({
+        x: n / 2 + Math.cos(ph) * r,
+        y: n / 2 + Math.sin(ph) * r * 0.72,
+        z: maxZ + n * (0.30 + 0.10 * Math.sin(ph * 1.7 + i * 2)),
+        // wing phase drives the V opening; a flat V reads as a glide
+        flap: Math.sin(time / 190 + i * 1.7),
+        dir: Math.cos(ph) >= 0 ? 1 : -1
+      });
+    }
+    return out;
+  }
+
+  return {
+    attachStageKeys: attachStageKeys,
+    weatherFor: weatherFor, birdsAt: birdsAt, SNOW_TINT: SNOW_TINT,
+    paintFallShape: paintFallShape,
+    BIRD_COUNT: BIRD_COUNT,
+    DEG: DEG, QUIET: QUIET, SLAB_BOTTOM: SLAB_BOTTOM, SLAB_TOP: SLAB_TOP,
+    WIND_AMP: WIND_AMP, WIND_FREQ: WIND_FREQ, WIND_DIR: WIND_DIR,
+    EPS_AREA: EPS_AREA,
+    easeInOutCubic: easeInOutCubic,
+    makeCamera: makeCamera,
+    projX: projX, projY: projY,
+    windAt: windAt,
+    shoelace: shoelace,
+    boxFaces: boxFaces,
+    depthKey: depthKey,
+    collectFaces: collectFaces,
+    drawGround: drawGround,
+    drawVoxels: drawVoxels,
+    fillPoly: fillPoly
+  };
+});
+
+</script>
+<!-- /voxel-qr-tree -->
 <script>
 (() => {
   const isMac = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
@@ -350,6 +2320,159 @@
     if (p) p.closest(".field").style.display = vals.wifi.sec === "nopass" ? "none" : "";
   }
 
+  // ================= mosaic + garden =================
+  // Mosaic: every module a flat square in one of several nearby tones. Dark tones
+  // are pinned to a luminance band well under the light tints, so the code still
+  // thresholds cleanly; finder patterns use the deepest tone on plain paper.
+  const toLin = v => { v /= 255; return v <= .04045 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4; };
+  const fromLin = v => Math.round(255 * (v <= .0031308 ? v * 12.92 : 1.055 * v ** (1 / 2.4) - .055));
+  const linOf = hex => { const n = parseInt(hex.slice(1), 16); return [n >> 16, n >> 8 & 255, n & 255].map(toLin); };
+  const hexOf = l => "#" + l.map(v => fromLin(Math.min(1, Math.max(0, v))).toString(16).padStart(2, "0")).join("");
+  const Yof = l => .2126 * l[0] + .7152 * l[1] + .0722 * l[2];
+  const yHex = hex => Yof(linOf(hex));
+  function toLum(hex, t) {   // same hue, luminance t
+    const l = linOf(hex), y = Yof(l);
+    if (y > t) return hexOf(l.map(v => v * t / y));
+    const a = (t - y) / (1 - y); return hexOf(l.map(v => v + (1 - v) * a));
+  }
+  const mixHex = (a, b, t) => { const x = linOf(a), y = linOf(b); return hexOf(x.map((v, i) => v + (y[i] - v) * t)); };
+  const DARK_LO = .03, DARK_HI = .17, LIGHT_LO = .73, LIGHT_HI = .96;   // worst case (.73+.05)/(.17+.05) = 3.5
+  const SEASONS = {
+    spring: { label: "Spring", species: "sakura",
+      dark: ["#3e7b36", "#5b8c2c", "#2d6b4a", "#b04a78", "#9c3f62", "#71963a"],
+      light: ["#f3f7e6", "#fbedf1", "#eef5ea", "#fdf3f6", "#f6f6e8"], paper: "#f8f7ef" },
+    summer: { label: "Summer", species: "oak",
+      dark: ["#2c6aa8", "#22568f", "#3a7d2e", "#2e6828", "#a07a08", "#3b80b4", "#4f8a26"],
+      light: ["#fff5d2", "#eaf4fb", "#fdf0c2", "#f2f8ea", "#fff9e6"], paper: "#fbf8ec" },
+    autumn: { label: "Autumn", species: "ginkgo",
+      dark: ["#a66e1a", "#8e3a1c", "#b0521d", "#61642a", "#7b4a1d", "#9a5a12", "#8a6a1c"],
+      light: ["#f7e9cc", "#f3e1c2", "#f8eedb", "#f1e3c8", "#faf0dc"], paper: "#f6eedc" },
+    winter: { label: "Winter", species: "willow",
+      dark: ["#2f4f6f", "#3d5a73", "#2a4a5a", "#4a5d6e", "#365f70", "#5a5368"],
+      light: ["#eef3f7", "#f3f5f8", "#e9f0f4", "#f6f7f9"], paper: "#f4f6f8" },
+  };
+  const WADA = window.WADA;
+  const wadaCols = i => WADA.combos[i][1].map(j => WADA.colors[j][1]);
+  const wadaLabel = i => `${WADA.combos[i][0]} · ${WADA.combos[i][1].map(j => WADA.colors[j][0]).join(", ")}`;
+  const palCache = new Map();
+  function palette(st) {
+    const key = st.season === "wada" ? "wada" + st.combo : st.season;
+    if (palCache.has(key)) return palCache.get(key);
+    let s = SEASONS[st.season];
+    if (st.season === "wada") {
+      const cols = wadaCols(st.combo), paper = "#f7f4ec";
+      s = { label: "Wada", dark: cols, light: [paper, ...cols.map(c => mixHex(c, paper, .78))], paper };
+    }
+    // Dark tones keep their hue but land inside the band; ones that start too
+    // light are spread down the band so they stay distinct from each other.
+    let over = 0;
+    const dark = s.dark.map(c => { const y = yHex(c); return y > DARK_HI - .01 ? toLum(c, DARK_HI - .015 - (over++ % 3) * .03) : y < DARK_LO + .01 ? toLum(c, DARK_LO + .015) : c; });
+    const light = s.light.map(c => { const y = yHex(c); return y < LIGHT_LO + .06 ? toLum(c, LIGHT_LO + .06) : y > LIGHT_HI ? toLum(c, LIGHT_HI) : c; });
+    const darkest = dark.reduce((a, b) => yHex(a) < yHex(b) ? a : b);
+    const p = { label: s.label, dark, light, deep: toLum(darkest, .025), paper: toLum(s.paper, Math.max(.84, Math.min(.93, yHex(s.paper)))) };
+    palCache.set(key, p); return p;
+  }
+  const mrand = seed => { let a = seed >>> 0; return () => { a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; };
+  const hashStr = s => { let x = 2166136261; for (let i = 0; i < s.length; i++) x = Math.imul(x ^ s.charCodeAt(i), 16777619); return x >>> 0; };
+  // The module matrix, from the qrcode-generator instance qr-code-styling builds.
+  const matCache = new Map();
+  function matrix(data) {
+    if (matCache.has(data)) return matCache.get(data);
+    const q = new QRCodeStyling({ width: 400, height: 400, type: "svg", data: libData(data), qrOptions: { errorCorrectionLevel: "M" } });
+    const qr = q._qr; if (!qr) throw new Error("no matrix");
+    const n = qr.getModuleCount(), rows = [];
+    for (let r = 0; r < n; r++) { const row = []; for (let c = 0; c < n; c++) row.push(qr.isDark(r, c)); rows.push(row); }
+    if (matCache.size > 40) matCache.clear();
+    const out = { n, rows }; matCache.set(data, out); return out;
+  }
+  const inFinder = (r, c, n) => (r < 8 && c < 8) || (r < 8 && c >= n - 8) || (r >= n - 8 && c < 8);
+  function mosaicModel(st, data) {
+    const { n, rows } = matrix(data), p = palette(st), ring = st.margin, N = n + 2 * ring;
+    const sp = st.spread / 100 * .5, R = mrand(hashStr(data) ^ Math.imul(st.seed, 2654435761));
+    const cols = []; let darkMax = 0, lightMin = 1;
+    for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) {
+      const qr = r - ring, qc = c - ring, inside = qr >= 0 && qc >= 0 && qr < n && qc < n;
+      const dark = inside && rows[qr][qc];
+      let col;
+      if (inside && inFinder(qr, qc, n)) col = dark ? p.deep : p.paper;
+      else {
+        const set = dark ? p.dark : p.light, pick = () => set[Math.floor(R() * set.length)];
+        const base = mixHex(pick(), pick(), R() * .35);
+        const y = yHex(base) * (1 + (R() * 2 - 1) * sp);
+        col = dark ? toLum(base, Math.min(DARK_HI, Math.max(DARK_LO, y))) : toLum(base, Math.min(LIGHT_HI, Math.max(LIGHT_LO, y)));
+      }
+      const y = yHex(col); if (dark) darkMax = Math.max(darkMax, y); else lightMin = Math.min(lightMin, y);
+      cols.push(col);
+    }
+    return { N, cols, ratio: (lightMin + .05) / (darkMax + .05) };
+  }
+  function renderMosaic(st, data, S) {
+    const M = mosaicModel(st, data), cv = h("canvas"), x = cv.getContext("2d");
+    cv.width = cv.height = S;
+    const e = i => Math.round(i * S / M.N);   // whole-pixel edges: no seams between tiles
+    M.cols.forEach((col, i) => { const r = i / M.N | 0, c = i % M.N; x.fillStyle = col; x.fillRect(e(c), e(r), e(c + 1) - e(c), e(r + 1) - e(r)); });
+    cv._ratio = M.ratio;
+    return cv;
+  }
+  function mosaicSvg(st, data, S) {
+    const M = mosaicModel(st, data), out = [];
+    M.cols.forEach((col, i) => out.push(`<rect x="${i % M.N}" y="${i / M.N | 0}" width="1" height="1" fill="${col}"/>`));
+    return `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="${S}" height="${S}" viewBox="0 0 ${M.N} ${M.N}" shape-rendering="crispEdges">
+${out.join("\n")}
+</svg>`;
+  }
+
+  // Garden: the voxel-qr-tree scene (Palette / Scene / Render above, MIT), fed our
+  // matrix. "Scene" is its isometric view, "Top" its straight-down flip (which is
+  // itself a QR code), "Flat" the season's mosaic.
+  const sceneCache = new Map();
+  function gardenScene(st, data) {
+    const sp = SEASONS[st.season].species, sw = st.swatch || null, key = [data, sp, sw].join("|");
+    if (sceneCache.has(key)) return sceneCache.get(key);
+    if (sceneCache.size > 24) sceneCache.clear();
+    const sc = Scene.build({ matrix: matrix(data).rows, seed: data, species: sp, swatch: sw });
+    sc.id = key; sceneCache.set(key, sc); return sc;
+  }
+  const TREE = new Set(["bark", "leaf", "tendril"]);
+  function renderGarden(st, data, S) {
+    const full = gardenScene(st, data), sp = full.species;
+    // Tree and grass filters only remove things standing on dark modules; the
+    // ground layer still carries every module.
+    const keep = st.grass / 100;
+    const voxels = full.voxels.filter(v => !(!st.tree && TREE.has(v.kind)) &&
+      !(v.kind === "blade" && Scene.phaseAt(Math.floor(v.x * 7), Math.floor(v.y * 7)) / (2 * Math.PI) >= keep));
+    const scene = { ...full, voxels };
+    const top = st.view === "top";
+    const cv = h("canvas"), x = cv.getContext("2d");
+    cv.width = cv.height = S;
+    const cam = Render.makeCamera(scene.n, scene.maxZ, top ? 1 : 0, S, S);
+    Render.drawGround(x, scene, cam, S, S);
+    Render.drawVoxels(x, scene, cam, 0, 0);
+    if (!top && st.weather) {
+      // A still frame of the falling weather, seeded like the original's particles.
+      const w = Render.weatherFor(sp), R = Scene.mulberry32(Scene.hashString(full.id + "#p")), n = scene.n, maxZ = scene.maxZ;
+      if (w.snow && st.tree) {
+        x.save(); x.globalAlpha = .8; x.fillStyle = Render.SNOW_TINT;
+        for (let i = 0; i < scene.crownTops.length; i += 2) {
+          const c = scene.crownTops[i];
+          x.beginPath(); x.ellipse(Render.projX(cam, c.x + .5, c.y + .5), Render.projY(cam, c.x + .5, c.y + .5, c.z + .18), cam.scale * .34, cam.scale * .19, 0, 0, Math.PI * 2); x.fill();
+        }
+        x.restore();
+      }
+      x.save(); x.globalAlpha = w.snow ? .92 : .85;
+      x.fillStyle = x.strokeStyle = w.snow ? Render.SNOW_TINT : scene.palette.foliageSide;
+      for (let i = 0; i < w.count; i++) {
+        const px = R() * n, py = R() * n, z = R() * maxZ, size = w.size * (.78 + R() * .48), spin = R() * Math.PI * 2;
+        Render.paintFallShape(x, w.kind, Render.projX(cam, px, py), Render.projY(cam, px, py, z), size * cam.scale, spin);
+      }
+      x.restore();
+    }
+    return cv;
+  }
+  const kindName = st => (st.kind === "garden" ? "Garden" : "Mosaic") + " · " + (st.season === "wada" ? "Wada " + WADA.combos[st.combo][0] : SEASONS[st.season].label);
+  const WADA_DEFAULT = Math.max(0, WADA.combos.findIndex(c => c[1].length === 3));
+
   // ================= styles =================
   const BASE = { fg: "#111111", grad: "", bg: "#ffffff", dots: "square", corners: "square", cdot: "square", margin: 6,
     frame: false, frameColor: "#18181b", frameText: "#ffffff", caption: "", sub: "", logo: "none", logoText: "", logoSrc: null };
@@ -366,7 +2489,10 @@
     { name: "Brick", corners: "dot", cdot: "dot", fg: "#9b2c1f" },
     { name: "Navy card", dots: "dots", corners: "extra-rounded", cdot: "dot", fg: "#0b3d91", frame: true, frameColor: "#0b3d91", frameText: "#ffffff", logo: "initial" },
     { name: "Soft", dots: "extra-rounded", corners: "extra-rounded", cdot: "dot", fg: "#3f3f46", bg: "#f1efe9" },
-  ];
+    ...["spring", "summer", "autumn", "wada"].map(season => ({ kind: "mosaic", season, combo: WADA_DEFAULT, margin: 4, spread: 45, seed: 1 })),
+    ...["spring", "summer", "autumn"].map(season => ({ kind: "garden", season, combo: WADA_DEFAULT, margin: 4, spread: 45, seed: 1,
+      view: "scene", swatch: "", tree: true, grass: 100, weather: true })),
+  ].map(s => s.kind ? { ...s, name: kindName(s) } : s);
   const fresh = i => ({ ...BASE, ...PRESETS[i] });
   const styles = PRESETS.map((_, i) => fresh(i));
   let sel = 0;
@@ -419,6 +2545,7 @@
     return s + "…";
   }
   async function render(st, data, S) {
+    if (st.kind) return st.kind === "garden" && st.view !== "flat" ? renderGarden(st, data, S) : renderMosaic(st, data, S);
     const cv = h("canvas"), ctx = cv.getContext("2d");
     if (!st.frame) {
       const q = new QRCodeStyling(qrOptions(st, libData(data), S, "canvas"));
@@ -444,6 +2571,7 @@
     return cv;
   }
   async function renderSvg(st, data, S) {
+    if (st.kind) return mosaicSvg(st, data, S);
     const f = st.frame ? frameBox(st, S) : null;
     const q = new QRCodeStyling(qrOptions(st, libData(data), f ? f.inner : S, "svg"));
     const txt = await (await q.getRawData("svg")).text();
@@ -474,9 +2602,10 @@ ${f.cap.sub ? `<text x="${S / 2}" y="${f.sy}" ${font} font-weight="500" font-siz
   };
   const ratio = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + .05) / (Math.min(x, y) + .05); };
   function check(cv, data, st) {
-    const inks = [st.fg, st.grad].filter(Boolean);
-    const worst = Math.min(...inks.map(c => ratio(c, st.bg)));
-    const inverted = inks.every(c => lum(c) > lum(st.bg));
+    // Mosaic and garden canvases carry their own worst-case contrast.
+    const own = cv._ratio != null, inks = own ? [] : [st.fg, st.grad].filter(Boolean);
+    const worst = own ? cv._ratio : Math.min(...inks.map(c => ratio(c, st.bg)));
+    const inverted = !own && inks.every(c => lum(c) > lum(st.bg));
     // Read it back the way a camera sees it: at a few sizes, with a quiet zone.
     const t = h("canvas"), x = t.getContext("2d", { willReadFrequently: true });
     let ok = false;
@@ -501,21 +2630,41 @@ ${f.cap.sub ? `<text x="${S / 2}" y="${f.sy}" ${font} font-weight="500" font-siz
     const box = h("div", { className: "prev" }), name = h("span"), mark = h("span", { className: "mark", textContent: "…" });
     const el = h("div", { className: "card" + (i === sel ? " on" : "") }, box, h("div", { className: "foot" }, name, mark));
     el.onclick = () => select(i);
+    let seg = null;
+    if (st.kind === "garden") {
+      seg = h("div", { className: "seg" });
+      [["scene", "Scene"], ["top", "Top"], ["flat", "Flat"]].forEach(([v, l]) => {
+        const b = h("button", { className: "small", textContent: l, title: { scene: "The garden, for sharing", top: "Straight down: the garden itself as a code", flat: "The flat mosaic" }[v] });
+        b.dataset.view = v;
+        b.onclick = e => { e.stopPropagation(); styles[i].view = v; if (sel !== i) select(i); else buildCustom(); renderCard(i); syncExport(); };
+        seg.append(b);
+      });
+      box.append(seg);
+    }
     grid.append(el);
-    return { el, box, name, mark, seq: 0 };
+    return { el, box, name, mark, seg, seq: 0 };
   });
   async function renderCard(i) {
     const c = cards[i], st = styles[i], data = payload(), my = ++c.seq;
     c.name.textContent = st.name;
+    if (c.seg) c.seg.querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.view === st.view));
     if (!data) return;
-    let cv;
-    try { cv = await render(st, data, 420); } catch (e) { console.warn(e); c.mark.className = "mark bad"; c.mark.textContent = "Too long"; return; }
+    // Garden cards are judged on what scans: the Top view when it is showing,
+    // otherwise the flat mosaic. The Scene is a picture.
+    const garden = st.kind === "garden", judge = garden && st.view !== "top" ? { ...st, view: "flat" } : st;
+    let cv, shown;
+    try {
+      cv = await render(judge, data, garden && st.view === "top" ? 720 : 420);
+      shown = garden && st.view === "scene" ? await render(st, data, 420) : cv;
+    } catch (e) { console.warn(e); c.mark.className = "mark bad"; c.mark.textContent = "Too long"; return; }
     if (my !== c.seq) return;
-    c.box.replaceChildren(cv);
-    let m = check(cv, data, st);
+    c.box.replaceChildren(shown);
+    if (c.seg) c.box.append(c.seg);
+    let m = check(cv, data, judge);
     // Dense codes are only a pixel or two per module in the preview; judge
     // those at export size before calling them unreadable.
-    if (m.cls === "bad") { const big = await render(st, data, 1024); if (my !== c.seq) return; m = check(big, data, st); }
+    if (m.cls === "bad") { const big = await render(judge, data, st.kind ? 2048 : 1024); if (my !== c.seq) return; m = check(big, data, judge); }
+    if (garden && st.view === "scene") m = { ...m, text: m.cls === "ok" ? "Flat scans" : m.text, tip: "The scene is a picture for sharing. Top and Flat are the views that scan. " + m.tip };
     c.mark.className = "mark " + m.cls; c.mark.title = m.tip;
     c.mark.innerHTML = `<svg viewBox="0 0 24 24">${ICON[m.cls]}</svg>`; c.mark.append(m.text);
     c.result = m;
@@ -525,8 +2674,15 @@ ${f.cap.sub ? `<text x="${S / 2}" y="${f.sy}" ${font} font-weight="500" font-siz
     const data = payload(), my = ++allSeq;
     $("gridEmpty").hidden = !!data; grid.hidden = !data;
     ["png", "svg", "copy", "print"].forEach(id => $(id).disabled = !data);
+    syncExport();
     if (!data) return;
     for (let i = 0; i < styles.length && my === allSeq; i++) await renderCard(i);
+  }
+  function syncExport() {
+    const st = styles[sel], pic = st.kind === "garden" && st.view !== "flat";
+    $("svg").disabled = !payload() || pic;
+    $("svg").title = pic ? "Garden views export as PNG only" : "Download SVG";
+    $("png").title = `Download PNG, ${st.kind ? 2048 : 1024} px (Ctrl S)`;
   }
   const timers = new Map();
   function schedule(fn, ms, key = fn) { clearTimeout(timers.get(key)); timers.set(key, setTimeout(fn, ms)); }
@@ -538,7 +2694,7 @@ ${f.cap.sub ? `<text x="${S / 2}" y="${f.sy}" ${font} font-weight="500" font-siz
   function select(i) {
     sel = i;
     cards.forEach((c, j) => c.el.classList.toggle("on", j === i));
-    buildCustom();
+    buildCustom(); syncExport();
   }
   function buildCustom() {
     const st = styles[sel], box = $("custom"), a = autoCaption();
@@ -557,7 +2713,45 @@ ${f.cap.sub ? `<text x="${S / 2}" y="${f.sy}" ${font} font-weight="500" font-siz
     const check = (k, label, after) => { const c = h("input", { type: "checkbox", checked: !!st[k] }); c.onchange = () => { st[k] = c.checked; after && after(); changed(); }; return h("label", { className: "check" }, c, label); };
 
     const reset = h("button", { className: "small", textContent: "Reset" });
-    reset.onclick = () => { styles[sel] = fresh(sel); buildCustom(); renderCard(sel); };
+    reset.onclick = () => { styles[sel] = fresh(sel); buildCustom(); renderCard(sel); syncExport(); };
+    const range = (k, min, max) => { const r = h("input", { type: "range", min, max, value: st[k] }); r.oninput = () => { st[k] = +r.value; changed(); }; return r; };
+    if (st.kind) {
+      const garden = st.kind === "garden";
+      const again = () => { st.name = kindName(st); buildCustom(); renderCard(sel); };
+      const opts = Object.entries(SEASONS).map(([k, s]) => [k, s.label + (garden ? " · " + Scene.SPECIES.find(x => x.id === s.species).name : "")]);
+      if (!garden) opts.push(["wada", "Wada combination"]);
+      const season = h("select"); opts.forEach(([v, l]) => season.append(h("option", { value: v, textContent: l })));
+      season.value = st.season; season.onchange = () => { st.season = season.value; again(); };
+      const parts = [h("h2", {}, "Style ", h("span", { textContent: st.name }), reset), field(garden ? "Season and tree" : "Season", season)];
+      if (st.season === "wada") {
+        const combo = h("select");
+        WADA.combos.forEach((cb, j) => combo.append(h("option", { value: j, textContent: wadaLabel(j) })));
+        combo.value = st.combo; combo.onchange = () => { st.combo = +combo.value; again(); };
+        const any = h("button", { className: "small", textContent: "Random" });
+        any.onclick = () => { st.combo = Math.floor(Math.random() * WADA.combos.length); again(); };
+        parts.push(h("label", { className: "field" }, h("span", { style: "display:flex;align-items:center;justify-content:space-between" }, "Combination", any), combo),
+          h("div", { className: "sw" }, ...wadaCols(st.combo).map(c => h("i", { style: "background:" + c }))));
+      }
+      if (garden) {
+        const view = h("select"); [["scene", "Scene"], ["top", "Top (straight down)"], ["flat", "Flat mosaic"]].forEach(([v, l]) => view.append(h("option", { value: v, textContent: l })));
+        view.value = st.view; view.onchange = () => { st.view = view.value; renderCard(sel); syncExport(); };
+        const leaf = h("select"); [["", "Season colour"], ...Palette.SWATCHES.map(s => [s.id, s.name])].forEach(([v, l]) => leaf.append(h("option", { value: v, textContent: l })));
+        leaf.value = st.swatch; leaf.onchange = () => { st.swatch = leaf.value; changed(); };
+        parts.push(h("div", { className: "row2" }, field("View", view), field("Leaves", leaf)),
+          check("tree", "Show tree"), check("weather", "Falling petals, leaves or snow"),
+          field("Grass", range("grass", 0, 100)));
+      }
+      const shuffle = h("button", { className: "small", textContent: "Shuffle tiles" });
+      shuffle.onclick = () => { st.seed++; changed(); };
+      parts.push(field(garden ? "Mosaic variation" : "Tone variation", range("spread", 0, 100)));
+      if (!garden) parts.push(field("Margin", range("margin", 0, 8)));
+      parts.push(h("div", { className: "field" }, shuffle),
+        h("p", { className: "hint", textContent: garden
+          ? "Scene is a picture for sharing. Top looks straight down at the same garden and scans; Flat is the mosaic. Exports are 2048 px PNG."
+          : "Dark tiles stay well below the light ones in brightness, and the three corner squares stay plain, so phones still lock on. PNG is 2048 px." }));
+      box.replaceChildren(...parts);
+      return;
+    }
     const gradOn = h("input", { type: "checkbox", checked: !!st.grad });
     const gradCol = h("input", { type: "color", value: st.grad || "#0b5cad", disabled: !st.grad });
     gradOn.onchange = () => { st.grad = gradOn.checked ? gradCol.value : ""; gradCol.disabled = !gradOn.checked; changed(); };
@@ -605,14 +2799,15 @@ ${f.cap.sub ? `<text x="${S / 2}" y="${f.sy}" ${font} font-weight="500" font-siz
   };
 
   // ---------- export ----------
-  const fname = ext => `qr-${type}-${styles[sel].name.toLowerCase().replace(/\s+/g, "-")}.${ext}`;
+  const fname = ext => { const st = styles[sel], v = st.kind === "garden" && st.view !== "flat" ? "-" + st.view : "";
+    return `qr-${type}-${st.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}${v}.${ext}`; };
   function download(blob, name) {
     const a = h("a", { href: URL.createObjectURL(blob), download: name }); a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   }
-  const pngBlob = async () => { const cv = await render(styles[sel], payload(), 1024); return new Promise(r => cv.toBlob(r, "image/png")); };
+  const pngBlob = async () => { const st = styles[sel], cv = await render(st, payload(), st.kind ? 2048 : 1024); return new Promise(r => cv.toBlob(r, "image/png")); };
   async function savePng() { if (payload()) download(await pngBlob(), fname("png")); }
-  async function saveSvg() { if (payload()) download(new Blob([await renderSvg(styles[sel], payload(), 1024)], { type: "image/svg+xml" }), fname("svg")); }
+  async function saveSvg() { const st = styles[sel]; if (st.kind === "garden" && st.view !== "flat") return toast("Garden views export as PNG only"); if (payload()) download(new Blob([await renderSvg(styles[sel], payload(), 1024)], { type: "image/svg+xml" }), fname("svg")); }
   async function copyImg() {
     if (!payload()) return;
     try { await navigator.clipboard.write([new ClipboardItem({ "image/png": pngBlob() })]); toast("Copied. Paste it anywhere"); }
@@ -621,7 +2816,7 @@ ${f.cap.sub ? `<text x="${S / 2}" y="${f.sy}" ${font} font-weight="500" font-siz
   async function printCard() {
     const v = vals.wifi, data = payload();
     if (type !== "wifi" || !data) return;
-    const src = (await render({ ...styles[sel], frame: false }, data, 1024)).toDataURL("image/png");
+    const src = (await render({ ...styles[sel], frame: false, view: "flat" }, data, 1024)).toDataURL("image/png");
     const sec = { WPA: "WPA", WEP: "WEP", nopass: "Open" }[v.sec];
     const html = `<!doctype html><html><head><meta charset="utf-8"><title>Wi-Fi ${xml(v.ssid)}</title><style>
       body{margin:0;font-family:"Segoe UI",-apple-system,Helvetica,Arial,sans-serif;color:#18181b;display:grid;place-items:center;min-height:96vh}
@@ -865,7 +3060,7 @@ ${f.cap.sub ? `<text x="${S / 2}" y="${f.sy}" ${font} font-weight="500" font-siz
   });
 
   // Exposed for testing.
-  window.qrStudio = { payload, styles, cards, decode, parse, setType, vals, renderAll, select };
+  window.qrStudio = { payload, styles, cards, decode, parse, setType, vals, renderAll, renderCard, select, render, check, renderSvg, pngBlob, palette, mosaicModel, matrix, buildCustom };
 
   buildFields(); buildCustom();
   if (location.hash === "#scan") setMode("scan");

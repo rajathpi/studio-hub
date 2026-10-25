@@ -7,7 +7,7 @@ window.TOOLS = [
     glyph: '<path d="M4 8V5h3M20 8V5h-3M4 16v3h3M20 16v3h-3"/><path d="M8 12h8M8 9h5M8 15h6"/>' },
   { id: "color", name: "Color", page: "color-studio.html", group: "Screenshots and images", blurb: "Pick exact colours, get a palette", used: 2,
     glyph: '<path d="M14 4l6 6-9 9H5v-6z"/><path d="M13 5l6 6"/><circle cx="7.5" cy="16.5" r=".8"/>' },
-  { id: "qr", name: "QR", page: "qr-studio.html", group: "Screenshots and images", blurb: "Make QR codes in twelve styles, or read one", used: 2,
+  { id: "qr", name: "QR", page: "qr-studio.html", group: "Screenshots and images", blurb: "QR codes in nineteen styles, mosaics and gardens too", used: 2,
     glyph: '<rect x="4" y="4" width="6" height="6"/><rect x="14" y="4" width="6" height="6"/><rect x="4" y="14" width="6" height="6"/><path d="M14 14h2v2h-2zM18 14h2M14 18h2M18 18h2v2"/>' },
   { id: "pdf", name: "PDF", page: "pdf-studio.html", group: "Documents", blurb: "Merge, split and convert PDFs", used: 5,
     glyph: '<path d="M6 3h8l5 5v13H6z"/><path d="M14 3v5h5"/><path d="M9 14h6M9 17h4"/>' },
