@@ -334,7 +334,7 @@
   }
   const free = (spots, x, y, pad) => spots.every(([px, py, pr]) => (x - px) ** 2 + (y - py) ** 2 > (pr + pad) ** 2);
 
-  // ---- hand-drawn line helpers (doodles, memphis, the noodle)
+  // ---- hand-drawn line helpers (the doodles)
   const cpts = (cx, cy, r, n = 40, a0 = 0, a1 = TAU, sq = 1) => Array.from({ length: n + 1 }, (_, i) => [cx + r * Math.cos(a0 + (a1 - a0) * i / n), cy + r * sq * Math.sin(a0 + (a1 - a0) * i / n)]);
   const rot = (pts, cx, cy, a) => { const co = Math.cos(a), si = Math.sin(a); return pts.map(([x, y]) => [cx + (x - cx) * co - (y - cy) * si, cy + (x - cx) * si + (y - cy) * co]); };
   function pen(c, r, D, width) {
@@ -349,7 +349,6 @@
       dot(x, y, rr, col) { c.fillStyle = col; c.beginPath(); c.arc(x, y, rr, 0, TAU); c.fill(); },
     };
   }
-  const poly = (c, pts, col) => { c.fillStyle = col; c.beginPath(); pts.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y))); c.closePath(); c.fill(); };
 
   // Doodles: each draws around (cx, cy) with size r.
   const H = Math.PI;
@@ -421,20 +420,6 @@
       p.line(rot([[cx + r * .65, cy - r * .35], [cx + r, cy], [cx + r * .65, cy + r * .35]], cx, cy, a), c);
     },
   ];
-
-  // Catmull-Rom through the control points.
-  function catmull(pts, n) {
-    const P = [pts[0], ...pts, pts[pts.length - 1]], out = [];
-    for (let i = 1; i < P.length - 2; i++) {
-      const [p0, p1, p2, p3] = [P[i - 1], P[i], P[i + 1], P[i + 2]];
-      for (let k = 0; k < n; k++) {
-        const t = k / n, t2 = t * t, t3 = t2 * t;
-        out.push([0, 1].map((j) => .5 * (2 * p1[j] + (-p0[j] + p2[j]) * t + (2 * p0[j] - 5 * p1[j] + 4 * p2[j] - p3[j]) * t2 + (-p0[j] + 3 * p1[j] - 3 * p2[j] + p3[j]) * t3)));
-      }
-    }
-    out.push(pts[pts.length - 1]);
-    return out;
-  }
 
   // ---- the scenes. Each has colourways (vars); sun: which toggle it offers; fixed: no reroll.
   const SCENES = [
@@ -665,113 +650,176 @@
       },
     },
     {
-      id: "memphis", name: "Memphis",
+      id: "mesh-gradient", name: "Mesh gradient", grain: 3,
       vars: [
-        { n: "Classic", bg: "#f5efe4", pal: ["#ff5e5b", "#00c4c2", "#ffd23f", "#2b2d42", "#a06cd5", "#ff9ec4"], ink: "#2b2d42", sw: ["#f5efe4", "#ff5e5b"] },
-        { n: "Pastel", bg: "#fbf6ee", pal: ["#f7a399", "#8fd6cf", "#f9dc84", "#5b5f7a", "#c3a6e0", "#ffc4d8"], ink: "#5b5f7a", sw: ["#fbf6ee", "#8fd6cf"] },
-        { n: "Night", bg: "#1c1b29", pal: ["#ff5e5b", "#00c4c2", "#ffd23f", "#f5efe4", "#a06cd5", "#ff9ec4"], ink: "#f5efe4", sw: ["#1c1b29", "#ffd23f"] },
+        { n: "Peach", bg: "#f1d8cb", blobs: ["#f2a58e", "#c6b5e4", "#f5dca2", "#a3c3de"], sw: ["#f2a58e", "#c6b5e4"] },
+        { n: "Lagoon", bg: "#0f2c3b", blobs: ["#1e8784", "#3a5ca8", "#62c0ae", "#173f69"], sw: ["#1e8784", "#3a5ca8"] },
+        { n: "Plum", bg: "#23152e", blobs: ["#86397a", "#d9785f", "#45369a", "#bb5689"], sw: ["#86397a", "#d9785f"] },
+        { n: "Fog", bg: "#dde1e4", blobs: ["#b7c4d3", "#e7d6cc", "#c6d4c6", "#f0e9de"], sw: ["#b7c4d3", "#e7d6cc"] },
       ],
       draw(c, D, o, r) {
-        const { bg, pal, ink } = o.v, s = D.s;
-        c.fillStyle = bg; c.fillRect(-1, -1, D.W + 2, D.H + 2);
-        const p = pen(c, r, D, .45), fat = pen(c, r, D, .9), mid = pen(c, r, D, .3), plus = pen(c, r, D, .6);
-        const tries = Math.round(clamp(8000 * D.W * D.H / 8480 / (s * s), 800, 16000));
-        const spots = scatter(r, D, tries, 1.6 * s, 6.5 * s, 1.4 * s);
-        for (const [x, y, rr] of spots) {
-          const col = pal[r.i(pal.length)], kind = r.i(8), a = r.u(0, TAU);
-          if (kind === 0) { p.dot(x, y, rr * .7, col); p.line(cpts(x + rr * .15, y - rr * .15, rr * .7), ink, false, 0); }
-          else if (kind === 1) { const t = rot([[x, y - rr], [x + rr * .87, y + rr / 2], [x - rr * .87, y + rr / 2]], x, y, a); poly(c, t, col); p.line(t, ink, true, 0); }
-          else if (kind === 2) fat.line(rot(Array.from({ length: 41 }, (_, i) => [x - rr + 2 * rr * i / 40, y + rr * .3 * Math.sin(i / 40 * 3 * Math.PI)]), x, y, a), col, false, 0);
-          else if (kind === 3) p.line(rot(Array.from({ length: 9 }, (_, i) => [x - rr + 2 * rr * i / 8, y + (i % 2 ? rr * .3 : -rr * .3)]), x, y, a), col, false, 0);
-          else if (kind === 4) { for (let i = 0; i < 5; i++) for (let j = 0; j < 5; j++) p.dot(x - rr * .7 + i * rr * .35, y - rr * .7 + j * rr * .35, rr * .06, ink); }
-          else if (kind === 5) poly(c, rot(cpts(x, y, rr * .8, 30, 0, Math.PI), x, y, a), col);
-          else if (kind === 6) { for (let i = 0; i < 5; i++) mid.line(rot([[x - rr * .7, y - rr * .7 + i * rr * .35], [x + rr * .7, y - rr * .7 + i * rr * .35]], x, y, a), col, false, 0); }
-          else for (const q of [[[x - rr * .5, y], [x + rr * .5, y]], [[x, y - rr * .5], [x, y + rr * .5]]]) plus.line(rot(q, x, y, a), col, false, 0);
-        }
-        const conf = pen(c, r, D, .14);
-        for (let i = 0, n = Math.round(2500 * D.W * D.H / 8480 / (s * s)); i < n; i++) {
-          const x = r.u(0, D.W), y = r.u(0, D.H), a = r.u(0, Math.PI), col = pal[r.i(pal.length)];
-          if (D.vis(x, y) && free(spots, x, y, .4 * s)) conf.line([[x, y], [x + .35 * s * Math.cos(a), y + .35 * s * Math.sin(a)]], col, false, 0);
+        const v = o.v, n = Math.max(4, Math.round(D.W / D.H * 2.4)), k0 = r.i(4);
+        c.fillStyle = v.bg; c.fillRect(-1, -1, D.W + 2, D.H + 2);
+        // big tilted ellipses strung along the desk, each fading out as a Gaussian
+        for (let i = 0; i < n; i++) {
+          const x = (i + r.u(.15, .85)) / n * D.W, y = r.u(.1, .9) * D.H, rr = r.u(.8, 1.15) * D.H, sq = r.u(.6, 1), a = r.u(0, Math.PI);
+          const col = v.blobs[(k0 + i) % v.blobs.length], g = c.createRadialGradient(0, 0, 0, 0, 0, rr);
+          for (let k = 0; k <= 12; k++) g.addColorStop(k / 12, rgba(col, .9 * Math.exp(-4.5 * (k / 12) ** 2)));
+          c.save(); c.translate(x, y); c.rotate(a); c.scale(1, sq);
+          c.fillStyle = g; c.beginPath(); c.arc(0, 0, rr, 0, TAU); c.fill();
+          c.restore();
         }
       },
     },
     {
-      id: "desk-noodle", name: "Desk noodle",
+      id: "misty-archipelago", name: "Misty archipelago", sun: true, grain: 2,
       vars: [
-        { n: "Lemon", bg: "#ffe47a", dots: "#fad25f", stripes: ["#ff6384", "#ffffff", "#5bc0eb", "#ffffff"], head: "#ff6384", ink: "#281e3c", blush: "#ffa0af", sw: ["#ffe47a", "#ff6384"] },
-        { n: "Mint", bg: "#c4efdd", dots: "#ade4cd", stripes: ["#ff7a59", "#ffffff", "#6c63ff", "#ffffff"], head: "#ff7a59", ink: "#1f2a3a", blush: "#ffb59f", sw: ["#c4efdd", "#6c63ff"] },
-        { n: "Night", bg: "#1f1b3a", dots: "#29244d", stripes: ["#ff6384", "#ffffff", "#5bc0eb", "#ffffff"], head: "#ff6384", ink: "#0d0a1e", blush: "#ffa0af", sw: ["#1f1b3a", "#5bc0eb"] },
+        { n: "Morning", sky: [[0, "#aebfc9"], [.58, "#e8e4da"]], sea: ["#dcdcd4", "#93a6ad"], mist: "#e8e4da", sun: "#fff7ea", isles: ["#c9cfcc", "#b1bab9", "#95a2a4", "#7a898d", "#5e6e74"], sw: ["#e8e4da", "#7a898d"] },
+        { n: "Dusk", sky: [[0, "#4a4868"], [.58, "#eab79b"]], sea: ["#d9a68f", "#4c4762"], mist: "#eab79b", sun: "#ffe8cc", isles: ["#c99a92", "#ad8287", "#8d6a7a", "#6b5468", "#4a3c50"], sw: ["#eab79b", "#544458"] },
+        { n: "Night", moon: true, sky: [[0, "#0a1020"], [.58, "#2b3b5a"]], sea: ["#26354f", "#0a101c"], mist: "#2b3b5a", sun: "#e9ecf3", isles: ["#25324a", "#1e293e", "#172032", "#111826", "#0b1019"], sw: ["#2b3b5a", "#111826"] },
       ],
       draw(c, D, o, r) {
-        const v = o.v, s = D.s;
-        c.fillStyle = v.bg; c.fillRect(-1, -1, D.W + 2, D.H + 2);
-        const dots = new Path2D(), st = 3 * s;
-        for (let i = 0; i * st < D.W + st; i++) for (let j = 0; j * st < D.H + st; j++) {
-          const x = i * st + (j % 2 ? st / 2 : 0), y = j * st; dots.moveTo(x + .1 * s, y); dots.arc(x, y, .1 * s, 0, TAU);
+        const v = o.v, hz = .58 * D.H, sh = D.sh;
+        vgrad(c, D, [...v.sky, [.5805, v.sea[0]], [1, v.sea[1]]]);
+        if (o.sun) {
+          const rr = 2.4 * D.s, [x] = spot(D, .7, .5, rr), y = hz - 4 * sh;
+          disc(c, x, y, rr, v.sun, 6 * D.s);
+          c.strokeStyle = rgba(v.sun, .35); c.lineCap = "butt";
+          for (let i = 0, n = Math.round(260 * D.s); i < n; i++) {
+            const yy = r.u(hz + .2 * D.s, D.H), t = (yy - hz) / (D.H - hz), xx = x + r.n() * (1.2 + 4 * t) * D.s, w = r.u(.3, 1.5) * (.5 + t) * D.s;
+            c.lineWidth = Math.max(.06 * D.s, 1 / D.px); c.beginPath(); c.moveTo(xx - w, yy); c.lineTo(xx + w, yy); c.stroke();
+          }
         }
-        c.fillStyle = v.dots; c.fill(dots);
-        // path: tail comes in from the left, the body wanders through every screen, the head rests on the last one
-        const scr = [...D.scr].sort((a, b) => a.x - b.x), at = (q, u, v2) => [q.x + u * q.w, q.y + v2 * q.h];
-        const j = () => r.n() * .035, ctrl = [[scr[0].x - 6 * s, scr[0].y + .72 * scr[0].h]];
-        const LOOPS = [[[.27, .15], [.73, .23], [.8, .57], [.33, .68], [.47, .89]], [[.07, .81], [.4, .3], [.73, .17], [.9, .55], [.6, .81]]];
-        let head;
-        scr.forEach((q, k) => {
-          const last = k === scr.length - 1, wide = q.w >= q.h;
-          if (!last) {
-            if (wide) {
-              const m = Math.max(3, Math.round(q.w / q.h * 2.3));
-              for (let i = 0; i < m; i++) ctrl.push(at(q, .13 + .74 * i / (m - 1) + j(), (i % 2 ? .28 : .7) + j()));
-              if (scr[k + 1].y < q.y) ctrl.push(at(q, 1, 0));   // climb out into a taller neighbour
-            } else for (const [u, v2] of LOOPS[(k + 1) % 2]) ctrl.push(at(q, u + j(), v2 + j()));
-          } else if (scr.length === 1 && wide) {
-            for (const [u, v2] of [[.12, .68], [.3, .3], [.5, .7]]) ctrl.push(at(q, u + j(), v2 + j()));
-            head = at(q, .74, .5);
-          } else if (scr.length === 1) {
-            for (const [u, v2] of [[.22, .8], [.3, .35], [.7, .2], [.78, .5], [.45, .62]]) ctrl.push(at(q, u + j(), v2 + j()));
-            head = at(q, .58, .82);
-          } else if (wide) { ctrl.push(at(q, .12, .68)); head = at(q, .47, .42); }
-          else { ctrl.push(at(q, .25, .85)); head = at(q, .5, .55); }
+        // five rows of islands, far to near; each row sits a little lower and darker, with its
+        // reflection under it and haze rising off the water at its foot
+        const rows = [0, .05, .13, .27, .5];
+        v.isles.forEach((col, i) => {
+          const yw = hz + rows[i] * (D.H - hz), hm = (1.2 + i * i * .7) * sh, isles = [];
+          for (let x = r.u(-5, 20) * hm; x < D.W + 10 * hm; ) {
+            const w = hm * r.u(3, 7) * (i > 2 ? 1.6 : 1), h = hm * r.u(.5, 1), sk = r.u(-.35, .35), ph = [r.u(0, TAU), r.u(0, TAU)];
+            if (i < 3 || D.vis(x, yw - h, w / 2)) isles.push([x, w, h, sk, ph]);
+            x += w * r.u(1.2, i > 2 ? 6 : 3.5);
+          }
+          const shape = (flip) => {
+            c.beginPath();
+            for (const [x, w, h, sk, ph] of isles) {
+              c.moveTo(x - w / 2, yw);
+              for (let k = 1; k < 48; k++) {
+                const t = k / 24 - 1, u = t + sk * (1 - t * t), top = Math.max(0, 1 - u * u) ** .7 * (1 + .12 * Math.sin(t * 5 + ph[0]) + .05 * Math.sin(t * 17 + ph[1]));
+                c.lineTo(x + t * w / 2, yw - flip * h * top);
+              }
+              c.lineTo(x + w / 2, yw); c.closePath();
+            }
+          };
+          shape(-.8); c.fillStyle = rgba(col, .28); c.fill();
+          shape(1); c.fillStyle = col; c.fill();
+          band(c, D, v.mist, yw - 2.5 * hm, yw + .6 * hm, (t) => .5 * Math.exp(-Math.abs(t - .8) * 6), 20);
         });
-        ctrl.push(head);
-        const path = catmull(ctrl, 80), seg = [0];
-        for (let i = 1; i < path.length; i++) seg.push(seg[i - 1] + Math.hypot(path[i][0] - path[i - 1][0], path[i][1] - path[i - 1][1]));
-        const L = seg[seg.length - 1], Rb = 2.3 * s, pts = [];
-        for (let d = 0, i = 0; d < L; d += .12 * s) {
-          while (seg[i + 1] < d) i++;
-          const t = (d - seg[i]) / (seg[i + 1] - seg[i] || 1);
-          pts.push([path[i][0] + (path[i + 1][0] - path[i][0]) * t, path[i][1] + (path[i + 1][1] - path[i][1]) * t, d]);
+      },
+    },
+    {
+      id: "window-light", name: "Window light", grain: 2.5,
+      vars: [
+        { n: "Afternoon", bg: "#cdb69a", low: "#a88e72", light: "#fff0d4", sw: ["#cdb69a", "#fff0d4"] },
+        { n: "Morning", bg: "#c4c8cb", low: "#a1a7ad", light: "#fdfbf4", sw: ["#c4c8cb", "#fdfbf4"] },
+        { n: "Sage", bg: "#a6b09e", low: "#86927f", light: "#f8f0d8", sw: ["#a6b09e", "#f8f0d8"] },
+        { n: "Dusk", bg: "#76574f", low: "#523c39", light: "#ffbd8c", sw: ["#76574f", "#ffbd8c"] },
+      ],
+      draw(c, D, o, r) {
+        const v = o.v;
+        vgrad(c, D, [[0, v.bg], [1, v.low]]);
+        // each window throws a slanted 2 x 2 grid of panes that widens as it falls,
+        // light coming from the upper left; one window per screen-and-a-half of desk
+        const n = Math.max(1, Math.round(D.W / (D.H * 1.7))), wins = [];
+        for (let w = 0; w < n; w++) {
+          const ph = D.H * r.u(.3, .35), pw = ph * r.u(.55, .68), bar = ph * .07, k = r.u(.35, .55), sp = r.u(.15, .3);
+          wins.push([(w + r.u(.42, .55)) / n * D.W, D.H * r.u(.06, .14), pw, ph, bar, k, sp]);
         }
-        const rad = (d) => Rb * Math.min(1, .35 + d / (18 * s)), ol = .25 * s;
-        const outline = new Path2D();
-        for (const [x, y, d] of pts) { const rr = rad(d) + ol; outline.moveTo(x + rr, y); outline.arc(x, y, rr, 0, TAU); }
-        c.fillStyle = v.ink; c.fill(outline);
-        let run = null, runCol = null;
-        const flush = () => { if (run) { c.fillStyle = runCol; c.fill(run); } };
-        for (const [x, y, d] of pts) {
-          const col = v.stripes[Math.floor(d / (2.2 * s)) % v.stripes.length];
-          if (col !== runCol) { flush(); run = new Path2D(); runCol = col; }
-          const rr = rad(d); run.moveTo(x + rr, y); run.arc(x, y, rr, 0, TAU);
+        const panes = () => {
+          for (const [x0, y0, pw, ph, bar, k, sp] of wins) {
+            const tall = 2 * ph + bar, ex = (e, y) => x0 + e * (1 + sp * (y - y0) / tall) + k * (y - y0);
+            for (let i = 0; i < 2; i++) for (let j = 0; j < 2; j++) {
+              const e0 = i * (pw + bar), e1 = e0 + pw, ya = y0 + j * (ph + bar), yb = ya + ph;
+              c.moveTo(ex(e0, ya), ya); c.lineTo(ex(e1, ya), ya); c.lineTo(ex(e1, yb), yb); c.lineTo(ex(e0, yb), yb); c.closePath();
+            }
+          }
+        };
+        soft(c, D, panes, rgba(v.light, .16), 3 * D.s);
+        soft(c, D, panes, rgba(v.light, .42), .3 * D.s);
+        // the room falls off towards the floor and ceiling, dimming the light with it
+        band(c, D, v.low, 0, D.H, (t) => .45 * Math.max(0, t - .55) ** 1.5 * 3 + .18 * Math.max(0, .2 - t) * 5, 20);
+      },
+    },
+    {
+      id: "contour-map", name: "Contour map", grain: 1.5,
+      vars: [
+        { n: "Sand", bg: "#ede4d3", ink: "#9a7e62", sw: ["#ede4d3", "#9a7e62"] },
+        { n: "Moss", bg: "#2e3a2f", ink: "#c3cfb0", sw: ["#2e3a2f", "#c3cfb0"] },
+        { n: "Slate", bg: "#1d232d", ink: "#8ea2bd", sw: ["#1d232d", "#8ea2bd"] },
+        { n: "Clay", bg: "#c47a5c", ink: "#f6dccc", sw: ["#c47a5c", "#f6dccc"] },
+      ],
+      draw(c, D, o, r) {
+        const v = o.v, s = D.s, ph = [r.u(0, TAU), r.u(0, TAU), r.u(0, TAU)], hills = [];
+        c.fillStyle = v.bg; c.fillRect(-1, -1, D.W + 2, D.H + 2);
+        // the terrain: soft hills (a compact bump each) over two long swells
+        for (let i = 0, n = Math.max(16, Math.round(D.W * D.H / (90 * s * s))); i < n; i++) hills.push([r.u(-.1, 1.1) * D.W, r.u(-.1, 1.1) * D.H, r.u(8, 22) * s, r.u(-.45, .7)]);
+        const f = (x, y) => {
+          let h = .3 * Math.sin(x / (21 * s) + ph[0] + Math.sin(y / (15 * s) + ph[1])) + .2 * Math.sin(y / (12 * s) + x / (29 * s) + ph[2]);
+          for (const [hx, hy, hr, ha] of hills) { const d = ((x - hx) ** 2 + (y - hy) ** 2) / (hr * hr); if (d < 1) h += ha * (1 - d) ** 3; }
+          return h;
+        };
+        // contour heights come from a coarse fixed lattice so every screen agrees on them
+        let lo = Infinity, hi = -Infinity;
+        for (let x = 0; x <= D.W; x += s) for (let y = 0; y <= D.H; y += s) { const h = f(x, y); if (h < lo) lo = h; if (h > hi) hi = h; }
+        const step = (hi - lo) / 24;
+        // marching squares on a lattice anchored at the desk's corner, over this render's slice only
+        const cell = Math.max(.15 * s, 2.5 / D.px), i0 = Math.floor(Math.max(0, D.view[0] - 1) / cell), i1 = Math.ceil(Math.min(D.W, D.view[1] + 1) / cell);
+        const ni = i1 - i0 + 1, nj = Math.ceil(D.H / cell) + 1, val = new Float32Array(ni * nj);
+        for (let i = 0; i < ni; i++) for (let j = 0; j < nj; j++) val[i * nj + j] = f((i0 + i) * cell, j * cell);
+        const thin = new Path2D(), bold = new Path2D(), cut = (a, b, L) => (L - a) / (b - a) * cell;
+        for (let i = 0; i < ni - 1; i++) for (let j = 0; j < nj - 1; j++) {
+          const x = (i0 + i) * cell, y = j * cell, a = val[i * nj + j], b = val[(i + 1) * nj + j], e = val[(i + 1) * nj + j + 1], d = val[i * nj + j + 1];
+          const mn = Math.min(a, b, e, d), mx = Math.max(a, b, e, d);
+          for (let k = Math.ceil((mn - lo) / step); lo + k * step < mx; k++) {
+            const L = lo + k * step, p = [];
+            if ((a < L) !== (b < L)) p.push(x + cut(a, b, L), y);
+            if ((b < L) !== (e < L)) p.push(x + cell, y + cut(b, e, L));
+            if ((d < L) !== (e < L)) p.push(x + cut(d, e, L), y + cell);
+            if ((a < L) !== (d < L)) p.push(x, y + cut(a, d, L));
+            const path = k % 5 ? thin : bold;
+            for (let m = 0; m + 3 < p.length; m += 4) { path.moveTo(p[m], p[m + 1]); path.lineTo(p[m + 2], p[m + 3]); }
+          }
         }
-        flush();
-        // the head, googly eyes looking back along the body
-        const [hx, hy] = head, Hh = Rb * 1.9;
-        disc(c, hx, hy, Hh + .3 * s, v.ink); disc(c, hx, hy, Hh, v.head);
-        for (const ex of [-.85, .85]) {
-          const ecx = hx + ex * Hh * .55, ecy = hy - Hh * .35, er = Hh * .42;
-          disc(c, ecx, ecy, er + .2 * s, v.ink); disc(c, ecx, ecy, er, "#ffffff"); disc(c, ecx - er * .35, ecy - er * .25, er * .45, v.ink);
-        }
-        pen(c, r, D, .3).line(cpts(hx, hy + Hh * .1, Hh * .5, 20, .2 * Math.PI, .8 * Math.PI), v.ink, false, 0);
-        c.fillStyle = v.blush;
-        for (const bx of [-1, 1]) { c.beginPath(); c.ellipse(hx + bx * Hh * .68, hy + Hh * .25, .7 * s, .35 * s, 0, 0, TAU); c.fill(); }
-        // a little speech bubble, kept on the head's screen
-        const hs = D.scr.find((q) => hx >= q.x && hx <= q.x + q.w && hy >= q.y && hy <= q.y + q.h) || scr[scr.length - 1];
-        const bx = clamp(hx - 8.5 * s, hs.x + 3.6 * s, hs.x + hs.w - 3.6 * s), by = Math.max(hy - 6.2 * s, hs.y + 1.6 * s);
-        c.beginPath(); c.roundRect ? c.roundRect(bx - 3.3 * s, by - 1.3 * s, 6.6 * s, 2.6 * s, s) : c.rect(bx - 3.3 * s, by - 1.3 * s, 6.6 * s, 2.6 * s);
-        c.fillStyle = "#ffffff"; c.fill(); c.lineWidth = .15 * s; c.strokeStyle = v.ink; c.stroke();
-        poly(c, [[bx + 1.6 * s, by + 1.2 * s], [bx + 3.2 * s, by + 2.6 * s], [bx + 2.4 * s, by + 1.2 * s]], v.ink);
-        c.save(); c.translate(bx, by); c.scale(.01, .01);
-        c.font = `bold ${Math.round(110 * s)}px "Comic Sans MS", "Chalkboard SE", "Comic Neue", "Mona Sans Variable", sans-serif`;
-        c.textAlign = "center"; c.textBaseline = "middle"; c.fillStyle = v.ink; c.fillText("hi :)", 0, 4 * s);
+        const w = Math.max(.02 * s, .8 / D.px);
+        c.lineCap = "round"; c.lineJoin = "round";
+        c.strokeStyle = rgba(v.ink, .4); c.lineWidth = w; c.stroke(thin);
+        c.strokeStyle = rgba(v.ink, .6); c.lineWidth = w * 2.2; c.stroke(bold);
+      },
+    },
+    {
+      id: "graph-paper", name: "Graph paper", fixed: true, grain: 1.5,
+      vars: [
+        { n: "Paper", bg: "#f4f1e8", ink: "#5f7fb0", sw: ["#f4f1e8", "#5f7fb0"] },
+        { n: "Green", bg: "#e9efe4", ink: "#5a8c69", sw: ["#e9efe4", "#5a8c69"] },
+        { n: "Blueprint", bg: "#1c3a5e", ink: "#d3e2f2", sw: ["#1c3a5e", "#d3e2f2"] },
+        { n: "Night", bg: "#17191e", ink: "#8b95a9", sw: ["#17191e", "#8b95a9"] },
+      ],
+      draw(c, D, o) {
+        const v = o.v;
+        c.fillStyle = v.bg; c.fillRect(-1, -1, D.W + 2, D.H + 2);
+        // real centimetres: a 1 cm grid, every fifth line stronger, centred on the desk.
+        // Minor lines fade out once they get too close together to read as lines.
+        const ox = (D.W % 5) / 2, oy = (D.H % 5) / 2, minor = new Path2D(), major = new Path2D();
+        for (let k = -Math.floor(ox); ox + k <= D.W; k++) { const x = ox + k; (k % 5 ? minor : major).moveTo(x, -1); (k % 5 ? minor : major).lineTo(x, D.H + 1); }
+        for (let k = -Math.floor(oy); oy + k <= D.H; k++) { const y = oy + k; (k % 5 ? minor : major).moveTo(-1, y); (k % 5 ? minor : major).lineTo(D.W + 1, y); }
+        const w = Math.max(.012, .7 / D.px);
+        c.strokeStyle = rgba(v.ink, .22 * clamp((D.px - 3) / 8, 0, 1)); c.lineWidth = w; c.stroke(minor);
+        c.strokeStyle = rgba(v.ink, .42); c.lineWidth = w * 2; c.stroke(major);
+        // a faint vignette, as if the sheet were under one lamp
+        c.save(); c.translate(D.W / 2, D.H / 2); c.scale(D.W / 2, D.H / 2);
+        const g = c.createRadialGradient(0, 0, 0, 0, 0, 1.42);
+        for (let k = 0; k <= 10; k++) g.addColorStop(k / 10, `rgba(0,0,0,${(.16 * Math.max(0, k / 10 - .4) ** 2 / .36).toFixed(4)})`);
+        c.fillStyle = g; c.fillRect(-1.1, -1.1, 2.2, 2.2);
         c.restore();
       },
     },

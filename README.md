@@ -130,7 +130,7 @@ Type it the way you'd say it: `175 cm in ft`, `100 sqm to sq ft`, `5 lakh to mil
 
 ### Wallpaper Studio — [`wallpaper-studio.html`](wallpaper-studio.html)
 
-One wallpaper across several screens. Detect your monitors (or add them by hand), drag them into the order they stand on your desk, and lay a pattern over the whole desk in real centimetres so lines carry on across the bezels. Export a Windows Span PNG, one PNG per screen for macOS, or a preview of the desk.
+One wallpaper across several screens. Detect your monitors (or add them by hand), drag them into the order they stand on your desk, and the scene is laid out over the whole desk in real centimetres, so horizons, contour lines and grids carry on across the bezels. Fourteen quiet scenes, each with a few variants: dusk mountains, soft gradient, ink mist, night sky, sea sunrise, desert dunes, foggy pines, aurora snow, mirror lake, rolling hills, doodle wall, mesh gradient, misty archipelago, window light, contour map and graph paper (a true 1 cm grid). Export a Windows Span PNG, one PNG per screen for macOS, or a preview of the desk.
 
 ### Outfit Studio — [`outfit-studio.html`](outfit-studio.html)
 
