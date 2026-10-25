@@ -40,6 +40,8 @@ SLOT = '<span data-hub-theme-slot></span>'
 
 KIT_RE = re.compile(r"<!-- studio-hub theme kit v\d.*?<!-- /studio-hub theme kit -->\n?", re.S)
 TOUR_RE = re.compile(r"<!-- studio-hub tour -->.*?<!-- /studio-hub tour -->\n?", re.S)
+TOOLS_RE = re.compile(r"<!-- studio-hub tools:.*?<!-- /studio-hub tools -->\n?", re.S)
+TOOLS_SLOT = "<!-- studio-hub tools slot -->"
 SLIDER_RE = re.compile(r"<!-- studio-hub theme slider -->.*?<!-- /studio-hub theme slider -->\n?", re.S)
 
 
@@ -101,6 +103,10 @@ def apply(page: pathlib.Path) -> str:
     s = s.replace('style="font-size:12px;color:#8a8b94"', 'style="font-size:12px;color:var(--h-muted)"')
     i = s.index("</head>")
     s = s[:i] + kit + s[i:]
+    if page.name == "index.html":  # the tool list rides inside the page: GitHub Pages does not serve every file under _theme
+        tools = (HERE / "tools.js").read_text(encoding="utf-8").rstrip()
+        s = TOOLS_RE.sub(TOOLS_SLOT + "\n", s).replace('<script src="_theme/tools.js"></script>', TOOLS_SLOT)
+        s = s.replace(TOOLS_SLOT, "<!-- studio-hub tools: inlined from _theme/tools.js by _theme/apply.py -->\n<script>\n" + tools + "\n</script>\n<!-- /studio-hub tools -->")
     j = s.rindex("</body>")
     s = s[:j] + slider + s[j:]
     tours = json.loads((HERE / "tours.json").read_text(encoding="utf-8"))  # in-page walkthroughs
