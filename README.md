@@ -126,7 +126,7 @@ The same instant in several cities, hour by hour. Rows for Gothenburg, Mangalore
 
 ### Convert Studio — [`convert-studio.html`](convert-studio.html)
 
-Eighteen converter groups on one page: currency (SEK, INR, USD, EUR, GBP, NOK, DKK, CHF, JPY, AED, live ECB rates kept for offline use), big numbers with lakh and crore, length, height in feet and inches, area (with cent and gunta), volume, weight (with tola), temperature, speed, running pace, fuel economy, data, internet speed, time, energy, power, pressure and angle. Type in any box and the rest of its group updates; click a unit to copy; search finds a unit by name.
+Type it the way you'd say it: `175 cm in ft`, `100 sqm to sq ft`, `5 lakh to million`, `20 c`, `5'10`, `5:30 min/km in mph`. The answer appears big, every other unit of that kind sits under it, and Enter keeps the line in a short history. Spelling is forgiving: `sqm`, `square meters`, `m2`, `m^2` and `metre square` all mean m²; plurals, `kilos`, `rupees`, `kronor`, typos like `celcius` and `farenheit` all land. Suggestions appear as you type a unit (Tab takes the first), and **All units** lists everything by group. **Browse** is the other way round: pick a group and a unit on the left, type an amount, see it in every other unit. Eighteen groups: currency (SEK, INR, USD, EUR, GBP, NOK, DKK, CHF, JPY, AED, live ECB rates kept for offline use), big numbers with lakh and crore, length, area (with cent and gunta), volume, weight (with tola), temperature, speed, running pace, fuel economy, data, internet speed, time, energy, power, pressure and angle.
 
 ### Wallpaper Studio — [`wallpaper-studio.html`](wallpaper-studio.html)
 

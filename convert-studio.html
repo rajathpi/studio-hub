@@ -4,65 +4,75 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Convert Studio</title>
-<meta name="description" content="Everyday unit converter: currency, length, area, weight, volume, temperature, fuel, data, lakh and crore, and more.">
+<meta name="description" content="Type a question like 175 cm in ft, 5 lakh to million or 20 c and get the answer, plus every other unit. Understands sqm, square meters, m2, typos and plurals.">
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { height: 100%; }
-  body {
-    font-family: var(--h-font);
-    background: var(--h-bg); color: var(--h-text);
-    display: flex; flex-direction: column;
-  }
-  header {
-    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
-    padding: 10px 14px; background: var(--h-panel); border-bottom: 1px solid var(--h-border);
-  }
-  header h1 { font-size: 15px; font-weight: 600; margin-right: 6px; }
+  body { font-family: var(--h-font); background: var(--h-bg); color: var(--h-text); display: flex; flex-direction: column; }
+  header { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: var(--h-panel); border-bottom: 1px solid var(--h-border); }
+  header h1 { font-size: 15px; font-weight: 600; }
+  header .sub { font-size: 12px; color: var(--h-muted); }
   .spacer { flex: 1; }
-  input, button { font: inherit; color: var(--h-text); }
-  button {
-    font-size: 13px; padding: 6px 12px; border-radius: 6px;
-    border: 1px solid var(--h-btn-border); background: var(--h-btn); cursor: pointer;
-  }
+  button, input { font: inherit; color: var(--h-text); }
+  button { font-size: 13px; padding: 6px 12px; border-radius: 6px; border: 1px solid var(--h-btn-border); background: var(--h-btn); cursor: pointer; }
   button:hover { background: var(--h-btn-hover); }
-  #q {
-    width: 260px; font-size: 13px; padding: 6px 10px; border-radius: 6px;
-    border: 1px solid var(--h-btn-border); background: var(--h-btn); outline: none;
-  }
-  #q:focus { border-color: var(--h-text2); }
-  .hint { font-size: 12px; color: var(--h-muted); }
+  button.on { background: var(--h-accent); border-color: var(--h-accent); color: var(--h-on-accent); }
+  .chip { font-size: 12px; padding: 4px 10px; border-radius: 999px; }
 
-  main { flex: 1; min-height: 0; overflow: auto; padding: 18px; }
-  #cards { columns: 300px; column-gap: 16px; }
-  .card {
-    break-inside: avoid; margin-bottom: 16px; padding: 12px 14px 14px;
-    background: var(--h-panel); border: 1px solid var(--h-border); border-radius: 10px;
-  }
-  .card h2 { font-family: var(--h-head); font-size: 14px; font-weight: 700; margin-bottom: 9px; display: flex; justify-content: space-between; align-items: baseline; }
-  .card h2 small { font-family: var(--h-font); font-weight: 400; font-size: 11px; color: var(--h-muted); }
-  .rows { display: grid; gap: 5px; }
-  .f { display: flex; align-items: center; border: 1px solid var(--h-btn-border); background: var(--h-btn); border-radius: 6px; min-width: 0; }
-  .f:focus-within { border-color: var(--h-text2); }
-  .f.src { box-shadow: inset 3px 0 0 var(--h-text); }
-  .f input { border: 0; background: transparent; min-width: 0; width: 100%; padding: 6px 9px; outline: none; font-variant-numeric: tabular-nums; font-size: 14px; }
-  .f .u {
-    flex: none; width: 108px; padding: 0 9px; font-size: 12px; color: var(--h-muted); text-align: right;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: copy;
-  }
-  .f .u:hover { color: var(--h-text); }
-  .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
-  .note { font-size: 12px; color: var(--h-muted); margin-top: 8px; line-height: 1.5; }
-  .note.off { color: var(--h-amber); }
-  .card.hide { display: none; }
-  #none { display: none; text-align: center; color: var(--h-muted); padding: 40px; font-size: 14px; }
-
-  #toast {
-    position: fixed; left: 50%; bottom: 22px; transform: translate(-50%, 20px); opacity: 0;
-    background: var(--h-accent); color: var(--h-on-accent); font-size: 13px; padding: 8px 14px; border-radius: 8px;
-    transition: opacity .2s, transform .2s; pointer-events: none;
-  }
-  #toast.show { opacity: 1; transform: translate(-50%, 0); }
-  @media (max-width: 600px) { #q { width: 100%; } main { padding: 12px; } .hint { display: none; } }
+  main { flex: 1; min-height: 0; overflow: auto; padding: 9vh 24px 40px; }
+  .wrap { max-width: 680px; margin: 0 auto; }
+  .ask { position: relative; }
+  .ask label { display: flex; align-items: center; background: var(--h-panel); border: 1px solid var(--h-border2); border-radius: 16px; padding: 6px 8px 6px 18px; box-shadow: 0 12px 34px -20px rgba(0,0,0,.3); }
+  .ask label:focus-within { border-color: var(--h-text2); }
+  .ask input { flex: 1; border: 0; background: none; outline: none; font-size: 22px; padding: 10px 0; min-width: 0; }
+  .ask kbd { font: 11px "SF Mono", Menlo, Consolas, monospace; color: var(--h-muted); border: 1px solid var(--h-border2); border-radius: 5px; padding: 2px 6px; margin-right: 8px; }
+  #sug { position: absolute; left: 0; right: 0; top: calc(100% + 6px); z-index: 5; display: none; padding: 5px; background: var(--h-panel); border: 1px solid var(--h-border2); border-radius: 12px; box-shadow: 0 12px 30px -12px rgba(0,0,0,.3); }
+  #sug.show { display: block; }
+  #sug button { display: flex; width: 100%; gap: 10px; align-items: baseline; text-align: left; border: 0; background: none; padding: 7px 10px; border-radius: 8px; font-size: 14px; }
+  #sug button.on, #sug button:hover { background: var(--h-btn-hover); }
+  #sug button b { font-weight: 600; min-width: 70px; }
+  #sug button span { color: var(--h-muted); font-size: 12.5px; }
+  #sug button em { margin-left: auto; font-style: normal; color: var(--h-faint); font-size: 11px; white-space: nowrap; }
+  .eg { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+  .answer { margin-top: 28px; min-height: 96px; }
+  .answer b { display: block; font-family: var(--h-head); font-size: 56px; font-weight: 800; letter-spacing: -.02em; font-variant-numeric: tabular-nums; line-height: 1.1; overflow-wrap: anywhere; cursor: copy; }
+  .answer span { color: var(--h-muted); font-size: 15px; }
+  .answer span i { font-style: normal; color: var(--h-text2); }
+  .answer .no { font-size: 15px; color: var(--h-muted); line-height: 1.6; }
+  .answer .no b { display: inline; font: inherit; color: var(--h-text); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+  .table { margin-top: 24px; display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 6px; }
+  .table div { background: var(--h-panel); border: 1px solid var(--h-border); border-radius: 10px; padding: 9px 12px; font-size: 13px; color: var(--h-text2); display: flex; justify-content: space-between; gap: 8px; cursor: copy; }
+  .table div b { font-variant-numeric: tabular-nums; color: var(--h-text); font-weight: 600; text-align: right; }
+  h3 { font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--h-muted); margin: 28px 0 8px; display: flex; justify-content: space-between; align-items: center; }
+  h3 button { font-size: 11px; padding: 2px 8px; text-transform: none; letter-spacing: 0; font-weight: 500; }
+  .hist button { display: flex; width: 100%; justify-content: space-between; text-align: left; border: 0; background: none; padding: 7px 4px; font-size: 13px; color: var(--h-text2); border-radius: 6px; }
+  .hist button:hover { background: var(--h-panel); }
+  .hist button b { color: var(--h-text); font-weight: 600; font-variant-numeric: tabular-nums; }
+  /* every unit, by group, so nothing is hidden behind the box */
+  #all { display: none; margin-top: 6px; }
+  #all.show { display: block; }
+  .grp { padding: 10px 0; border-top: 1px solid var(--h-border); }
+  .grp h4 { font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+  .grp h4 small { color: var(--h-muted); font-weight: 400; margin-left: 6px; }
+  .units { display: flex; flex-wrap: wrap; gap: 5px; }
+  .units button { font-size: 12px; padding: 3px 9px; border-radius: 999px; }
+  .units button small { color: var(--h-muted); margin-left: 4px; }
+  .toast { position: fixed; left: 50%; bottom: 22px; transform: translate(-50%, 20px); opacity: 0; background: var(--h-accent); color: var(--h-on-accent); font-size: 13px; padding: 8px 14px; border-radius: 8px; transition: opacity .2s, transform .2s; pointer-events: none; }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+  .seg { display: flex; border: 1px solid var(--h-btn-border); border-radius: 8px; overflow: hidden; }
+  .seg button { border: 0; border-radius: 0; padding: 5px 12px; font-size: 13px; }
+  .seg button.on { background: var(--h-accent); color: var(--h-on-accent); }
+  .browseWrap { max-width: 920px; margin: -6vh auto 0; display: grid; grid-template-columns: 180px 1fr; gap: 24px; }
+  #rail button { display: block; width: 100%; text-align: left; border: 0; background: none; padding: 7px 10px; border-radius: 8px; font-size: 13px; }
+  #rail button.on { background: var(--h-accent); color: var(--h-on-accent); }
+  .amount { display: flex; align-items: baseline; gap: 12px; background: var(--h-panel); border: 1px solid var(--h-border2); border-radius: 16px; padding: 10px 18px; }
+  .amount input { flex: 1; min-width: 0; border: 0; background: none; outline: none; font-family: var(--h-head); font-size: 40px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .amount span { font-size: 18px; color: var(--h-muted); }
+  .pane .units { margin-top: 10px; }
+  .pane .units button.on { background: var(--h-accent); border-color: var(--h-accent); color: var(--h-on-accent); }
+  .pane .answer { margin-top: 18px; min-height: 0; }
+  @media (max-width: 700px) { .browseWrap { grid-template-columns: 1fr; margin-top: 0; } #rail { display: flex; flex-wrap: wrap; gap: 4px; } #rail button { width: auto; } }
+  @media (max-width: 600px) { main { padding: 24px 14px 40px; } .answer b { font-size: 40px; } .ask input { font-size: 18px; } }
 </style>
 <!-- studio-hub theme kit v1: fonts, light/dark tokens, title shadow, theme slider. Source: _theme/kit.html, inlined by _theme/apply.py -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource-variable/mona-sans@5.3.0/wdth.css">
@@ -111,25 +121,34 @@
 <!-- /studio-hub theme kit -->
 </head>
 <body>
-<header>
-  <h1>Convert Studio</h1>
-  <input id="q" type="search" placeholder="Find a unit, e.g. acre, mpg, crore" autocomplete="off">
-  <span class="hint">Type in any box. Click a unit to copy.</span>
-  <div class="spacer"></div>
-  <button id="reset" title="Put every box back to its starting value">Reset</button>
-  <span data-hub-theme-slot></span>
+<header><h1>Convert Studio</h1><div class="seg" id="seg"><button data-mode="ask" class="on">Ask</button><button data-mode="browse">Browse</button></div><span class="sub" id="subtitle">Type it the way you'd say it</span><div class="spacer"></div><button id="browse" class="chip">All units</button><span data-hub-theme-slot></span>  <span data-hub-theme-slot></span>
 </header>
-<main>
-  <div id="cards"></div>
-  <div id="none">Nothing matches that.</div>
-</main>
-<div id="toast"></div>
+<main><div class="wrap" id="wrapAsk">
+  <div class="ask">
+    <label><input id="q" placeholder="175 cm in ft   ·   100 sqm to sq ft   ·   5 lakh in million   ·   20 c" autocomplete="off" autofocus><kbd>/</kbd></label>
+    <div id="sug"></div>
+  </div>
+  <div class="eg" id="eg"></div>
+  <div class="answer" id="ans"></div>
+  <div class="table" id="table"></div>
+  <div id="all"></div>
+  <h3 id="hh" style="display:none">Earlier <button id="hx">Clear</button></h3>
+  <div class="hist" id="hist"></div>
+</div>
+<div class="browseWrap" id="wrapBrowse" style="display:none">
+  <nav id="rail"></nav>
+  <div class="pane">
+    <div class="amount"><input id="bq" inputmode="decimal" autocomplete="off" value="1"><span id="bsym"></span></div>
+    <div class="units" id="bunits"></div>
+    <div class="answer" id="bans"></div>
+    <div class="table" id="btable"></div>
+  </div>
+</div></main>
+<div class="toast" id="toast"></div>
 
 <script>
 (() => {
-  const $ = id => document.getElementById(id);
   const KEY = "convertStudio.values", RKEY = "convertStudio.rates";
-
   // Each unit converts to and from its group's base unit. `f` is a plain factor
   // (1 unit = f base); non-linear units give to/from functions instead.
   const lin = (sym, f, name) => ({ sym, name, to: v => v * f, from: b => b / f });
@@ -211,132 +230,265 @@
     return i.replace(/\B(?=(\d{3})+(?!\d))/g, " ") + (d ? "." + d : "");
   }
 
-  let saved = {};
-  try { saved = JSON.parse(localStorage.getItem(KEY)) || {}; } catch {}
-  const store = () => { try { localStorage.setItem(KEY, JSON.stringify(saved)); } catch {} };
-
-  // ---- build the cards ----
-  const box = $("cards");
-  GROUPS.forEach(g => {
-    const card = document.createElement("section");
-    card.className = "card";
-    card.dataset.find = [g.name, g.sub, ...g.units.flatMap(u => [u.sym, u.name])].filter(Boolean).join(" ").toLowerCase();
-    card.innerHTML = `<h2>${g.name}${g.sub ? `<small>${g.sub}</small>` : ""}</h2><div class="rows"></div>` + (g.note ? '<div class="note" id="rate"></div>' : "");
-    const rows = card.querySelector(".rows");
-    g.fields = g.units.map((u, i) => {
-      if (u.ftin) {   // one row, two boxes
-        const row = document.createElement("div"); row.className = "pair";
-        row.innerHTML = '<label class="f"><input inputmode="decimal" autocomplete="off" aria-label="feet"><span class="u">ft</span></label><label class="f"><input inputmode="decimal" autocomplete="off" aria-label="inches"><span class="u">in</span></label>';
-        rows.append(row);
-        const [ft, inch] = row.querySelectorAll("input");
-        [ft, inch].forEach(inp => inp.addEventListener("input", () => typed(g, i)));
-        row.querySelectorAll(".u").forEach(sp => sp.onclick = () => copy(`${ft.value || 0} ft ${inch.value || 0} in`));
-        return { row, ft, inch, labels: row.querySelectorAll(".f") };
-      }
-      const f = document.createElement("label"); f.className = "f";
-      f.innerHTML = `<input inputmode="decimal" autocomplete="off" aria-label="${u.sym}"><span class="u" title="${u.name || u.sym} — click to copy">${u.sym}</span>`;
-      rows.append(f);
-      const inp = f.querySelector("input");
-      inp.addEventListener("input", () => typed(g, i));
-      f.querySelector(".u").onclick = e => { e.preventDefault(); if (inp.value) copy(`${inp.value} ${u.sym}`); };
-      return { inp, labels: [f] };
-    });
-    box.append(card);
-    const [i, v] = saved[g.id] || g.def;
-    setRaw(g, i, v); run(g, i);
-  });
-
-  function setRaw(g, i, v) {
-    const fl = g.fields[i];
-    if (!fl) return;
-    if (fl.ft) { const [a, b] = String(v).split("|"); fl.ft.value = a || ""; fl.inch.value = b || ""; }
-    else fl.inp.value = v;
-  }
-  function raw(g, i) { const fl = g.fields[i]; return fl.ft ? fl.ft.value + "|" + fl.inch.value : fl.inp.value; }
-  function typed(g, i) { saved[g.id] = [i, raw(g, i)]; store(); run(g, i); }
-
-  // Read the box the user typed in, turn it into the base unit, write every other box.
-  function run(g, i) {
-    const u = g.units[i], fl = g.fields[i];
-    let v;
-    if (u.ftin) {
-      const ft = num(fl.ft.value), inch = num(fl.inch.value);
-      v = Number.isFinite(ft) || Number.isFinite(inch) ? ((ft || 0) * 12 + (inch || 0)) * .0254 : NaN;
-    } else if (u.pace) v = unclock(fl.inp.value);
-    else v = num(fl.inp.value);
-    const base = Number.isFinite(v) ? u.to(v) : NaN;
-    g.fields.forEach((f, j) => {
-      f.labels.forEach(l => l.classList.toggle("src", j === i));
-      if (j === i) return;
-      const w = g.units[j], out = Number.isFinite(base) ? w.from(base) : NaN;
-      if (w.ftin) {
-        if (!Number.isFinite(out)) { f.ft.value = f.inch.value = ""; return; }
-        const tot = out / .0254; let ft = Math.floor(tot / 12), inch = +(tot - ft * 12).toFixed(1);
-        if (inch >= 12) { ft += 1; inch = 0; }
-        f.ft.value = ft; f.inch.value = inch;
-      } else if (w.pace) f.inp.value = clock(out);
-      else f.inp.value = Number.isFinite(out) && out !== Infinity ? fmt(out, g.dp) : "";
-    });
-  }
-
-  // ---- currency rates ----
-  const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-  const curGroup = GROUPS[0];
-  function rateNote() {
-    const el = $("rate");
-    if (!rates) { el.className = "note off"; el.textContent = "No rates yet. They load once you are online."; return; }
-    const [y, m, d] = rates.date.split("-").map(Number);
-    el.className = "note" + (rateLive ? "" : " off");
-    el.textContent = `Rates of ${d} ${MON[m - 1]} ${y}` + (rateLive ? "" : " (saved, offline)") + (rates.rates.AED ? "" : ". AED isn't available.");
-  }
-  function refreshCurrency() { const [i] = saved.cur || curGroup.def; run(curGroup, i); rateNote(); }
-  refreshCurrency();
-  (async () => {
-    const want = CUR.filter(c => c !== "EUR").join(",");
-    let j = null;
-    // api.frankfurter.app now 301s to frankfurter.dev without CORS headers, so ask .dev first
-    for (const u of [`https://api.frankfurter.dev/v1/latest?from=EUR&to=${want}`, `https://api.frankfurter.app/latest?from=EUR&to=${want}`]) {
-      try { const res = await fetch(u); if (res.ok) { j = await res.json(); break; } } catch {}
-    }
-    if (!j || !j.rates || !j.rates.SEK) {
-      // ECB doesn't publish every currency (AED); retry without unknown ones
-      try { const res = await fetch("https://api.frankfurter.dev/v1/latest?from=EUR"); if (res.ok) j = await res.json(); } catch {}
-    }
-    if (j && j.rates && j.rates.SEK) {
-      rates = { date: j.date, rates: { EUR: 1, ...j.rates } };
-      if (!rates.rates.AED && rates.rates.USD) rates.rates.AED = rates.rates.USD * 3.6725;   // dirham is pegged to the dollar
-      rateLive = true;
-      try { localStorage.setItem(RKEY, JSON.stringify(rates)); } catch {}
-    }
-    refreshCurrency();
-  })();
-
-  // ---- search ----
-  $("q").addEventListener("input", e => {
-    const words = e.target.value.toLowerCase().trim().split(/\s+/).filter(Boolean);
-    let shown = 0;
-    document.querySelectorAll(".card").forEach(c => {
-      const ok = words.every(w => c.dataset.find.includes(w));
-      c.classList.toggle("hide", !ok); shown += ok;
-    });
-    $("none").style.display = shown ? "none" : "block";
-  });
-  document.addEventListener("keydown", e => {
-    if (e.key === "/" && !e.target.closest?.("input")) { e.preventDefault(); $("q").focus(); }
-    if (e.key === "Escape" && e.target === $("q")) { $("q").value = ""; $("q").dispatchEvent(new Event("input")); }
-  });
-
-  $("reset").onclick = () => {
-    saved = {}; store();
-    GROUPS.forEach(g => { g.fields.forEach((_, i) => setRaw(g, i, "")); setRaw(g, g.def[0], g.def[1]); run(g, g.def[0]); });
-    toast("Back to the starting values");
+  // ---------- understanding what someone types ----------
+  // Every unit gets a set of spellings: its symbol, its name words, and common ways
+  // people write it. Input is boiled down the same way, then matched exactly, by
+  // prefix, or with a typo or two.
+  const EXTRA = {
+    "°C": ["c", "celsius", "centigrade", "degc", "degreesc", "degreescelsius", "celcius"], "°F": ["f", "fahrenheit", "degf", "degreesf", "degreesfahrenheit", "farenheit"], "K": ["kelvin"],
+    "mm": ["millimeter", "millimetre"], "cm": ["centimeter", "centimetre", "cms"], "m": ["meter", "metre", "mtr", "mtrs"], "km": ["kilometer", "kilometre", "kms", "klick"],
+    "in": ["inch", "inches", "\"", "''"], "ft": ["feet", "foot", "'"], "yd": ["yard"], "mi": ["mile"], "nmi": ["nauticalmile", "nautical"],
+    "cm²": ["sqcm", "squarecentimeter", "squarecentimetre", "cm^2", "cm2"], "m²": ["sqm", "sqmeter", "sqmetre", "squaremeter", "squaremetre", "m^2", "m2", "sqmt", "sqmts", "metersquare", "metresquare", "metersquared"], "ft²": ["sqft", "squarefeet", "squarefoot", "ft^2", "ft2", "sft", "feetsquare", "footsquare"], "yd²": ["sqyd", "squareyard", "yd^2", "yd2", "yardsquare"], "km²": ["sqkm", "squarekilometer", "squarekilometre", "km^2", "km2"], "mi²": ["sqmi", "squaremile", "mi^2", "mi2"],
+    "are": ["ares"], "hectare": ["ha", "hectares"], "acre": ["acres", "ac"], "cent": ["cents"], "gunta": ["guntha", "gunthas", "guntas"],
+    "ml": ["milliliter", "millilitre", "millilitres", "milliliters"], "l": ["liter", "litre", "litres", "liters", "ltr", "ltrs", "lt"], "dl": ["deciliter", "decilitre"], "m³": ["cubicmeter", "cubicmetre", "m^3", "m3", "cum", "cbm"],
+    "tsp": ["teaspoon", "teaspoons"], "tbsp": ["tablespoon", "tablespoons", "tbs"], "cup (US)": ["cup", "cups"], "fl oz (US)": ["floz", "fluidounce", "fluidounces"], "pint (US)": ["pint", "pints", "pt"], "gal (US)": ["gal", "gallon", "gallons", "usgal", "usgallon"], "gal (UK)": ["ukgal", "ukgallon", "imperialgallon", "impgal"], "ft³": ["cubicfeet", "cubicfoot", "ft^3", "ft3", "cft", "cuft"],
+    "mg": ["milligram", "milligrams"], "g": ["gram", "grams", "gm", "gms"], "kg": ["kilo", "kilos", "kilogram", "kilograms", "kgs"], "tonne": ["ton", "tons", "tonnes", "metricton", "t"], "oz": ["ounce", "ounces"], "lb": ["lbs", "pound", "pounds"], "stone": ["st", "stones"], "tola": ["tolas"], "troy oz": ["troyounce", "ozt"],
+    "km/h": ["kmh", "kph", "kmph", "kmperhour", "kilometersperhour"], "m/s": ["ms", "mps", "meterspersecond"], "mph": ["milesperhour", "mi/h"], "knot": ["knots", "kn", "kt", "kts"],
+    "min/km": ["minperkm", "minutesperkm", "paceperkm"], "min/mi": ["minpermile", "minutespermile", "permile"],
+    "l/100 km": ["l/100km", "lper100km", "litersper100km", "litresper100km", "l100"], "km/l": ["kmpl", "kml", "kmperliter", "kmperlitre"], "mpg (US)": ["mpg", "milespergallon", "usmpg"], "mpg (UK)": ["ukmpg", "mpguk", "imperialmpg"], "mil/l": ["milperliter", "milperlitre", "mil"],
+    "byte": ["bytes", "b"], "KB": ["kilobyte", "kilobytes"], "MB": ["megabyte", "megabytes", "megs"], "GB": ["gigabyte", "gigabytes", "gigs"], "TB": ["terabyte", "terabytes"], "MiB": ["mebibyte"], "GiB": ["gibibyte"],
+    "Mbit/s": ["mbps", "mbit", "megabit", "megabits", "mb/s"], "Gbit/s": ["gbps", "gbit", "gigabit", "gigabits"], "MB/s": ["mbytes", "megabytespersecond", "mbs"], "kbit/s": ["kbps", "kbit", "kilobit"],
+    "seconds": ["s", "sec", "secs", "second"], "minutes": ["min", "mins", "minute"], "hours": ["h", "hr", "hrs", "hour"], "days": ["d", "day"], "weeks": ["w", "wk", "wks", "week"], "months": ["mo", "month", "mon"], "years": ["y", "yr", "yrs", "year"],
+    "kcal": ["calorie", "calories", "cal", "kilocalorie", "kilocalories"], "kJ": ["kilojoule", "kilojoules"], "Wh": ["watthour", "watthours"], "kWh": ["kilowatthour", "kilowatthours", "units"],
+    "W": ["watt", "watts"], "kW": ["kilowatt", "kilowatts"], "hp": ["horsepower", "bhp"], "hk (PS)": ["hk", "ps", "metrichorsepower", "pferdestarke"],
+    "bar": ["bars"], "psi": ["poundspersquareinch"], "kPa": ["kilopascal", "kilopascals"], "atm": ["atmosphere", "atmospheres"], "hPa": ["hectopascal", "mbar", "millibar", "millibars"],
+    "degrees": ["deg", "degree", "°"], "radians": ["rad", "radian"], "turns": ["turn", "rev", "revolution", "revolutions"],
+    "ones": ["one", "unit", "plain"], "thousand": ["thousands", "k", "thou"], "lakh": ["lakhs", "lac", "lacs", "lakhrupees"], "million": ["millions", "mn", "mio", "mil"], "crore": ["crores", "cr"], "billion": ["billions", "bn"], "trillion": ["trillions", "tn"],
+    "SEK": ["kr", "kronor", "krona", "swedishkrona", "swedishkronor", "sek"], "INR": ["rs", "rupee", "rupees", "₹", "inr"], "USD": ["$", "dollar", "dollars", "usdollar", "usdollars", "bucks"], "EUR": ["€", "euro", "euros"], "GBP": ["£", "quid", "sterling", "britishpound", "britishpounds", "gbp"], "NOK": ["nok", "norwegiankrone", "norwegiankroner"], "DKK": ["dkk", "danishkrone", "danishkroner"], "CHF": ["chf", "franc", "francs", "swissfranc"], "JPY": ["yen", "jpy", "¥"], "AED": ["aed", "dirham", "dirhams"],
   };
-
-  async function copy(text) {
-    try { await navigator.clipboard.writeText(text); toast("Copied " + text); } catch { toast("Copy blocked by the browser"); }
+  // "mil" means Swedish mil in fuel and million in big numbers; the group it is asked with decides
+  function canon(s) {
+    s = String(s).toLowerCase().trim().replace(/[º°]/g, "°").replace(/\s+/g, " ");
+    s = s.replace(/²/g, "^2").replace(/³/g, "^3");
+    s = s.replace(/[\s._\-]/g, "");
+    let m;
+    if ((m = s.match(/^(?:square|sq)(.+?)(?:\^2)?$/)) && m[1] !== "rt") s = m[1] + "^2";
+    else if ((m = s.match(/^(.+?)(?:squared?|sq)$/))) s = m[1] + "^2";
+    if ((m = s.match(/^cubic(.+?)(?:\^3)?$/))) s = m[1] + "^3";
+    else if ((m = s.match(/^(.+?)cubic$/))) s = m[1] + "^3";
+    s = s.replace(/^(degrees?|deg)(?=[cf]$|celsius|fahrenheit|kelvin)/, "").replace(/^°/, "");
+    s = s.replace(/^per/, "").replace(/\(|\)/g, "");
+    return s;
   }
+  const KEYS = [];   // [canonical spelling, unit, group, priority]: symbols and known spellings beat single words of a name
+  for (const g of GROUPS) for (const u of g.units) {
+    if (u.ftin) continue;
+    const add = (k, pri) => { if (!k) return; KEYS.push([k, u, g, pri]); const st = k.match(/^(.+?)(\^\d)?$/); if (st[1].length > 3 && !st[1].endsWith("s") && !/\//.test(st[1])) KEYS.push([st[1] + "s" + (st[2] || ""), u, g, pri]); };
+    for (const k of new Set([u.sym, ...(EXTRA[u.sym] || [])].map(canon))) add(k, 0);
+    for (const k of new Set((u.name || "").split(" ").map(canon))) if (k.length > 2) add(k, 1);
+  }
+  const RAW = [];   // [lower-case spelling as people write it, unit, group]
+  for (const g of GROUPS) for (const u of g.units) {
+    if (u.ftin) continue;
+    for (const k of new Set([u.sym, ...(u.name || "").split(" "), ...(EXTRA[u.sym] || [])].filter(k => k && k.length > 1).map(k => k.toLowerCase()))) RAW.push([k, u, g]);
+  }
+  const lev = (a, b) => { const m = a.length, n = b.length; if (!m || !n) return m + n; let p = [...Array(n + 1).keys()]; for (let i = 1; i <= m; i++) { const c = [i]; for (let j = 1; j <= n; j++) c[j] = Math.min(p[j] + 1, c[j - 1] + 1, p[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)); p = c; } return p[n]; };
+  // Find a unit for some text. `group` restricts it (the second unit of a line must be
+  // in the first unit's group); `near` is a group to prefer when the text is ambiguous.
+  function findUnit(text, group, near) {
+    const t = canon(text); if (!t) return null;
+    const pool = group ? KEYS.filter(k => k[2] === group) : KEYS;
+    const pick = list => { list = list.slice().sort((a, b) => a[3] - b[3]); return list.find(k => k[2] === near) || list[0]; };
+    const exact = pool.filter(k => k[0] === t); if (exact.length) return pick(exact);
+    if (t.length >= 2) { const pre = pool.filter(k => k[0].startsWith(t) && k[0].length - t.length <= 6); if (pre.length) return pick(pre.sort((a, b) => a[0].length - b[0].length)); }
+    if (t.length >= 4) { const tol = t.length >= 7 ? 2 : 1; const fuzzy = pool.filter(k => k[0].length >= 4 && lev(k[0], t) <= tol); if (fuzzy.length) return pick(fuzzy.sort((a, b) => lev(a[0], t) - lev(b[0], t))); }
+    return null;
+  }
+  // "175 cm in ft", "5 lakh to million", "20 c", "5 ft 10 in cm", "5'10", "1,5 l in cups", "5:30 min/km in mph"
+  function parse(line) {
+    line = line.trim().replace(/\s+/g, " ");
+    if (!line) return null;
+    // feet and inches as one amount
+    const fi = line.match(/^(\d+(?:[.,]\d+)?)\s*(?:'|ft|feet|foot)\s*(\d+(?:[.,]\d+)?)?\s*(?:"|''|in|inch|inches)?(?:\s+(?:to|in|into|as|->|→|=)\s+(.+))?$/i);
+    if (fi && (fi[2] !== undefined || /'/.test(line))) {
+      const inches = num(fi[1]) * 12 + (fi[2] ? num(fi[2]) : 0);
+      const from = findUnit("in", GROUPS.find(g => g.id === "len"));
+      return finish(inches, from, fi[3], `${fi[1]} ft${fi[2] ? " " + fi[2] + " in" : ""}`, true);
+    }
+    const m = line.match(/^(-?[\d\s.,:]*\d)\s*([^\d].*?)?(?:\s+(?:to|in|into|as|->|→|=)\s+(.+))?$/i) || line.match(/^(-?[\d\s.,:]*\d)\s*(.+?)\s*(?:to|in|into|->|→|=)\s*(.+)$/i);
+    if (!m || !m[2]) return null;
+    // "20 c to f" might also read as unit "c to f"; try the split both ways
+    const from = findUnit(m[2]) || null;
+    if (!from) return { bad: m[2], v: num(m[1]) };
+    const v = from[1].pace ? unclock(m[1]) : num(m[1]);
+    return finish(v, from, m[3], m[1].trim());
+  }
+  function finish(v, from, toText, shown, feetIn) {
+    if (!Number.isFinite(v)) return null;
+    let to = null;
+    if (toText) { to = findUnit(toText, from[2]); if (!to) return { bad: toText, group: from[2] }; }
+    const base = from[1].to(v);
+    const out = from[2].units.filter(u => u !== from[1] && !u.ftin).map(u => ({ u, v: u.from(base) }));
+    // with no unit asked for, lead with the one people usually want next
+    const want = PARTNER[feetIn ? "ft" : from[1].sym];
+    const i = want ? out.findIndex(o => o.u.sym === want) : -1;
+    if (i > 0) out.unshift(out.splice(i, 1)[0]);
+    return { v, from, to, base, out, text: shown + (feetIn ? "" : " " + from[1].sym) };
+  }
+  const PARTNER = { mm: "in", cm: "ft", m: "ft", km: "mi", in: "cm", ft: "cm", yd: "m", mi: "km", nmi: "km", "cm²": "in", "m²": "ft²", "ft²": "m²", "yd²": "m²", "km²": "mi²", "mi²": "km²", are: "m²", acre: "hectare", hectare: "acre", cent: "m²", gunta: "m²",
+    ml: "cup (US)", l: "gal (US)", dl: "cup (US)", "gal (US)": "l", "gal (UK)": "l", "cup (US)": "ml", "fl oz (US)": "ml", "pint (US)": "l", tsp: "ml", tbsp: "ml", "m³": "ft³", "ft³": "m³",
+    mg: "g", g: "oz", kg: "lb", lb: "kg", oz: "g", stone: "kg", tonne: "lb", tola: "g", "troy oz": "g", "°C": "°F", "°F": "°C", K: "°C", "km/h": "mph", mph: "km/h", "m/s": "km/h", knot: "km/h",
+    "min/km": "min/mi", "min/mi": "min/km", "l/100 km": "mpg (US)", "mpg (US)": "l/100 km", "mpg (UK)": "l/100 km", "km/l": "l/100 km", "mil/l": "l/100 km",
+    byte: "KB", KB: "MB", MB: "GB", GB: "TB", TB: "GB", MiB: "MB", GiB: "GB", "Mbit/s": "MB/s", "Gbit/s": "MB/s", "MB/s": "Mbit/s", "kbit/s": "Mbit/s", seconds: "minutes", minutes: "hours", hours: "days", days: "weeks", weeks: "days", months: "days", years: "days",
+    kcal: "kJ", kJ: "kcal", Wh: "kcal", kWh: "kcal", W: "hp", kW: "hp", hp: "kW", "hk (PS)": "kW", bar: "psi", psi: "bar", kPa: "psi", atm: "bar", hPa: "bar", degrees: "radians", radians: "degrees", turns: "degrees",
+    ones: "thousand", thousand: "lakh", lakh: "million", million: "lakh", crore: "million", billion: "crore", trillion: "billion", SEK: "INR", INR: "SEK", USD: "SEK", EUR: "SEK", GBP: "SEK", NOK: "SEK", DKK: "SEK", CHF: "SEK", JPY: "SEK", AED: "INR" };
+  const show = (u, v, dp) => u.pace ? clock(v) : fmt(v, dp);
+  // a length in feet reads better as feet and inches too
+  const feetIn = m => { const tot = m / .0254; let ft = Math.floor(tot / 12), inch = +(tot - ft * 12).toFixed(1); if (inch >= 12) { ft++; inch = 0; } return `${ft} ft ${inch} in`; };
+
+  // ---------- the page ----------
+  const $ = id => document.getElementById(id);
+  const EG = ["175 cm in ft", "100 sqm to sq ft", "5 lakh to million", "20 c", "70 kg in lb", "1000 sek in inr", "5:30 min/km in mph", "6 l/100 km in mpg", "2 acres in gunta"];
+  $("eg").innerHTML = EG.map(e => `<button class="chip">${e}</button>`).join("");
+  $("eg").querySelectorAll("button").forEach(b => b.onclick = () => { $("q").value = b.textContent; run(true); $("q").focus(); });
+  let hist = [];
+  try { hist = JSON.parse(localStorage.getItem(KEY + ".ask") || "[]"); } catch {}
+  let last = null;
+  function run(keep) {
+    const q = $("q").value, r = parse(q);
+    last = r;
+    if (!r || r.bad !== undefined) {
+      $("table").innerHTML = "";
+      if (!q.trim()) { $("ans").innerHTML = '<p class="no">An amount and a unit. Add “in” or “to” and another unit for one answer; leave it out and you get them all. Click <b id="allLink">All units</b> to see what I know.</p>'; $("allLink").onclick = () => toggleAll(true); }
+      else if (r && r.bad !== undefined) {
+        const near = suggestFor(r.bad, r.group);
+        $("ans").innerHTML = `<p class="no">I don’t know “${esc(r.bad)}”${r.group ? " in " + r.group.name.toLowerCase() : ""}.${near.length ? " Did you mean " + near.map(k => `<b data-sym="${esc(k[1].sym)}">${esc(k[1].sym)}</b>`).join(", ") + "?" : ""}</p>`;
+        $("ans").querySelectorAll("b[data-sym]").forEach(b => b.onclick = () => { $("q").value = q.replace(r.bad, b.dataset.sym); run(true); });
+      } else $("ans").innerHTML = '<p class="no">Start with the amount, then the unit: “70 kg in lb”.</p>';
+      return;
+    }
+    const dp = r.from[2].dp, main = r.to ? { u: r.to[1], v: r.to[1].from(r.base) } : r.out[0];
+    let big = show(main.u, main.v, dp) + " " + main.u.sym;
+    if (r.from[2].id === "len" && main.u.sym === "ft") big = feetIn(r.base);
+    const meta = [r.text, r.from[2].name, r.from[2].id === "cur" ? (rates ? "ECB rates of " + rates.date + (rateLive ? "" : " (saved)") : "no rates yet") : ""].filter(Boolean);
+    $("ans").innerHTML = `<b title="Copy">${esc(big)}</b><span><i>${esc(meta[0])}</i> · ${meta.slice(1).join(" · ")}</span>`;
+    $("ans").querySelector("b").onclick = () => copy(big);
+    $("table").innerHTML = r.out.filter(o => o.u !== main.u).map(o => `<div title="Copy"><span>${esc(o.u.sym)}</span><b>${show(o.u, o.v, dp)}</b></div>`).join("");
+    $("table").querySelectorAll("div").forEach(d => d.onclick = () => copy(d.querySelector("b").textContent + " " + d.querySelector("span").textContent));
+    if (keep) { const line = q.trim(); hist = [[line, big], ...hist.filter(h => h[0] !== line)].slice(0, 10); try { localStorage.setItem(KEY + ".ask", JSON.stringify(hist)); } catch {} drawHist(); }
+  }
+  function suggestFor(text, group) {
+    const t = canon(text); if (!t) return [];
+    const raw = text.toLowerCase().trim(), seen = new Set(), out = [];
+    for (const k of RAW) { if ((group && k[2] !== group) || seen.has(k[1])) continue; if (k[0].startsWith(raw)) { seen.add(k[1]); out.push(k); } if (out.length === 3) return out; }
+    if (t.length < 4) return out;
+    const pool = group ? KEYS.filter(k => k[2] === group) : KEYS;
+    for (const k of pool.slice().sort((a, b) => lev(a[0], t) - lev(b[0], t))) { if (seen.has(k[1])) continue; if (lev(k[0], t) > 2) break; seen.add(k[1]); out.push(k); if (out.length === 3) break; }
+    return out;
+  }
+  function drawHist() { $("hh").style.display = hist.length ? "" : "none"; $("hist").innerHTML = hist.map(([l, v]) => `<button>${esc(l)}<b>${esc(v)}</b></button>`).join(""); $("hist").querySelectorAll("button").forEach((b, i) => b.onclick = () => { $("q").value = hist[i][0]; run(false); $("q").focus(); }); }
+  $("hx").onclick = () => { hist = []; try { localStorage.removeItem(KEY + ".ask"); } catch {} drawHist(); };
+
+  // suggestions while the unit is being typed
+  let sugIx = -1;
+  function suggest() {
+    const q = $("q").value, box = $("sug");
+    const m = q.match(/^(-?[\d\s.,:]*\d)\s*(.*?)(?:\s+(to|in|into|as)\s+(.*))?$/i);
+    box.classList.remove("show"); box.innerHTML = ""; sugIx = -1;
+    if (!m) return;
+    const second = m[4] !== undefined, frag = second ? m[4] : m[2];
+    if (!frag || frag.length < 1 || /\s$/.test(frag)) return;
+    const t = canon(frag); if (!t) return;
+    let group = null;
+    if (second) { const from = findUnit(m[2]); if (!from) return; group = from[2]; }
+    const raw = frag.toLowerCase().trim(), seen = new Set(), hits = [];
+    const consider = (list, key) => { for (const k of list) { if (seen.has(k[1]) || (group && k[2] !== group)) continue; if (k[0].startsWith(key) || (key.length >= 3 && k[0].includes(key))) { seen.add(k[1]); hits.push([k[0], k[1], k[2], k[0].startsWith(key) ? 0 : 1]); } } };
+    consider(RAW, raw); consider(KEYS, t);
+    hits.sort((a, b) => a[3] - b[3] || a[0].length - b[0].length);
+    if (!hits.length) return;
+    box.innerHTML = hits.slice(0, 7).map(k => `<button type="button"><b>${esc(k[1].sym)}</b><span>${esc(k[1].name || "")}</span><em>${esc(k[2].name)}</em></button>`).join("");
+    box.querySelectorAll("button").forEach((b, i) => b.onclick = () => pickSug(hits[i]));
+    box.classList.add("show");
+    box._hits = hits; box._m = m; box._second = second;
+  }
+  function pickSug(k) {
+    const m = $("sug")._m, second = $("sug")._second;
+    $("q").value = second ? `${m[1]} ${m[2]} ${m[3]} ${k[1].sym}` : `${m[1]} ${k[1].sym}`;
+    $("sug").classList.remove("show"); run(true); $("q").focus();
+  }
+  $("q").addEventListener("input", () => { run(false); suggest(); });
+  $("q").addEventListener("keydown", e => {
+    const box = $("sug"), items = box.querySelectorAll("button");
+    if (box.classList.contains("show") && (e.key === "ArrowDown" || e.key === "ArrowUp")) { e.preventDefault(); sugIx = (sugIx + (e.key === "ArrowDown" ? 1 : -1) + items.length) % items.length; items.forEach((b, i) => b.classList.toggle("on", i === sugIx)); }
+    else if (e.key === "Tab" && box.classList.contains("show")) { e.preventDefault(); pickSug(box._hits[Math.max(0, sugIx)]); }
+    else if (e.key === "Enter") { if (box.classList.contains("show") && sugIx >= 0) pickSug(box._hits[sugIx]); else { box.classList.remove("show"); run(true); } }
+    else if (e.key === "Escape") { if (box.classList.contains("show")) box.classList.remove("show"); else { $("q").value = ""; run(false); } }
+  });
+  document.addEventListener("click", e => { if (!e.target.closest(".ask")) $("sug").classList.remove("show"); });
+  document.addEventListener("keydown", e => { if (e.key === "/" && e.target !== $("q")) { e.preventDefault(); $("q").focus(); } });
+
+  // every unit, as chips that drop into the box
+  function drawAll() {
+    $("all").innerHTML = GROUPS.map(g => `<div class="grp"><h4>${esc(g.name)}${g.sub ? `<small>${esc(g.sub)}</small>` : ""}</h4><div class="units">` +
+      g.units.filter(u => !u.ftin).map(u => { const al = (EXTRA[u.sym] || []).filter(a => /^[a-z]/.test(a) && a.length > 2).slice(0, 2).join(", "); return `<button data-sym="${esc(u.sym)}">${esc(u.sym)}${u.name ? `<small>${esc(u.name.split(" ")[0])}</small>` : al ? `<small>${esc(al)}</small>` : ""}</button>`; }).join("") + "</div></div>").join("");
+    $("all").querySelectorAll("button").forEach(b => b.onclick = () => insertUnit(b.dataset.sym));
+  }
+  function insertUnit(sym) {
+    const q = $("q").value.trim(), r = parse(q);
+    if (!q || !/\d/.test(q)) $("q").value = "1 " + sym;
+    else if (r && r.bad === undefined && !r.to) $("q").value = q + " in " + sym;
+    else { const m = q.match(/^(-?[\d\s.,:]*\d)/); $("q").value = (m ? m[1] : "1") + " " + sym; }
+    run(true); $("q").focus();
+  }
+  function toggleAll(on) { const show = on ?? !$("all").classList.contains("show"); $("all").classList.toggle("show", show); $("browse").classList.toggle("on", show); if (show && !$("all").innerHTML) drawAll(); }
+  $("browse").onclick = () => toggleAll();
+
+  // ---------- Browse: a group, a unit, an amount, every other unit ----------
+  let B = { g: "len", u: "cm", v: "1" };
+  try { Object.assign(B, JSON.parse(localStorage.getItem(KEY + ".browse")) || {}); } catch {}
+  const bsave = () => { try { localStorage.setItem(KEY + ".browse", JSON.stringify(B)); } catch {} };
+  function drawBrowse() {
+    const g = GROUPS.find(x => x.id === B.g) || GROUPS[0]; B.g = g.id;
+    const us = g.units.filter(u => !u.ftin);
+    const u = us.find(x => x.sym === B.u) || us[0]; B.u = u.sym;
+    $("rail").innerHTML = GROUPS.map(x => `<button class="${x === g ? "on" : ""}" data-g="${x.id}">${esc(x.name)}</button>`).join("");
+    $("rail").querySelectorAll("button").forEach(b => b.onclick = () => { B.g = b.dataset.g; B.u = null; B.v = (GROUPS.find(x => x.id === B.g).def || [0, "1"])[1]; bsave(); drawBrowse(); });
+    $("bunits").innerHTML = us.map(x => `<button class="${x === u ? "on" : ""}" data-u="${esc(x.sym)}">${esc(x.sym)}${x.name ? `<small>${esc(x.name.split(" ")[0])}</small>` : ""}</button>`).join("");
+    $("bunits").querySelectorAll("button").forEach(b => b.onclick = () => { B.u = b.dataset.u; bsave(); drawBrowse(); });
+    $("bsym").textContent = u.sym; if ($("bq").value !== B.v) $("bq").value = B.v;
+    const v = u.pace ? unclock(B.v) : num(B.v);
+    if (!Number.isFinite(v)) { $("bans").innerHTML = ""; $("btable").innerHTML = ""; return; }
+    const base = u.to(v), rest = us.filter(x => x !== u).map(x => ({ u: x, v: x.from(base) }));
+    const want = PARTNER[u.sym], i = want ? rest.findIndex(o => o.u.sym === want) : -1;
+    if (i > 0) rest.unshift(rest.splice(i, 1)[0]);
+    const main = rest[0], big = g.id === "len" && main.u.sym === "ft" ? feetIn(base) : show(main.u, main.v, g.dp) + " " + main.u.sym;
+    $("bans").innerHTML = `<b title="Copy">${esc(big)}</b><span><i>${esc(show(u, v, g.dp))} ${esc(u.sym)}</i> · ${esc(g.name)}${g.id === "cur" && rates ? " · ECB rates of " + rates.date : ""}</span>`;
+    $("bans").querySelector("b").onclick = () => copy(big);
+    $("btable").innerHTML = rest.slice(1).map(o => `<div title="Copy"><span>${esc(o.u.sym)}</span><b>${show(o.u, o.v, g.dp)}</b></div>`).join("");
+    $("btable").querySelectorAll("div").forEach(d => d.onclick = () => copy(d.querySelector("b").textContent + " " + d.querySelector("span").textContent));
+  }
+  $("bq").addEventListener("input", () => { B.v = $("bq").value; bsave(); drawBrowse(); });
+  let mode = "ask";
+  try { mode = localStorage.getItem(KEY + ".mode") || "ask"; } catch {}
+  function setMode(m) {
+    mode = m; try { localStorage.setItem(KEY + ".mode", m); } catch {}
+    $("seg").querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.mode === m));
+    $("wrapAsk").style.display = m === "ask" ? "" : "none"; $("wrapBrowse").style.display = m === "browse" ? "" : "none";
+    $("browse").style.display = m === "ask" ? "" : "none";
+    $("subtitle").textContent = m === "ask" ? "Type it the way you'd say it" : "Pick a unit, see it in every other";
+    if (m === "browse") drawBrowse(); else $("q").focus();
+  }
+  $("seg").querySelectorAll("button").forEach(b => b.onclick = () => setMode(b.dataset.mode));
+  setMode(mode);
+
+  function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
   let tt;
-  function toast(msg) { const t = $("toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(tt); tt = setTimeout(() => t.classList.remove("show"), 1800); }
+  function toast(msg) { const t = $("toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(tt); tt = setTimeout(() => t.classList.remove("show"), 1600); }
+  async function copy(text) { try { await navigator.clipboard.writeText(text); toast("Copied " + text); } catch { toast("Copy blocked by the browser"); } }
+
+  // rates
+  (async () => {
+    for (const u of ["https://api.frankfurter.dev/v1/latest?from=EUR&to=" + CUR.filter(c => c !== "EUR").join(","), "https://api.frankfurter.dev/v1/latest?from=EUR"]) {
+      try { const r = await fetch(u); if (!r.ok) continue; const j = await r.json(); if (!j.rates || !j.rates.SEK) continue;
+        rates = { date: j.date, rates: { EUR: 1, ...j.rates } }; if (!rates.rates.AED && rates.rates.USD) rates.rates.AED = rates.rates.USD * 3.6725;
+        rateLive = true; try { localStorage.setItem(RKEY, JSON.stringify(rates)); } catch {} break; } catch {}
+    }
+    run(false); if (mode === "browse") drawBrowse();
+  })();
+  const url = new URLSearchParams(location.search).get("q");
+  if (url) $("q").value = url;
+  run(false); drawHist();
+  window.convert = { parse, findUnit, canon };
 })();
 </script>
 <!-- studio-hub theme slider -->

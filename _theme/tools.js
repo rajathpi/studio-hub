@@ -25,7 +25,7 @@ window.TOOLS = [
     glyph: '<path d="M8 7.5L3.5 12 8 16.5M16 7.5l4.5 4.5-4.5 4.5M14 4.5l-4 15"/>' },
   { id: "time", name: "Time", page: "time-studio.html", group: "Everyday", blurb: "Gothenburg, Mangalore and the US on one board", used: 4,
     glyph: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3 2"/>' },
-  { id: "convert", name: "Convert", page: "convert-studio.html", group: "Everyday", blurb: "Units, currency, lakh and crore", used: 3,
+  { id: "convert", name: "Convert", page: "convert-studio.html", group: "Everyday", blurb: "Type 175 cm in ft, or 5 lakh to million", used: 3,
     glyph: '<path d="M4 8h13l-3-3M20 16H7l3 3"/>' },
   { id: "pattern", name: "Pattern", page: "pattern-studio.html", group: "Make things", blurb: "Generative art and wallpapers", used: 2,
     glyph: '<circle cx="7" cy="7" r="2.5"/><circle cx="17" cy="7" r="2.5"/><circle cx="7" cy="17" r="2.5"/><circle cx="17" cy="17" r="2.5"/><circle cx="12" cy="12" r="2.5"/>' },
