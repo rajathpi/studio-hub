@@ -25,7 +25,12 @@
   button:hover, select:hover { background: var(--h-btn-hover); border-color: var(--h-accent2); }
   .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 
-  #palettes { justify-content: center; margin-bottom: 22px; }
+  #palettes { justify-content: center; margin-bottom: 8px; }
+  #wada { justify-content: center; margin-bottom: 22px; font-size: 12px; color: var(--h-muted); }
+  #wada .pair { display: inline-flex; gap: 0; border-radius: 999px; overflow: hidden; border: 1px solid var(--h-border); vertical-align: middle; }
+  #wada .pair i { width: 18px; height: 18px; display: block; }
+  #wada b { color: var(--h-text); font-weight: 600; }
+  #wada button { padding: 4px 10px; font-size: 12px; border-radius: 999px; }
   .sw {
     width: 30px; height: 30px; border-radius: 50%; padding: 0; border: 2px solid var(--h-border);
     display: grid; place-items: center; overflow: hidden;
@@ -163,6 +168,7 @@
   <p class="sub">A gallery of generative patterns. Pick one, push its sliders, roll new seeds, and export a crisp SVG or a big PNG. Everything is drawn right here; nothing leaves this page.</p>
 
   <div class="row" id="palettes"></div>
+  <div class="row" id="wada"><button id="wadaBtn" title="A random pair from Sanzo Wada's A Dictionary of Color Combinations (1933) · press C">Random Wada colours</button><span id="wadaName"></span></div>
 
   <div class="row" id="filters">
     <input id="q" type="search" placeholder="Search patterns" aria-label="Search patterns">
@@ -376,6 +382,105 @@
     }
     return [x, y];
   };
+  // Join loose segments [[a, b], ...] into polylines: ends that meet are chained, and where
+  // four or more meet (a crossing) each segment carries on into the one most nearly straight ahead.
+  function chain(segs) {
+    const key = (q) => Math.round(q[0] * 20) + "," + Math.round(q[1] * 20), at = new Map(), link = segs.map(() => [null, null]);
+    segs.forEach((s, i) => { for (const e of [0, 1]) { const k = key(s[e]); if (!at.has(k)) at.set(k, []); at.get(k).push([i, e]); } });
+    for (const ends of at.values()) {
+      const dir = ([i, e]) => { const a = segs[i][e], b = segs[i][1 - e], l = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1; return [(b[0] - a[0]) / l, (b[1] - a[1]) / l]; };
+      const left = ends.slice();
+      while (left.length > 1) {
+        const u = dir(left[0]); let best = 1, bd = Infinity;
+        for (let j = 1; j < left.length; j++) { const v = dir(left[j]), dt = u[0] * v[0] + u[1] * v[1]; if (dt < bd) { bd = dt; best = j; } }
+        const [x, y] = [left[0], left[best]];
+        link[x[0]][x[1]] = y; link[y[0]][y[1]] = x;
+        left.splice(best, 1); left.shift();
+      }
+    }
+    const used = new Uint8Array(segs.length), lines = [];
+    const walk = (i, e) => { const p = []; let cur = [i, e]; while (cur && !used[cur[0]]) { used[cur[0]] = 1; p.push(segs[cur[0]][cur[1]]); const nx = link[cur[0]][1 - cur[1]]; if (!nx) { p.push(segs[cur[0]][1 - cur[1]]); return [p, false]; } cur = [nx[0], nx[1]]; } return [p, true]; };
+    // Open strands first, from a free end, so they come out whole; whatever is left is a loop.
+    for (let i = 0; i < segs.length; i++) for (const e of [0, 1]) if (!used[i] && !link[i][e]) { const [p] = walk(i, e); lines.push({ p, closed: false }); }
+    for (let i = 0; i < segs.length; i++) if (!used[i]) { const [p] = walk(i, 0); lines.push({ p, closed: true }); }
+    return lines;
+  }
+  // Draw polylines as an over-under weave: find every crossing, alternate over and under along each
+  // strand, then redraw a short bridge of the upper strand at each crossing, haloed in the paper colour.
+  // band 0 draws single lines with breaks; otherwise strands are straps of that width with outlines.
+  // With over off, the strands are drawn flat and no crossings are looked for.
+  function weave(lines, band, stroke, gap, bg, join = "round", over = true) {
+    const segs = [], cross = [];
+    (over ? lines : []).forEach((L, li) => {
+      const P = L.closed ? [...L.p, L.p[0]] : L.p; L.len = [0];
+      for (let i = 0; i < P.length - 1; i++) { L.len.push(L.len[i] + Math.hypot(P[i + 1][0] - P[i][0], P[i + 1][1] - P[i][1])); segs.push([li, i, P[i], P[i + 1]]); }
+      L.P = P; L.ev = [];
+    });
+    // Segments bucketed on a coarse grid so only near neighbours are tested.
+    const C = 40, grid = new Map(), seen = new Set();
+    segs.forEach((s, si) => {
+      const x0 = Math.floor(Math.min(s[2][0], s[3][0]) / C), x1 = Math.floor(Math.max(s[2][0], s[3][0]) / C), y0 = Math.floor(Math.min(s[2][1], s[3][1]) / C), y1 = Math.floor(Math.max(s[2][1], s[3][1]) / C);
+      for (let gx = x0; gx <= x1; gx++) for (let gy = y0; gy <= y1; gy++) {
+        const k = gx * 100003 + gy, cell = grid.get(k) || [];
+        for (const sj of cell) {
+          const pk = sj * 1e6 + si; if (seen.has(pk)) continue; seen.add(pk);
+          const a = segs[sj], ex = a[3][0] - a[2][0], ey = a[3][1] - a[2][1], fx = s[3][0] - s[2][0], fy = s[3][1] - s[2][1], den = ex * fy - ey * fx;
+          if (Math.abs(den) < 1e-9) continue;
+          const dx = s[2][0] - a[2][0], dy = s[2][1] - a[2][1], t = (dx * fy - dy * fx) / den, u = (dx * ey - dy * ex) / den;
+          // Half-open, so a crossing that falls exactly on a vertex is counted once.
+          if (t < -1e-7 || t >= 1 - 1e-7 || u < -1e-7 || u >= 1 - 1e-7) continue;
+          if (a[0] === s[0] && Math.abs(a[1] - s[1]) <= 1) continue;
+          const la = lines[a[0]], ls = lines[s[0]], ci = cross.length;
+          const sin = Math.abs(den) / (Math.hypot(ex, ey) * Math.hypot(fx, fy));
+          cross.push({ L: [a[0], s[0]], at: [la.len[a[1]] + t * (la.len[a[1] + 1] - la.len[a[1]]), ls.len[s[1]] + u * (ls.len[s[1] + 1] - ls.len[s[1]])], sin, up: -1 });
+          la.ev.push([ci, 0]); ls.ev.push([ci, 1]);
+        }
+        cell.push(si); grid.set(k, cell);
+      }
+    });
+    for (const L of over ? lines : []) { L.ev.sort((x, y) => cross[x[0]].at[x[1]] - cross[y[0]].at[y[1]]); L.ev.forEach(([ci, sl], k) => { cross[ci].k = cross[ci].k || []; cross[ci].k[sl] = k; }); }
+    // Over, under, over...: settle one crossing, then spread the alternation along both of its strands.
+    for (let c0 = 0; c0 < cross.length; c0++) {
+      if (cross[c0].up >= 0) continue;
+      cross[c0].up = 0; const queue = [c0];
+      while (queue.length) {
+        const c = cross[queue.pop()];
+        for (const sl of [0, 1]) {
+          const L = lines[c.L[sl]], over = c.up === sl, n = L.ev.length;
+          for (const st of [-1, 1]) {
+            let k = c.k[sl] + st; if (k < 0 || k >= n) { if (!L.closed) continue; k = (k + n) % n; }
+            const [cj, sj] = L.ev[k], o = cross[cj];
+            if (o.up < 0) { o.up = over ? 1 - sj : sj; queue.push(cj); }
+          }
+        }
+      }
+    }
+    // The stretch of a polyline between two arc lengths, as path data.
+    const slice = (L, a, b) => {
+      const tot = L.len[L.len.length - 1]; a = Math.max(0, a); b = Math.min(tot, b);
+      const pt = (s) => { let i = 1; while (i < L.len.length - 1 && L.len[i] < s) i++; const t = (s - L.len[i - 1]) / ((L.len[i] - L.len[i - 1]) || 1); return [i, [L.P[i - 1][0] + (L.P[i][0] - L.P[i - 1][0]) * t, L.P[i - 1][1] + (L.P[i][1] - L.P[i - 1][1]) * t]]; };
+      const [i0, p0] = pt(a), [i1, p1] = pt(b), q = [p0];
+      for (let i = i0; i < i1; i++) q.push(L.P[i]);
+      q.push(p1);
+      return "M" + q.map((v) => f(v[0]) + " " + f(v[1])).join("L");
+    };
+    const full = lines.map((L) => "M" + L.p.map((v) => f(v[0]) + " " + f(v[1])).join("L") + (L.closed ? "Z" : "")).join("");
+    const wide = band ? band + 2 * stroke : stroke;
+    // The halo stops a hair short and the strap's paper core runs a hair long, so no seam shows at a bridge's ends.
+    const br = ["", "", ""];
+    for (const c of cross) {
+      const L = lines[c.L[c.up]], s = c.at[c.up], tot = L.len[L.len.length - 1];
+      [-1, 0, 1].forEach((dh, i) => {
+        const h = (wide + 2 * gap) / 2 / Math.max(0.3, c.sin) + gap + dh;
+        br[i] += slice(L, s - h, s + h);
+        // A loop's bridge can straddle the point where the loop was opened.
+        if (L.closed && s - h < 0) br[i] += slice(L, tot + s - h, tot);
+        if (L.closed && s + h > tot) br[i] += slice(L, 0, s + h - tot);
+      });
+    }
+    return `<g stroke-linejoin="${join}" stroke-miterlimit="8"><path d="${full}" stroke-width="${f(wide)}"/>${band ? `<path d="${full}" stroke="${bg}" stroke-width="${band}"/>` : ""}`
+      + (over ? `<path d="${br[0]}" stroke="${bg}" stroke-width="${f(wide + 2 * gap)}"/><path d="${br[1]}" stroke-width="${f(wide)}"/>${band ? `<path d="${br[2]}" stroke="${bg}" stroke-width="${band}"/>` : ""}` : "") + `</g>`;
+  }
 
   // Every pattern draws into a W x H box (W is always 1000) and returns SVG
   // elements. The wrapping <g> defaults to fill:none, stroke:fg.
@@ -1317,6 +1422,238 @@
         return out.join("");
       },
     },
+    {
+      id: "penrose", name: "Penrose Rhombs", tags: ["tiles", "math", "geometric"],
+      blurb: "Two rhombs, one fat and one thin, that cover the plane forever without ever repeating. Each tile carries two arcs, and the arcs join up across the whole sheet into rings and stars of five-fold symmetry.",
+      params: [P("size", "Tile size", 26, 160, 1, 54), P("arcs", "Arc width", 0, 8, 0.1, 2.8), P("edge", "Edge width", 0, 4, 0.1, 0.8), T("fill", "Fill thin rhombs", true)],
+      draw(p, { W, H, fg, bg }) {
+        const PHI = (1 + Math.sqrt(5)) / 2, cx = W / 2, cy = H / 2;
+        // Each split shrinks the tiles by φ, so start from a sun big enough to end at the chosen size.
+        const depth = Math.max(0, Math.ceil(Math.log(Math.hypot(W, H) / 2 / p.size) / Math.log(PHI))), R = p.size * PHI ** depth;
+        const L = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
+        const seen = (T) => {
+          const xs = [T[1][0], T[2][0], T[3][0]], ys = [T[1][1], T[2][1], T[3][1]];
+          return Math.max(...xs) > 0 && Math.min(...xs) < W && Math.max(...ys) > 0 && Math.min(...ys) < H;
+        };
+        // Robinson triangles [kind, A, B, C]: kind 0 is half a thin rhomb, 1 half a fat one, apex A, the halves paired across BC.
+        let tris = Array.from({ length: 10 }, (_, i) => {
+          const a = (2 * i - 1) * Math.PI / 10, b = (2 * i + 1) * Math.PI / 10;
+          const B = [cx + R * Math.cos(a), cy + R * Math.sin(a)], C = [cx + R * Math.cos(b), cy + R * Math.sin(b)];
+          return i % 2 ? [0, [cx, cy], B, C] : [0, [cx, cy], C, B];
+        });
+        for (let k = 0; k < depth; k++) {
+          const nx = [];
+          for (const [kind, A, B, C] of tris) {
+            if (kind === 0) { const Q = L(A, B, 1 / PHI); nx.push([0, C, Q, B], [1, Q, C, A]); }
+            else { const Q = L(B, A, 1 / PHI), S = L(B, C, 1 / PHI); nx.push([1, S, C, A], [1, Q, S, B], [0, S, Q, A]); }
+          }
+          tris = nx.filter(seen);
+        }
+        // Rhomb edges are the triangles' legs; each is shared by two triangles, so keep one copy.
+        const key = (a, b) => { const u = f(a[0]) + "," + f(a[1]), v = f(b[0]) + "," + f(b[1]); return u < v ? u + v : v + u; };
+        const edges = new Set(), thin = new Set();
+        let d = "", inkArcs = "", paperArcs = "", fills = "";
+        const leg = (a, b) => { const k = key(a, b); if (!edges.has(k)) { edges.add(k); d += `M${f(a[0])} ${f(a[1])}L${f(b[0])} ${f(b[1])}`; } };
+        // Matching arcs ring the two base corners: radii 1/φ² and 1/φ of the edge, the big one only on fat tiles.
+        const arc = (V, A, C, rad) => {
+          const s = Math.hypot(A[0] - V[0], A[1] - V[1]), u = L(V, A, rad / s), w = L(V, C, rad / Math.hypot(C[0] - V[0], C[1] - V[1]));
+          const sw = (A[0] - V[0]) * (C[1] - V[1]) - (A[1] - V[1]) * (C[0] - V[0]) > 0 ? 1 : 0;
+          return `M${f(u[0])} ${f(u[1])}A${f(rad)} ${f(rad)} 0 0 ${sw} ${f(w[0])} ${f(w[1])}`;
+        };
+        for (const [kind, A, B, C] of tris) {
+          if (p.edge) { leg(C, A); leg(A, B); }
+          const s = Math.hypot(B[0] - A[0], B[1] - A[1]), a = arc(B, A, C, s * (kind ? 1 / PHI : 1 / PHI / PHI)) + arc(C, A, B, s / PHI / PHI);
+          if (p.fill && !kind) {
+            paperArcs += a;
+            const k = key(B, C), [mx, my] = [B[0] + C[0] - A[0], B[1] + C[1] - A[1]];
+            if (!thin.has(k)) { thin.add(k); fills += `M${f(A[0])} ${f(A[1])}L${f(B[0])} ${f(B[1])}L${f(mx)} ${f(my)}L${f(C[0])} ${f(C[1])}Z`; }
+          } else inkArcs += a;
+        }
+        return (fills ? `<path d="${fills}" fill="${fg}" stroke="${fg}" stroke-width="${p.edge}" stroke-linejoin="round"/>` : "")
+          + (p.edge ? `<path d="${d}" stroke-width="${p.edge}" stroke-linecap="round"/>` : "")
+          + (p.arcs ? `<path d="${inkArcs}" stroke-width="${p.arcs}"/><path d="${paperArcs}" stroke="${bg}" stroke-width="${p.arcs}"/>` : "");
+      },
+    },
+    {
+      id: "girih", name: "Girih Stars", tags: ["tiles", "geometric", "math"],
+      blurb: "Hankin's recipe for Islamic star patterns: lay a tiling of regular polygons, send two lines from the middle of every edge at a set angle, and stop each one where it meets its neighbour. Tilings 1–4 are squares, hexagons, octagons with squares, and twelve-gons with hexagons and squares.",
+      params: [P("grid", "Tiling", 1, 4, 1, 4), P("size", "Tile size", 34, 200, 1, 64), P("angle", "Contact angle", 20, 85, 0.5, 60), P("gap", "Contact gap", 0, 0.4, 0.01, 0), P("band", "Strap width", 0, 30, 0.5, 0), P("stroke", "Line width", 0.3, 10, 0.1, 6), T("weave", "Over and under", true), T("tiles", "Show tiling", false)],
+      draw(p, { W, H, bg }) {
+        // Each tiling: two lattice vectors and the polygons of one cell as [sides, x, y, first-vertex angle], edge length 1.
+        const r3 = Math.sqrt(3), L8 = 1 + Math.SQRT2, D = 3 + r3, h6 = (2 + r3) / 2 + r3 / 2;
+        const sq = (a) => [4, D / 2 * Math.cos(a), D / 2 * Math.sin(a), a + Math.PI / 4];
+        const [u, v, cell] = [
+          [[1, 0], [0, 1], [[4, 0.5, 0.5, Math.PI / 4]]],
+          [[r3, 0], [r3 / 2, 1.5], [[6, 0, 0, Math.PI / 6]]],
+          [[L8, 0], [0, L8], [[8, 0, 0, Math.PI / 8], [4, L8 / 2, L8 / 2, 0]]],
+          [[D, 0], [D / 2, D * r3 / 2], [[12, 0, 0, Math.PI / 12], sq(0), sq(Math.PI / 3), sq(2 * Math.PI / 3),
+            [6, h6 * Math.cos(Math.PI / 6), h6 * Math.sin(Math.PI / 6), 0], [6, 0, h6, 0]]],
+        ][p.grid - 1];
+        const s = p.size, th = p.angle * Math.PI / 180, cx = W / 2, cy = H / 2;
+        const N = Math.ceil(Math.hypot(W, H) / s / Math.min(Math.hypot(...u), Math.hypot(...v))) + 2;
+        const segs = []; let t = "";
+        for (let i = -N; i <= N; i++) for (let j = -N; j <= N; j++) for (const [n, px, py, rot] of cell) {
+          const R = s / 2 / Math.sin(Math.PI / n), c = [cx + s * (px + i * u[0] + j * v[0]), cy + s * (py + i * u[1] + j * v[1])];
+          if (c[0] < -R || c[1] < -R || c[0] > W + R || c[1] > H + R) continue;
+          const V = Array.from({ length: n }, (_, k) => [c[0] + R * Math.cos(rot + k * TAU / n), c[1] + R * Math.sin(rot + k * TAU / n)]);
+          if (p.tiles) t += `M${pts(V).replace(/ /g, "L")}Z`;
+          // Two rays per edge, from either side of its midpoint, leaning toward the edge's two ends.
+          const rays = V.map((a, k) => {
+            const b = V[(k + 1) % n], e = [(b[0] - a[0]) / s, (b[1] - a[1]) / s], m = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+            const ln = Math.hypot(c[0] - m[0], c[1] - m[1]), nn = [(c[0] - m[0]) / ln, (c[1] - m[1]) / ln], g = p.gap * s / 2;
+            return { A: [m[0] + e[0] * g, m[1] + e[1] * g], a: [Math.cos(th) * e[0] + Math.sin(th) * nn[0], Math.cos(th) * e[1] + Math.sin(th) * nn[1]],
+                     B: [m[0] - e[0] * g, m[1] - e[1] * g], b: [-Math.cos(th) * e[0] + Math.sin(th) * nn[0], -Math.cos(th) * e[1] + Math.sin(th) * nn[1]] };
+          });
+          // The ray toward a corner meets the next edge's ray toward the same corner on the corner's bisector.
+          for (let k = 0; k < n; k++) {
+            const P0 = rays[k], P1 = rays[(k + 1) % n];
+            const den = P0.a[0] * P1.b[1] - P0.a[1] * P1.b[0];
+            const q = ((P1.B[0] - P0.A[0]) * P1.b[1] - (P1.B[1] - P0.A[1]) * P1.b[0]) / den;
+            const X = [P0.A[0] + P0.a[0] * q, P0.A[1] + P0.a[1] * q];
+            segs.push([P0.A, X], [X, P1.B]);
+          }
+        }
+        return (p.tiles ? `<path d="${t}" stroke-width="${f(p.stroke * 0.35)}"/>` : "") + weave(chain(segs), p.band, p.stroke, Math.max(1.5, p.stroke), bg, "miter", p.weave);
+      },
+    },
+    {
+      id: "celtic", name: "Celtic Knotwork", tags: ["lines", "tiles", "geometric"],
+      blurb: "A diagonal plait, every strand going over, then under, then over. Breaks dropped into the grid (mirrored, the way scribes laid them out) turn the plait back on itself, and a few closed ribbons knot the whole panel.",
+      params: [P("cells", "Cells across", 2, 20, 1, 7), P("breaks", "Breaks", 0, 1, 0.01, 0.3), P("band", "Strap width", 0, 0.4, 0.01, 0.26), P("stroke", "Line width", 0.5, 10, 0.1, 5), P("gap", "Gap", 0, 14, 0.5, 6), T("mirror", "Mirrored", true)],
+      draw(p, { W, H, r, bg }) {
+        const cols = p.cells, rows = Math.max(1, Math.round(cols * H / W)), s = Math.min(W / cols, H / rows) / 1.08;
+        const x0 = (W - cols * s) / 2, y0 = (H - rows * s) / 2;
+        const band = p.band * s, wide = band ? band + 2 * p.stroke : p.stroke;
+        // Crossings sit on the middles of the grid's edges, in half-cell units [x, y]: horizontal edges at (i + ½, j), vertical at (i, j + ½).
+        // A break walls one off, either along its edge or across it; the outer border is all wall.
+        const wall = new Map(), key = (x, y) => x * 2 + "," + y * 2;
+        const pick = () => (r() < p.breaks ? (r() < 0.5 ? "along" : "across") : null);
+        for (let y = 0; y <= rows; y += 0.5) for (let x = 0; x <= cols; x += 0.5) {
+          if (((x * 2) + (y * 2)) % 2 === 0 || wall.has(key(x, y))) continue;
+          const w = x === 0 || y === 0 || x === cols || y === rows ? "along" : pick();
+          for (const [mx, my] of p.mirror ? [[x, y], [cols - x, y], [x, rows - y], [cols - x, rows - y]] : [[x, y]]) if (!wall.has(key(mx, my))) wall.set(key(mx, my), w);
+        }
+        const inside = (x, y) => x >= 0 && y >= 0 && x <= cols && y <= rows;
+        const at = (x, y) => [x0 + x * s, y0 + y * s];
+        // A U-turn's depth: as deep as the strap allows without touching its mirror image across the wall.
+        const k = Math.min(0.5, Math.max(0, (s / 4 - wide / 2 - p.gap / 2 - 0.03 * s) * 8 / (3 * s)));
+        const segs = [], NE = [0.5, -0.5], NW = [-0.5, -0.5], SE = [0.5, 0.5], SW = [-0.5, 0.5];
+        for (const [kk, w] of wall) {
+          const [x, y] = kk.split(",").map((v) => v / 2), horiz = y % 1 === 0;
+          const pairs = !w ? [[NE, SW], [NW, SE]] : (w === "along") === horiz ? [[NW, NE], [SW, SE]] : [[NW, SW], [NE, SE]];
+          for (const [a, b] of pairs) {
+            if (!inside(x + a[0], y + a[1]) || !inside(x + b[0], y + b[1])) continue;
+            const A = at(x + a[0] / 2, y + a[1] / 2), B = at(x + b[0] / 2, y + b[1] / 2), M = at(x, y);
+            if (!w) { segs.push([A, M], [M, B]); continue; }
+            const c1 = [A[0] - a[0] * k * s, A[1] - a[1] * k * s], c2 = [B[0] - b[0] * k * s, B[1] - b[1] * k * s];
+            let q = A;
+            for (let i = 1; i <= 8; i++) {
+              const t = i / 8, u = 1 - t, nq = i === 8 ? B : [u * u * u * A[0] + 3 * u * u * t * c1[0] + 3 * u * t * t * c2[0] + t * t * t * B[0], u * u * u * A[1] + 3 * u * u * t * c1[1] + 3 * u * t * t * c2[1] + t * t * t * B[1]];
+              segs.push([q, nq]); q = nq;
+            }
+          }
+        }
+        return weave(chain(segs), band, p.stroke, p.gap, bg);
+      },
+    },
+    {
+      id: "turing", name: "Reaction–Diffusion", tags: ["nature", "math", "lines"],
+      blurb: "Two chemicals that feed on and spread through each other (the Gray–Scott model), left to react on a small grid and then traced as contours. The same two equations, four recipes: holes, labyrinth, coral and worms.",
+      params: [P("kind", "Recipe", 1, 4, 1, 3), P("scale", "Scale", 0.9, 1.6, 0.05, 1), P("lines", "Contours", 1, 5, 1, 1), P("spread", "Contour spread", 0.1, 0.9, 0.01, 0.6), P("stroke", "Line width", 0.3, 6, 0.1, 2), T("fill", "Fill", true)],
+      draw(p, { W, H, r, fg, bg }) {
+        // Feed and kill rates per recipe; the grid gets coarser as the scale grows, so the pattern grows with it.
+        const [F, K] = [[0.039, 0.058], [0.026, 0.055], [0.0545, 0.062], [0.062, 0.0609]][p.kind - 1];
+        const nx = Math.round(80 / p.scale), ny = Math.max(4, Math.round(nx * H / W)), N = nx * ny, D = 0.07;
+        let A = new Float64Array(N).fill(1), B = new Float64Array(N), A2 = new Float64Array(N), B2 = new Float64Array(N);
+        for (let k = 0; k < N / 40; k++) {
+          const cx = (r() * nx) | 0, cy = (r() * ny) | 0;
+          for (let y = -1; y <= 1; y++) for (let x = -1; x <= 1; x++) { const i = ((cy + y + ny) % ny) * nx + (cx + x + nx) % nx; B[i] = 1; A[i] = 0.5; }
+        }
+        // Explicit Euler on a wrap-around grid; B diffuses at half A's rate.
+        for (let it = 0; it < 1200; it++) {
+          for (let y = 0; y < ny; y++) {
+            const up = (y ? y - 1 : ny - 1) * nx, dn = (y < ny - 1 ? y + 1 : 0) * nx, row = y * nx;
+            for (let x = 0; x < nx; x++) {
+              const l = row + (x ? x - 1 : nx - 1), rt = row + (x < nx - 1 ? x + 1 : 0), i = row + x, a = A[i], b = B[i], abb = a * b * b;
+              A2[i] = a + D * (A[l] + A[rt] + A[up + x] + A[dn + x] - 4 * a) - abb + F * (1 - a);
+              B2[i] = b + D * 0.5 * (B[l] + B[rt] + B[up + x] + B[dn + x] - 4 * b) + abb - (K + F) * b;
+            }
+          }
+          [A, A2] = [A2, A]; [B, B2] = [B2, B];
+        }
+        let lo = Infinity, hi = -Infinity; for (const b of B) { lo = Math.min(lo, b); hi = Math.max(hi, b); }
+        // Catmull-Rom lookup between grid cells, so contours come out as curves rather than steps.
+        const cr = (a, b, c, d, t) => b + 0.5 * t * (c - a + t * (2 * a - 5 * b + 4 * c - d + t * (3 * (b - c) + d - a)));
+        const at = (i, j) => B[((j + ny) % ny) * nx + (i + nx) % nx];
+        // Traced over a slightly larger sheet whose rim counts as empty, so every filled shape closes off-sheet.
+        const m = 8, field = (x, y) => {
+          if (x <= 0 || y <= 0 || x >= W + 2 * m - 0.01 || y >= H + 2 * m - 0.01) return lo;
+          x -= m; y -= m;
+          const u = x / W * nx - 0.5, v = y / H * ny - 0.5, i = Math.floor(u), j = Math.floor(v), tu = u - i, tv = v - j;
+          const row = (jj) => cr(at(i - 1, jj), at(i, jj), at(i + 1, jj), at(i + 2, jj), tu);
+          return cr(row(j - 1), row(j), row(j + 1), row(j + 2), tv);
+        };
+        const n = p.lines, mid = (n - 1) / 2, lv = Array.from({ length: n }, (_, i) => lo + (hi - lo) * (0.5 + (n > 1 ? (i - mid) / (n - 1) : 0) * p.spread * 0.9));
+        // Marching squares gives loose segments; chained into loops they draw (and fill) as whole shapes.
+        const path = (d) => chain(d.split("M").slice(1).map((s) => s.split("L").map((q) => q.split(" ").map(Number))))
+          .map((L) => "M" + L.p.map((q) => f(q[0]) + " " + f(q[1])).join(" ") + (L.closed ? "Z" : "")).join("");
+        const ds = contours(field, W + 2 * m, H + 2 * m, n > 2 ? 140 : 180, lv).map(path), fi = Math.floor(mid);
+        return `<g transform="translate(${-m} ${-m})">` + ds.map((d, i) => p.fill && i === fi
+          ? `<path d="${d}" fill="${fg}" fill-rule="evenodd" stroke="none"/>`
+          : `<path d="${d}" stroke="${p.fill && i > fi ? bg : fg}" stroke-width="${p.stroke}" stroke-linejoin="round"/>`).join("") + `</g>`;
+      },
+    },
+    {
+      id: "dla", name: "Coral Growth", tags: ["nature", "fractal", "lines"],
+      blurb: "Diffusion-limited aggregation: particles wander in at random, one at a time, and freeze the moment they touch the growing cluster. Tips catch almost everything, so it branches like coral or frost; each branch is drawn as thick as the growth it carries.",
+      params: [P("count", "Particles", 300, 8000, 100, 4000), P("stick", "Stickiness", 0.15, 1, 0.01, 1), P("taper", "Taper", 0, 0.7, 0.01, 0.4), P("tip", "Tip width", 0.2, 4, 0.1, 1), P("max", "Trunk width", 1, 24, 0.5, 10)],
+      draw(p, { W, H, r }) {
+        const N = p.count, X = new Float32Array(N), Y = new Float32Array(N), par = new Int32Array(N).fill(-1), grid = new Map();
+        // Particles have radius 1; a hash of 2-unit cells finds touching neighbours.
+        const ck = (x, y) => (Math.floor(x / 2) + 4096) * 8192 + Math.floor(y / 2) + 4096;
+        const touch = (x, y) => {
+          for (let gx = -1; gx <= 1; gx++) for (let gy = -1; gy <= 1; gy++) {
+            const c = grid.get(ck(x + gx * 2, y + gy * 2)); if (!c) continue;
+            for (const j of c) if ((X[j] - x) ** 2 + (Y[j] - y) ** 2 < 4) return j;
+          }
+          return -1;
+        };
+        // A distance map around the cluster, capped at 16 units, lets a walker leap as far as the nearest particle allows.
+        const Rd = 16, G = 2 * Math.ceil(3 * N ** 0.6 + 60), dist = new Uint8Array(G * G).fill(Rd), o = G / 2;
+        const ring = Uint8Array.from({ length: (2 * Rd + 1) ** 2 }, (_, q) => Math.min(Rd, Math.floor(Math.hypot(q % (2 * Rd + 1) - Rd, Math.floor(q / (2 * Rd + 1)) - Rd))));
+        const put = (i) => {
+          const k = ck(X[i], Y[i]); if (!grid.has(k)) grid.set(k, []); grid.get(k).push(i);
+          const c0 = (Math.round(Y[i]) + o - Rd) * G + Math.round(X[i]) + o - Rd;
+          for (let dy = 0, q = 0; dy <= 2 * Rd; dy++) for (let dx = 0, row = c0 + dy * G; dx <= 2 * Rd; dx++, q++) if (ring[q] < dist[row + dx]) dist[row + dx] = ring[q];
+        };
+        const room = (x, y) => Math.max(1, dist[(Math.round(y) + o) * G + Math.round(x) + o] - 2.8);
+        put(0);
+        let rmax = 1;
+        for (let i = 1; i < N; i++) {
+          let a = r() * TAU, x = (rmax + 3) * Math.cos(a), y = (rmax + 3) * Math.sin(a);
+          for (;;) {
+            const d = Math.hypot(x, y);
+            // Far from the cluster a walker can leap: nothing lies within d - rmax of it.
+            if (d > 4 * rmax + 40) { a = r() * TAU; x = (rmax + 3) * Math.cos(a); y = (rmax + 3) * Math.sin(a); continue; }
+            const st = d > rmax + 6 ? d - rmax - 4 : room(x, y), b = r() * TAU, nx = x + st * Math.cos(b), ny = y + st * Math.sin(b);
+            const j = st === 1 ? touch(nx, ny) : -1;
+            if (j < 0) { x = nx; y = ny; continue; }
+            if (r() > p.stick) continue;
+            X[i] = nx; Y[i] = ny; par[i] = j; put(i); rmax = Math.max(rmax, Math.hypot(nx, ny) + 1);
+            break;
+          }
+        }
+        // Width from how many particles hang off each one; parents always come before their children.
+        const size = new Float32Array(N).fill(1);
+        for (let i = N - 1; i > 0; i--) size[par[i]] += size[i];
+        const Q = fitPts(Array.from(X, (x, i) => [x, Y[i]]), W, H, 0.05), byW = new Map();
+        for (let i = 1; i < N; i++) {
+          const w = f(Math.min(p.max, p.tip * size[i] ** p.taper) * 2) / 2, a = Q[par[i]], b = Q[i];
+          byW.set(w, (byW.get(w) || "") + `M${f(a[0])} ${f(a[1])}L${f(b[0])} ${f(b[1])}`);
+        }
+        return `<g stroke-linecap="round">${[...byW].map(([w, d]) => `<path d="${d}" stroke-width="${w}"/>`).join("")}</g>`;
+      },
+    },
   ];
 
   const TAGS = { truchet: ["tiles", "curves"], maze: ["tiles", "lines"], flow: ["lines", "noise"], cubes: ["tiles", "3D", "op-art"], halftone: ["dots", "3D"],
@@ -1327,7 +1664,7 @@
   // closed shapes that look best repeated, one per screen; "bottom" ones stand on the ground.
   const CENTERED = { sunburst: "radial", rings: "radial", arcs: "radial", polygons: "radial", hilbert: "radial",
     phyllotaxis: "object", halftone: "object", lissajous: "object", spiro: "object", rose: "object", supershape: "object", harmonograph: "object", koch: "object",
-    dragon: "object", pendulum: "object", lorenz: "object", clifford: "object", timestable: "object", apollonian: "object", guilloche: "object",
+    dragon: "object", pendulum: "object", lorenz: "object", clifford: "object", timestable: "object", apollonian: "object", guilloche: "object", dla: "object",
     tree: "bottom", fern: "bottom" };
   for (const pat of PATTERNS) pat.centered = CENTERED[pat.id] || false;
 
@@ -1336,6 +1673,22 @@
     ["Blueprint", "#e6eeff", "#1f428f"], ["Moss", "#dbe8c8", "#22392a"], ["Mustard", "#1c1c1c", "#f2c230"],
     ["Vermilion", "#d63a2c", "#f3e9d6"], ["Violet", "#cdbcff", "#24163f"], ["Teal", "#0f3d3e", "#9fd8cb"],
   ];
+
+  // Sanzo Wada, A Dictionary of Color Combinations (1933): 159 colours, 348 combinations.
+  const WADA = {"colors":[["Hermosa Pink","#f9c1ce"],["Corinthian Pink","#f8b6ba"],["Cameo Pink","#e0b3b6"],["Fawn","#d1b0a7"],["Light Brown Drab","#b59392"],["Coral Red","#f58e84"],["Fresh Color","#f6917e"],["Grenadine Pink","#f48067"],["Eosine Pink","#f37f94"],["Spinel Red","#f27291"],["Old Rose","#d46d7a"],["Eugenia Red | A","#e2625e"],["Eugenia Red | B","#da525d"],["Raw Sienna","#bb7125"],["Vinaceous Tawny","#c56127"],["Jasper Red","#eb5324"],["Spectrum Red","#e31f26"],["Red Orange","#dd4027"],["Etruscan Red","#c55347"],["Burnt Sienna","#ae5224"],["Ochre Red","#ab544d"],["Scarlet","#cb2f43"],["Carmine","#cc1236"],["Indian Lake","#c53c69"],["Rosolanc Purple","#b73f74"],["Pomegranite Purple","#b71f57"],["Hydrangea Red","#a94151"],["Brick Red","#a84222"],["Carmine Red","#a62c37"],["Pompeian Red","#ab2439"],["Red","#a72144"],["Brown","#7c4226"],["Hay's Russet","#793327"],["Vandyke Red","#82241f"],["Pansy Purple","#7d133a"],["Pale Burnt Lake","#802626"],["Violet Red","#642d5e"],["Vistoris Lake","#6d4145"],["Sulpher Yellow","#f5ecc2"],["Pale Lemon Yellow","#ffefae"],["Naples Yellow","#fbe6a0"],["Ivory Buff","#ebd3a2"],["Seashell Pink","#fdd4bd"],["Light Pinkish Cinnamon","#fcc79b"],["Pinkish Cinnamon","#eeb480"],["Cinnamon Buff","#fdc57e"],["Cream Yellow","#fdbf68"],["Golden Yellow","#f3a257"],["Vinaceous Cinnamon","#eea78c"],["Ochraceous Salmon","#d8a37b"],["Isabella Color","#c5a56e"],["Maple","#c59f6b"],["Olive Buff","#c1c494"],["Ecru","#c2ae93"],["Yellow","#fff200"],["Lemon Yellow","#f8ed43"],["Apricot Yellow","#ffdd00"],["Pyrite Yellow","#cab356"],["Olive Ocher","#d6b43e"],["Yellow Ocher","#e2b540"],["Orange Yellow","#fcb315"],["Yellow Orange","#f99d1b"],["Apricot Orange","#f68c50"],["Orange","#f37420"],["Peach Red","#f15a30"],["English Red","#d96629"],["Cinnamon Rufous","#c27544"],["Orange Rufous","#c16b27"],["Sulphine Yellow","#c19f2c"],["Khaki","#bc892b"],["Citron Yellow","#b2b73e"],["Citrine","#b09f36"],["Buffy Citrine","#96874d"],["Dark Citrine","#8b835b"],["Light Grayish Olive","#848061"],["Krongbergs Green","#84875e"],["Olive","#837e31"],["Orange Citrine","#986f2d"],["Sudan Brown","#a36752"],["Olive Green","#6b7140"],["Light Brownish Olive","#806e4b"],["Deep Grayish Olive","#635a3a"],["Pale Raw Umber","#71502f"],["Sepia","#644b1e"],["Madder Brown","#762c19"],["Mars Brown Tobacco","#653514"],["Vandyke Brown","#4b3317"],["Turquoise Green","#b5decc"],["Glaucous Green","#b4cdc2"],["Dark Greenish Glaucous","#b7c2a9"],["Yellow Green","#afd472"],["Light Green Yellow","#c7d14f"],["Night Green","#87c540"],["Olive Yellow","#a6a159"],["Artemesia Green","#709390"],["Andover Green","#6d7e77"],["Rainette Green","#8fa071"],["Chromium Green","#719470"],["Pistachio Green","#648f7b"],["Sea Green","#00b49b"],["Benzol Green","#00978d"],["Light Porcelain Green","#00908a"],["Green","#489b6e"],["Dull Viridian Green","#009465"],["Oil Green","#819238"],["Diamine Green","#1a7444"],["Cossack Green","#437742"],["Lincoln Green","#555832"],["Blackish Olive","#42533e"],["Deep Slate Olive","#253122"],["Nile Blue","#bce4e5"],["Pale King's Blue","#a7d4e4"],["Light Glaucous Blue","#a5c8d1"],["Salvia Blue","#97acc8"],["Cobalt Green","#96d1aa"],["Calamine BLue","#78cdd0"],["Venice Green","#62c6bf"],["Cerulian Blue","#0093a5"],["Peacock Blue","#00939b"],["Green Blue","#099197"],["Olympic Blue","#5a82b3"],["Blue","#006eb8"],["Antwarp Blue","#007190"],["Helvetia Blue","#005b8d"],["Dark Medici Blue","#547076"],["Dusky Green","#004f46"],["Deep Lyons Blue","#1c4286"],["Violet Blue","#40456a"],["Vandar Poel's Blue","#064f6e"],["Dark Tyrian Blue","#12354e"],["Dull Violet Black","#1e0e3f"],["Deep Indigo","#051230"],["Deep Slate Green","#112f2c"],["Grayish Lavender - A","#b5b1d8"],["Grayish Lavender - B","#c0a9b3"],["Laelia Pink","#ca92a8"],["Lilac","#b984af"],["Eupatorium Purple","#bf5892"],["Light Mauve","#9a72aa"],["Aconite Violet","#a36aa5"],["Dull Blue Violet","#80719e"],["Dark Soft Violet","#66629c"],["Blue Violet","#6450a1"],["Purple Drab","#84565b"],["Deep Violet / Plumbeous","#70727c"],["Veronia Purple","#8c4c62"],["Dark Slate Purple","#704357"],["Taupe Brown","#7a4456"],["Violet Carmine","#713b4c"],["Violet","#4f4086"],["Red Violet","#59256a"],["Cotinga Purple","#501345"],["Dusky Madder Violet","#4e1d4c"],["White","#ffffff"],["Neutral Gray","#b6bfc1"],["Mineral Gray","#a2b0ad"],["Warm Gray","#a1a39a"],["Slate Color","#34454c"],["Black","#111314"]],"combos":[[1,[65,117]],[2,[61,129]],[3,[13,39]],[4,[50,150]],[5,[106,128]],[6,[7,131]],[7,[63,88]],[8,[66,133]],[9,[36,140]],[10,[66,73]],[11,[41,155]],[12,[50,119]],[13,[13,145]],[14,[9,40]],[15,[100,133]],[16,[33,111]],[17,[12,99]],[18,[3,152]],[19,[85,92]],[20,[115,135]],[21,[7,99]],[22,[54,126]],[23,[45,138]],[24,[83,145]],[25,[18,110]],[26,[47,82]],[27,[1,157]],[28,[84,131]],[29,[75,113]],[30,[29,155]],[31,[17,39]],[32,[49,92]],[33,[13,157]],[34,[8,154]],[35,[4,28]],[36,[68,87]],[37,[27,150]],[38,[105,126]],[39,[22,123]],[40,[14,70]],[41,[73,115]],[42,[59,149]],[43,[1,139]],[44,[101,120]],[45,[42,55]],[46,[63,158]],[47,[18,134]],[48,[24,123]],[49,[111,121]],[50,[41,152]],[51,[28,121]],[52,[38,158]],[53,[61,152]],[54,[100,112]],[55,[10,153]],[56,[134,149]],[57,[147,157]],[58,[32,99]],[59,[8,71]],[60,[39,129]],[61,[91,151]],[62,[54,158]],[63,[37,117]],[64,[139,141]],[65,[68,115]],[66,[58,79]],[67,[120,129]],[68,[4,54]],[69,[156,158]],[70,[13,107]],[71,[29,49]],[72,[38,111]],[73,[82,96]],[74,[87,119]],[75,[111,127]],[76,[39,156]],[77,[12,128]],[78,[44,116]],[79,[84,119]],[80,[38,138]],[81,[47,156]],[82,[32,152]],[83,[52,127]],[84,[42,132]],[85,[14,122]],[86,[13,99]],[87,[1,70]],[88,[42,121]],[89,[61,127]],[90,[8,139]],[91,[37,67]],[92,[5,100]],[93,[71,112]],[94,[41,125]],[95,[32,130]],[96,[59,76]],[97,[1,18]],[98,[84,127]],[99,[39,117]],[100,[72,140]],[101,[2,126]],[102,[41,67]],[103,[66,152]],[104,[28,38]],[105,[2,97]],[106,[122,130]],[107,[56,74]],[108,[8,27]],[109,[39,108]],[110,[31,86]],[111,[39,90]],[112,[7,158]],[113,[42,86]],[114,[60,122]],[115,[40,64]],[116,[2,142]],[117,[22,158]],[118,[59,86]],[119,[112,129]],[120,[2,29]],[121,[31,49,107]],[122,[22,46,100]],[123,[5,55,147]],[124,[35,59,93]],[125,[3,117,127]],[126,[41,59,126]],[127,[45,98,141]],[128,[1,116,138]],[129,[56,69,113]],[130,[13,28,149]],[131,[13,65,118]],[132,[38,47,71]],[133,[33,71,99]],[134,[8,138,150]],[135,[38,106,113]],[136,[21,103,150]],[137,[18,45,98]],[138,[47,55,116]],[139,[113,131,154]],[140,[47,122,157]],[141,[63,90,129]],[142,[26,68,113]],[143,[121,136,156]],[144,[24,63,158]],[145,[31,70,130]],[146,[69,81,105]],[147,[9,33,87]],[148,[58,60,117]],[149,[58,63,132]],[150,[42,70,88]],[151,[38,61,128]],[152,[18,32,112]],[153,[8,60,70]],[154,[22,54,121]],[155,[15,100,131]],[156,[58,114,149]],[157,[34,58,120]],[158,[55,66,92]],[159,[69,115,133]],[160,[68,82,124]],[161,[31,44,123]],[162,[10,96,136]],[163,[56,87,122]],[164,[17,60,149]],[165,[2,9,37]],[166,[7,40,132]],[167,[53,111,128]],[168,[55,128,145]],[169,[1,39,156]],[170,[24,60,150]],[171,[35,61,88]],[172,[66,122,150]],[173,[55,84,87]],[174,[1,134,147]],[175,[44,52,142]],[176,[0,42,115]],[177,[35,72,133]],[178,[41,112,119]],[179,[17,47,126]],[180,[45,138,154]],[181,[28,149,151]],[182,[13,86,131]],[183,[144,145,150]],[184,[9,41,74]],[185,[4,18,39]],[186,[32,49,121]],[187,[123,134,139]],[188,[96,113,114]],[189,[55,109,116]],[190,[41,65,158]],[191,[4,59,121]],[192,[46,86,144]],[193,[7,40,101]],[194,[15,42,120]],[195,[9,39,154]],[196,[70,111,142]],[197,[8,141,154]],[198,[19,56,102]],[199,[20,80,126]],[200,[28,52,97]],[201,[7,76,114]],[202,[87,114,157]],[203,[39,48,107]],[204,[24,66,112]],[205,[35,48,149]],[206,[1,47,66]],[207,[78,88,158]],[208,[38,119,122]],[209,[41,61,113]],[210,[45,55,107]],[211,[62,93,131]],[212,[29,77,113]],[213,[48,56,111]],[214,[41,78,149]],[215,[46,121,137]],[216,[15,102,158]],[217,[35,49,105]],[218,[123,133,144]],[219,[15,97,125]],[220,[25,49,139]],[221,[28,154,158]],[222,[59,61,67]],[223,[4,49,87]],[224,[9,124,147]],[225,[22,125,146]],[226,[37,46,149]],[227,[0,112,117]],[228,[28,39,154]],[229,[47,109,154]],[230,[7,87,114]],[231,[2,32,120]],[232,[22,44,131]],[233,[28,72,127]],[234,[45,82,111]],[235,[41,61,134]],[236,[69,126,143]],[237,[28,84,113]],[238,[49,151,156]],[239,[4,57,88]],[240,[6,54,117]],[241,[17,39,50,124]],[242,[8,19,105,158]],[243,[13,41,79,157]],[244,[4,14,95,122]],[245,[28,104,129,157]],[246,[1,27,38,45]],[247,[13,56,100,126]],[248,[8,69,133,146]],[249,[32,53,58,124]],[250,[57,64,99,110]],[251,[30,54,105,157]],[252,[12,13,68,119]],[253,[55,62,151,157]],[254,[1,38,76,135]],[255,[13,57,115,158]],[256,[48,63,103,158]],[257,[16,60,121,139]],[258,[35,44,76,122]],[259,[55,119,123,156]],[260,[10,48,88,99]],[261,[30,39,115,156]],[262,[12,41,71,106]],[263,[19,44,87,157]],[264,[1,17,89,117]],[265,[10,56,93,130]],[266,[16,41,96,100]],[267,[46,61,100,121]],[268,[4,13,109,110]],[269,[13,35,139,158]],[270,[12,38,79,106]],[271,[25,114,119,132]],[272,[39,63,87,113]],[273,[0,34,78,154]],[274,[64,73,120,138]],[275,[18,53,84,147]],[276,[8,42,90,158]],[277,[9,24,76,130]],[278,[46,58,106,125]],[279,[13,48,53,129]],[280,[12,107,135,147]],[281,[39,100,114,122]],[282,[12,51,114,136]],[283,[20,35,97,116]],[284,[11,56,99,125]],[285,[4,19,64,87]],[286,[19,60,118,127]],[287,[8,57,111,115]],[288,[61,83,147,158]],[289,[55,91,127,130]],[290,[37,39,107,114]],[291,[91,99,114,115]],[292,[39,44,50,53]],[293,[13,87,94,102]],[294,[38,46,106,113]],[295,[46,54,121,130]],[296,[38,49,82,157]],[297,[19,61,79,127]],[298,[13,55,64,158]],[299,[23,48,104,122]],[300,[7,46,87,115]],[301,[16,41,96,139]],[302,[46,53,110,122]],[303,[40,64,109,154]],[304,[32,46,73,100]],[305,[44,56,70,87]],[306,[55,100,103,110]],[307,[22,133,139,151]],[308,[3,21,65,114]],[309,[47,62,127,128]],[310,[38,44,76,109]],[311,[29,46,89,91]],[312,[19,61,94,123]],[313,[22,54,105,158]],[314,[8,32,126,152]],[315,[7,38,47,137]],[316,[33,103,149,150]],[317,[43,53,55,87]],[318,[80,108,125,132]],[319,[13,56,61,106]],[320,[5,38,104,112]],[321,[4,38,109,113]],[322,[16,27,137,142]],[323,[45,70,84,158]],[324,[29,120,139,154]],[325,[12,40,59,132]],[326,[38,64,90,92]],[327,[8,13,53,134]],[328,[27,62,86,101]],[329,[46,134,151,157]],[330,[52,110,113,119]],[331,[23,130,138,149]],[332,[5,21,109,125]],[333,[19,55,114,121]],[334,[42,76,90,122]],[335,[33,61,149,157]],[336,[8,32,39,108]],[337,[37,135,148,158]],[338,[28,60,125,134]],[339,[49,65,112,127]],[340,[64,99,154,158]],[341,[7,106,109,112]],[342,[1,46,77,109]],[343,[19,41,81,128]],[344,[45,126,139,158]],[345,[32,110,116,142]],[346,[24,87,91,95]],[347,[93,99,123,136]],[348,[52,106,109,151]]]};
+  const lum = (h) => { const [r, g, b] = [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16) / 255).map((c) => c <= .04045 ? c / 12.92 : ((c + .055) / 1.055) ** 2.4); return .2126 * r + .7152 * g + .0722 * b; };
+  const contrast = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + .05) / (y + .05); };
+  // Ink and paper from a combination: the two colours farthest apart in lightness, the lighter one as paper.
+  // Combinations too close in tone to read as a pattern are skipped.
+  function wadaPair(k) {
+    const [n, ids] = WADA.combos[k], cols = ids.map((i) => WADA.colors[i]);
+    let best = null;
+    for (const a of cols) for (const b of cols) if (a !== b) { const c = contrast(a[1], b[1]); if (!best || c > best.c) best = { a, b, c }; }
+    if (!best || best.c < 2.4) return null;
+    const [ink, paper] = lum(best.a[1]) < lum(best.b[1]) ? [best.a, best.b] : [best.b, best.a];
+    return { n, ink, paper, cols };
+  }
+  const WADA_OK = WADA.combos.map((_, k) => k).filter((k) => wadaPair(k));
 
   const $ = (id) => document.getElementById(id);
   const PREF = "patternStudio.v1";
@@ -1416,9 +1769,25 @@
     $("bgIn").oninput = (e) => setColors(colors.fg, e.target.value, true);
     $("swap").onclick = () => setColors(colors.bg, colors.fg);
   }
+  let wadaIx = store.wada ?? -1;
+  function drawWada() {
+    const el = $("wadaName");
+    if (wadaIx < 0 || !wadaPair(wadaIx)) { el.innerHTML = ""; return; }
+    const p = wadaPair(wadaIx);
+    el.innerHTML = `<span class="pair">${p.cols.map((c) => `<i style="background:${c[1]}" title="${c[0]}"></i>`).join("")}</span> No. ${p.n} · <b>${p.ink[0]}</b> on <b>${p.paper[0]}</b>`;
+  }
+  function randomWada() {
+    let k; do { k = WADA_OK[Math.floor(Math.random() * WADA_OK.length)]; } while (k === wadaIx && WADA_OK.length > 1);
+    const p = wadaPair(k);
+    wadaIx = k; store.wada = k; persist();
+    setColors(p.ink[1], p.paper[1]);
+  }
   let galleryTimer;
-  function setColors(fg, bg, live) {
+  function setColors(fg, bg, live, keepWada) {
     colors = { fg, bg }; store.colors = colors; persist();
+    const p = wadaIx >= 0 && wadaPair(wadaIx);
+    if (!(p && p.ink[1] === fg && p.paper[1] === bg) && !(p && p.ink[1] === bg && p.paper[1] === fg)) { wadaIx = -1; store.wada = -1; }
+    drawWada();
     if (!live) drawPalettes();
     if (current) drawEditor();
     clearTimeout(galleryTimer); galleryTimer = setTimeout(drawGallery, live ? 120 : 0);
@@ -1906,7 +2275,9 @@
     return new Blob([...parts, ...dir, end], { type: "application/zip" });
   }
 
-  drawPalettes(); drawChips(); drawGallery(); route();
+  $("wadaBtn").onclick = randomWada;
+  document.addEventListener("keydown", (e) => { if (e.key.toLowerCase() === "c" && !e.ctrlKey && !e.metaKey && !e.altKey && !e.target.closest("input, select, textarea")) randomWada(); });
+  drawPalettes(); drawWada(); drawChips(); drawGallery(); route();
 })();
 </script>
 <!-- studio-hub theme slider -->
