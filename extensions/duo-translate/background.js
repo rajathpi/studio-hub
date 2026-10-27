@@ -12,8 +12,11 @@ const cache = new Map(); // `${target}\u0001${text}` -> [translation, lang]
 chrome.runtime.onInstalled.addListener(async () => {
   const s = await chrome.storage.sync.get(DEFAULTS);
   await chrome.storage.sync.set(s);
+  // Show the real key in the menu: Alt+A, Control+Shift+A on a Mac, or whatever the user picked.
+  const [cmd] = (await chrome.commands.getAll()).filter((c) => c.name === 'toggle');
+  const title = cmd && cmd.shortcut ? `Translate page (${cmd.shortcut})` : 'Translate page';
   chrome.contextMenus.removeAll(() => {
-    chrome.contextMenus.create({ id: 'duo-toggle', title: 'Translate page (Alt+A)', contexts: ['page', 'selection', 'link'] });
+    chrome.contextMenus.create({ id: 'duo-toggle', title, contexts: ['page', 'selection', 'link'] });
   });
 });
 

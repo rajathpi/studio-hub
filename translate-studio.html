@@ -175,7 +175,7 @@
 
   <h2>Using it</h2>
   <div class="grid">
-    <div class="panel"><b>Turn it on</b><p>Press <kbd>Alt</kbd> <kbd>A</kbd>, or right-click the page and pick <em>Translate page</em>. Same again to show the original.</p></div>
+    <div class="panel"><b>Turn it on</b><p>Press <kbd>Alt</kbd> <kbd>A</kbd> (<kbd>Control</kbd> <kbd>Shift</kbd> <kbd>A</kbd> on a Mac), or right-click the page and pick <em>Translate page</em>. Same again to show the original.</p></div>
     <div class="panel"><b>Both or translation only</b><p>Click the extension icon to switch between showing both languages and the translation alone, and to pick the language.</p></div>
     <div class="panel"><b>Always translate a site</b><p>Tick <em>Always translate</em> in the popup and that site opens translated every time.</p></div>
     <div class="panel"><b>Fast on long pages</b><p>Only what's on screen is translated. The rest follows as you scroll, and new content is picked up as it loads.</p></div>
@@ -234,14 +234,14 @@
         `Open ${url(s.url)} in a new tab. Browsers block these links, so click it to copy, then paste.`,
         "Turn on <b>Developer mode</b>" + (b === "edge" ? " (left side)." : " (top right)."),
         "Click <b>Load unpacked</b> and pick the <code>duo-translate</code> folder. Keep the folder where it is; the browser reads it from there.",
-        "Reload tabs that were already open. Then press <kbd>Alt</kbd> <kbd>A</kbd> on any page.",
+        "Reload tabs that were already open. Then press " + (isMac ? "<kbd>Control</kbd> <kbd>Shift</kbd> <kbd>A</kbd>" : "<kbd>Alt</kbd> <kbd>A</kbd>") + " on any page.",
       ];
     }
     document.getElementById("steps").innerHTML = html.map((h) => `<li><span>${h}</span></li>`).join("");
     const sc = b === "firefox" ? "about:addons &rarr; gear &rarr; Manage Extension Shortcuts" : url(STEPS[b].shortcuts);
-    document.getElementById("os-note").innerHTML = isMac
-      ? `On a Mac the shortcut is <kbd>Option</kbd> <kbd>A</kbd>, which normally types "å". If you need that, pick another key at ${sc}.`
-      : `If another extension already uses <kbd>Alt</kbd> <kbd>A</kbd>, the browser leaves it unset. Pick a key at ${sc}.`;
+    const keys = isMac ? "<kbd>Control</kbd> <kbd>Shift</kbd> <kbd>A</kbd>" : "<kbd>Alt</kbd> <kbd>A</kbd>";
+    document.getElementById("os-note").innerHTML =
+      `If ${keys} does nothing, open the extension's popup. "No shortcut set" means another extension already has the key, or you updated an older copy (the browser only sets it on a first install). Set it at ${sc}` + (b === "firefox" ? "." : `, and leave Scope on <b>In ${b === "edge" ? "Edge" : b === "brave" ? "Brave" : "Chrome"}</b>, not Global.`);
   }
   const guess = navigator.brave ? "brave" : /Firefox\//.test(navigator.userAgent) ? "firefox" : /Edg\//.test(navigator.userAgent) ? "edge" : "chrome";
   document.getElementById("browsers").addEventListener("click", (e) => e.target.dataset.b && render(e.target.dataset.b));

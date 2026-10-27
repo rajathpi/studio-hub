@@ -20,13 +20,13 @@
   ],
   "action": {
     "default_popup": "popup.html",
-    "default_title": "Duo Translate (Alt+A)",
+    "default_title": "Duo Translate",
     "default_icon": { "16": "icons/16.png", "32": "icons/32.png", "48": "icons/48.png" }
   },
   "icons": { "16": "icons/16.png", "32": "icons/32.png", "48": "icons/48.png", "128": "icons/128.png" },
   "commands": {
     "toggle": {
-      "suggested_key": { "default": "Alt+A", "mac": "Alt+A" },
+      "suggested_key": { "default": "Alt+A", "mac": "MacCtrl+Shift+A" },
       "description": "Translate this page, or show the original again"
     }
   },
