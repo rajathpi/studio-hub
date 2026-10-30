@@ -12,7 +12,7 @@ const PAGES = [
   'index.html', 'diff-studio.html', 'regex-studio.html', 'merge-studio.html', 'blob-studio.html',
   'pattern-studio.html', 'mermaid-live.html', 'pdf-studio.html', 'markdown-studio.html', 'wallpaper-studio.html',
   'snap-studio.html', 'color-studio.html', 'qr-studio.html', 'time-studio.html', 'convert-studio.html', 'translate-studio.html',
-  'transcribe-studio.html', 'transcribe-studio-v2.html', // the model loads only once a file is dropped
+  'transcribe-studio.html', 'transcribe-studio-v2.html', 'transcribe-studio-v3.html', // the model loads only once a file is dropped
   // ocr-studio and outfit-studio stream language data and figures from other hosts, so they sit outside this check
 ];
 
