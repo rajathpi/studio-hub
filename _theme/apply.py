@@ -16,7 +16,7 @@ import sys
 HERE = pathlib.Path(__file__).resolve().parent
 ROOT = HERE.parent
 PAGES = ["index.html", "diff-studio.html", "regex-studio.html", "merge-studio.html",
-         "blob-studio.html", "pattern-studio.html", "code-studio.html", "mermaid-live.html", "pdf-studio.html", "markdown-studio.html", "wallpaper-studio.html", "snap-studio.html", "snap-studio-v2.html", "ocr-studio.html", "qr-studio.html", "color-studio.html", "time-studio.html", "time-studio-v2.html", "convert-studio.html", "outfit-studio.html", "outfit-studio-v2.html", "outfit-studio-v3.html", "outfit-models-v2.html", "outfit-research.html", "outfit-studio-v4.html", "translate-studio.html"]
+         "blob-studio.html", "pattern-studio.html", "code-studio.html", "mermaid-live.html", "pdf-studio.html", "markdown-studio.html", "wallpaper-studio.html", "snap-studio.html", "snap-studio-v2.html", "ocr-studio.html", "qr-studio.html", "color-studio.html", "time-studio.html", "time-studio-v2.html", "convert-studio.html", "outfit-studio.html", "outfit-studio-v2.html", "outfit-studio-v3.html", "outfit-models-v2.html", "outfit-research.html", "outfit-studio-v4.html", "translate-studio.html", "transcribe-studio.html", "transcribe-studio-v2.html", "transcribe-studio-v3.html"]
 
 # The tool pages share one dark palette; each colour becomes a token whose dark
 # value is that same colour (see kit.html), so dark mode looks exactly as before.
@@ -35,7 +35,7 @@ TOKENS = {
 HEX2TOK = {h: t for t, hs in TOKENS.items() for h in hs}
 SYS_FONT = '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
 # Pages whose top <header> is a toolbar: the slider docks at its end instead of floating over it.
-DOCK = {"markdown-studio.html", "diff-studio.html", "regex-studio.html", "merge-studio.html", "mermaid-live.html", "pdf-studio.html", "code-studio.html", "snap-studio.html", "snap-studio-v2.html", "ocr-studio.html", "qr-studio.html", "color-studio.html", "time-studio.html", "time-studio-v2.html", "convert-studio.html", "outfit-studio.html", "outfit-studio-v2.html", "outfit-studio-v3.html", "outfit-models-v2.html", "outfit-studio-v4.html"}
+DOCK = {"markdown-studio.html", "diff-studio.html", "regex-studio.html", "merge-studio.html", "mermaid-live.html", "pdf-studio.html", "code-studio.html", "snap-studio.html", "snap-studio-v2.html", "ocr-studio.html", "qr-studio.html", "color-studio.html", "time-studio.html", "time-studio-v2.html", "convert-studio.html", "outfit-studio.html", "outfit-studio-v2.html", "outfit-studio-v3.html", "outfit-models-v2.html", "outfit-studio-v4.html", "transcribe-studio.html", "transcribe-studio-v2.html", "transcribe-studio-v3.html"}
 SLOT = '<span data-hub-theme-slot></span>'
 
 KIT_RE = re.compile(r"<!-- studio-hub theme kit v\d.*?<!-- /studio-hub theme kit -->\n?", re.S)
