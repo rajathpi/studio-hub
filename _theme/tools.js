@@ -25,6 +25,8 @@ window.TOOLS = [
     glyph: '<path d="M8 7.5L3.5 12 8 16.5M16 7.5l4.5 4.5-4.5 4.5M14 4.5l-4 15"/>' },
   { id: "translate", name: "Translate", page: "translate-studio.html", group: "Everyday", blurb: "Pages with the translation under each paragraph", used: 3,
     glyph: '<path d="M4 6h9M4 10h6"/><path d="M4 15h16M4 19h11"/><path d="M17 4l3 3-3 3"/>' },
+  { id: "transcribe", name: "Transcribe", page: "transcribe-studio-v2.html", group: "Everyday", blurb: "Recordings and videos to text and subtitles (Whisper)", used: 3,
+    glyph: '<rect x="4.5" y="3" width="5" height="10" rx="2.5"/><path d="M2.5 10.5a4.5 4.5 0 0 0 9 0M7 15v3"/><path d="M14 8h7M14 12h7M14 16h5"/>' },
   { id: "time", name: "Time", page: "time-studio.html", group: "Everyday", blurb: "Gothenburg, Mangalore and the US on one board", used: 4,
     glyph: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3 2"/>' },
   { id: "convert", name: "Convert", page: "convert-studio.html", group: "Everyday", blurb: "Type 175 cm in ft, or 5 lakh to million", used: 3,
