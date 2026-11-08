@@ -30,6 +30,8 @@
   }
   select { padding: 5px 8px; }
   input { cursor: text; width: 170px; }
+  #audioOnly { width: auto; padding: 0; cursor: pointer; vertical-align: -2px; }
+  label.label { display: inline-flex; align-items: center; gap: 5px; cursor: pointer; }
   input::placeholder { color: var(--h-faint); }
   button:hover { background: var(--h-btn-hover); }
   button:disabled, select:disabled { opacity: .4; cursor: default; }
@@ -205,6 +207,8 @@
   </div>
   <div class="sep"></div>
   <button id="rec" title="Start or stop talking (R)"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg><span>Talk</span> <kbd>R</kbd></button>
+  <button id="meet" title="Write down a meeting: pick its tab and tick Share tab audio. Your mic is never opened (M)"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="12" rx="2"/><path d="M8 21h8M12 17v4"/></svg><span>Meeting</span> <kbd>M</kbd></button>
+  <label class="label" title="Only record the sound; transcribe it later"><input type="checkbox" id="audioOnly"> Audio only</label>
   <div class="sep"></div>
   <input id="find" type="search" placeholder="Find a word  /" disabled>
   <span id="hits"></span>
@@ -218,7 +222,7 @@
   <div id="empty">
     <button id="bigRec" class="primary" title="Start talking (R)"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button>
     <b>Press R and talk</b>
-    The words show up a moment after each pause, until you press stop. Or drop in a recording or a video, or <a id="pick">open a file</a>.
+    The words show up a moment after each pause, until you press stop. Or drop in a recording or a video, or <a id="pick">open a file</a>. Listening in on a meeting? Press M and pick the meeting's tab.
     <small id="emptyNote">Whisper runs in your browser on the GPU. Each model downloads once, then it's cached: Fast 150 MB, Balanced 490 MB, Best 1.5 GB. Nothing is uploaded.</small>
   </div>
   <section id="strip">
@@ -367,7 +371,7 @@ self.onmessage = ({ data: m }) => {
   for (const o of $("lang").options) LANG[o.value] = o.textContent;
   { const l = store.get("transcribeLang"); if (l != null && l in LANG) $("lang").value = l; }
   { const m = store.get("transcribeModel"); if (m in MODELS) $("model").value = m; }
-  $("lang").onchange = () => store.set("transcribeLang", $("lang").value);
+  $("lang").onchange = () => { store.set("transcribeLang", $("lang").value); if (mic && !mic.done) liveLang = $("lang").value; };
   $("model").onchange = () => { store.set("transcribeModel", $("model").value); warm(); };
 
   // ---------- worker ----------
@@ -440,27 +444,41 @@ self.onmessage = ({ data: m }) => {
     }
   }
 
-  async function startTalk() {
+  async function startTalk(meeting) {
     if (busy) return toast("Still working on the file");
     if (starting) return;
     starting = true;
-    try { await beginTalk(); }
+    try { await beginTalk(meeting); }
     catch (e) { console.error(e); toast("Couldn't start the microphone"); }
     finally { starting = false; }
   }
 
-  async function beginTalk() {
-    let stream;
-    try { stream = await getMic(); }
-    catch { return toast("No microphone, or it was blocked"); }
+  // A meeting listens only to the shared tab's (or screen's) sound and never opens the mic,
+  // so your own mic in the meeting is left alone.
+  async function beginTalk(meeting) {
+    let stream, share = null;
+    if (meeting) {
+      try { share = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false }, systemAudio: "include", selfBrowserSurface: "exclude" }); }
+      catch { return toast("Sharing was cancelled"); }
+      if (!share.getAudioTracks().length) { share.getTracks().forEach((t) => t.stop()); return toast("No sound came with it: pick the meeting's tab and tick Share tab audio"); }
+      stream = new MediaStream(share.getAudioTracks());
+      share.getAudioTracks()[0].onended = () => mic && !mic.done && mic.share === share && stopTalk();
+    } else {
+      try { stream = await getMic(); }
+      catch { return toast("No microphone, or it was blocked"); }
+    }
     const ac = new AudioContext({ sampleRate: SR });
     const src = ac.createMediaStreamSource(stream);
     const tap = await makeTap(ac, src, (f) => mic && !mic.done && hear(f));
     newSession("mic", "Recording");
+    session.audioOnly = $("audioOnly").checked;
+    $("audioOnly").disabled = true;
+    if (share) { session.meeting = true; session.stem += " Meeting"; $("title").textContent = "Meeting · " + $("title").textContent; }
     const types = ["audio/webm;codecs=opus", "audio/ogg;codecs=opus", "audio/mp4"];
     const rec = new MediaRecorder(stream, { mimeType: types.find((t) => MediaRecorder.isTypeSupported(t)), audioBitsPerSecond: 64000 });
+    const btn = share ? $("meet") : $("rec");
     mic = {
-      stream, ac, tap, rec, bits: [], t0: Date.now(),
+      stream, share, btn, ac, tap, rec, bits: [], t0: Date.now(),
       buf: new Float32Array(SR * 60), len: 0,       // all audio so far, grows as needed
       win: 0, winSum: 0, floor: 0.004,              // current 30 ms window and the noise floor
       pieceStart: 0, voiced: 0, lastVoice: -1, pending: 0,
@@ -468,9 +486,10 @@ self.onmessage = ({ data: m }) => {
     rec.ondataavailable = (e) => { if (e.data.size) { mic.bits.push(e.data); autosave(true); } };
     rec.start(10000);
     main.classList.add("recording");
-    $("rec").classList.add("rec"); $("bigRec").classList.add("rec");
-    const tick = () => { $("rec").querySelector("span").textContent = "Stop · " + clock((Date.now() - mic.t0) / 1000); };
+    btn.classList.add("rec"); $("bigRec").classList.add("rec");
+    const tick = () => { btn.querySelector("span").textContent = "Stop · " + clock((Date.now() - mic.t0) / 1000); };
     tick(); mic.timer = setInterval(tick, 500);
+    if (session.audioOnly) return setStatus("Recording audio only", "Nothing is transcribed now. Transcribe it when you stop, or drop the saved file in later.");
     const c = await config($("model").value);
     session.model = c.label;
     if (readyKey !== c.key) { getWorker().postMessage({ type: "load", cfg: c }); setStatus(`Starting ${c.name}`, "Keep talking: what you say now is kept and written out once it's ready."); }
@@ -508,7 +527,7 @@ self.onmessage = ({ data: m }) => {
     const audio = m.buf.slice(from, end);
     const speech = m.voiced / (end - from);
     m.pieceStart = end; m.voiced = 0; m.lastVoice = -1;
-    if (audio.length < SR * 0.5) return;
+    if (audio.length < SR * 0.5 || session.audioOnly) return;
     m.pending++;
     showGhost();
     const c = await config($("model").value);
@@ -522,13 +541,15 @@ self.onmessage = ({ data: m }) => {
     if (m.voiced) cut(m.len);
     m.tap.stop();
     await new Promise((r) => { m.rec.onstop = r; m.rec.stop(); });
-    if (location.protocol !== "file:") { m.stream.getTracks().forEach((t) => t.stop()); micStream = null; }
+    m.share?.getTracks().forEach((t) => t.stop());
+    if (location.protocol !== "file:" && micStream) { micStream.getTracks().forEach((t) => t.stop()); micStream = null; }
     m.ac.close();
     m.audio = m.buf.slice(0, m.len);
     m.blob = new Blob(m.bits, { type: m.rec.mimeType || "audio/webm" });
     m.done = true;
+    $("audioOnly").disabled = false;
     main.classList.remove("recording");
-    $("rec").classList.remove("rec"); $("bigRec").classList.remove("rec"); $("rec").querySelector("span").textContent = "Talk";
+    m.btn.classList.remove("rec"); $("bigRec").classList.remove("rec"); m.btn.querySelector("span").textContent = m.share ? "Meeting" : "Talk";
     duration = m.len / SR;
     showMedia(m.blob);
     autosave(true);
@@ -537,10 +558,12 @@ self.onmessage = ({ data: m }) => {
 
   function finishTalk() {
     setStatus(""); showGhost();
-    $("polishRow").hidden = $("model").value === "best" || !segs.length || !gpu;
+    $("polishRow").hidden = session.audioOnly ? false : $("model").value === "best" || !segs.length || !gpu;
+    $("polish").textContent = session.audioOnly ? "Transcribe with Best" : "Polish with Best";
     setButtons(true);
     metaLine();
-    if (!segs.length) toast("Didn't hear any words");
+    if (session.audioOnly) { if (!(dir && dirOk)) download(mic.blob, audioExt(), mic.blob.type); }
+    else if (!segs.length) toast("Didn't hear any words");
     autosave(true);
   }
 
@@ -615,7 +638,7 @@ self.onmessage = ({ data: m }) => {
   }
 
   function showGhost() {
-    const talking = mic && !mic.done;
+    const talking = mic && !mic.done && !session?.audioOnly;
     const waiting = mic && mic.pending > 0;
     $("ghost").classList.toggle("show", !!(talking || waiting) && (!session || session.kind === "mic"));
     $("ghostText").innerHTML = waiting ? "<i><b></b><b></b><b></b></i>" : talking ? "<i><b></b><b></b><b></b></i>" : "";
@@ -668,7 +691,7 @@ self.onmessage = ({ data: m }) => {
     parts = duration <= 30 ? 1 : 1 + Math.ceil((duration - 30) / 20);
     partsDone = 0; busy = true; started = performance.now(); live = ""; heard = 0;
     setStatus(readyKey === c.key ? progressText() : `Starting ${c.name}`, c.label);
-    getWorker().postMessage({ type: "file", id: ++jobId, cfg: c, language: session.language || $("lang").value, audio }, [audio.buffer]);
+    getWorker().postMessage({ type: "file", id: ++jobId, cfg: c, language: $("lang").value || session.language, audio }, [audio.buffer]);
   }
 
   $("polish").onclick = () => {
@@ -872,7 +895,7 @@ self.onmessage = ({ data: m }) => {
   function json() {
     return JSON.stringify({
       created: session.created.toISOString(),
-      source: session.kind === "mic" ? "microphone" : session.name,
+      source: session.kind === "mic" ? (session.meeting ? "meeting" : "microphone") : session.name,
       audio: session.kind === "mic" ? session.stem + audioExt() : session.name,
       model: session.model, language: session.language || null, duration: round(duration),
       segments: segs.map((s) => ({ start: round(s.s), end: round(s.e), text: s.text })),
@@ -969,7 +992,10 @@ self.onmessage = ({ data: m }) => {
 
   // ---------- controls and keys ----------
   const toggleTalk = () => (mic && !mic.done ? stopTalk() : startTalk());
+  const toggleMeet = () => (mic && !mic.done ? stopTalk() : startTalk(true));
   $("rec").onclick = $("bigRec").onclick = toggleTalk;
+  $("meet").onclick = toggleMeet;
+  navigator.mediaDevices?.getDisplayMedia || ($("meet").hidden = true);
   $("open").onclick = $("pick").onclick = () => $("file").click();
   $("file").onchange = () => { const f = $("file").files[0]; $("file").value = ""; f && takeFile(f, f.name); };
   addEventListener("dragover", (e) => { e.preventDefault(); main.classList.add("dropping"); });
@@ -980,8 +1006,9 @@ self.onmessage = ({ data: m }) => {
     f ? takeFile(f, f.name) : toast("Drop an audio or video file");
   });
   addEventListener("keydown", (e) => {
-    if (e.target.closest("textarea, select, input") || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.target.closest("textarea, select, input:not([type=checkbox])") || e.ctrlKey || e.metaKey || e.altKey) return;
     if (e.key === "r" || e.key === "R") { e.preventDefault(); toggleTalk(); }
+    else if ((e.key === "m" || e.key === "M") && !$("meet").hidden) { e.preventDefault(); toggleMeet(); }
     else if (e.key === " ") { e.preventDefault(); togglePlay(); }
     else if (e.key === "ArrowLeft") { e.preventDefault(); seek((mediaEl?.currentTime || 0) - 5); }
     else if (e.key === "ArrowRight") { e.preventDefault(); seek((mediaEl?.currentTime || 0) + 5); }
