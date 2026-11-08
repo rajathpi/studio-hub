@@ -4,8 +4,9 @@
 // (buttons, tabs, menu items) are swapped in place so layouts don't break.
 
 (() => {
-  if (window.__duoTranslate) return;
-  window.__duoTranslate = true;
+  // A copy orphaned by an extension update has a dead runtime and must not block this one.
+  if (window.__duoTranslate && window.__duoTranslate()) return;
+  window.__duoTranslate = () => { try { return !!chrome.runtime.id; } catch (e) { return false; } };
 
   const DEFAULTS = { mode: 'dual', engine: 'auto', target: 'en', sites: {} };
   const SKIP_SEL = 'script,style,noscript,textarea,input,select,option,code,pre,kbd,samp,svg,math,canvas,template,' +

@@ -32,9 +32,22 @@ chrome.commands.onCommand.addListener(async (cmd, tab) => {
 
 // The top frame decides; every frame then gets the same on/off.
 async function toggleTab(tabId) {
-  let state = null;
-  try { state = await chrome.tabs.sendMessage(tabId, { type: 'state' }, { frameId: 0 }); } catch (e) { return; }
-  chrome.tabs.sendMessage(tabId, { type: 'set', on: !(state && state.active) }).catch(() => {});
+  const state = await tabState(tabId);
+  if (state) chrome.tabs.sendMessage(tabId, { type: 'set', on: !state.active }).catch(() => {});
+}
+
+// Tabs opened before the extension was installed or updated have no content script yet.
+// shortcut: injects into the top frame only (activeTab covers no cross-origin iframes).
+async function tabState(tabId) {
+  const ask = () => chrome.tabs.sendMessage(tabId, { type: 'state' }, { frameId: 0 });
+  try { return await ask(); } catch (e) { /* not injected yet */ }
+  try {
+    await chrome.scripting.insertCSS({ target: { tabId }, files: ['content.css'] });
+    await chrome.scripting.executeScript({ target: { tabId }, files: ['content.js'] });
+    return await ask();
+  } catch (e) {
+    return null; // browser pages and the extension store stay off limits
+  }
 }
 
 chrome.runtime.onMessage.addListener((msg, sender, reply) => {
@@ -43,6 +56,10 @@ chrome.runtime.onMessage.addListener((msg, sender, reply) => {
       (out) => reply({ ok: true, out }),
       (err) => reply({ ok: false, error: String(err && err.message || err) })
     );
+    return true;
+  }
+  if (msg.type === 'tab-state') {
+    tabState(msg.tabId).then(reply);
     return true;
   }
   if (msg.type === 'toggle-tab') {

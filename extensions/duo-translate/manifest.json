@@ -1,9 +1,9 @@
 {
   "manifest_version": 3,
   "name": "Duo Translate",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Translates web pages and shows the translation under each paragraph. Free, no account.",
-  "permissions": ["storage", "contextMenus"],
+  "permissions": ["storage", "contextMenus", "activeTab", "scripting"],
   "host_permissions": ["https://clients5.google.com/*"],
   "background": {
     "service_worker": "background.js",

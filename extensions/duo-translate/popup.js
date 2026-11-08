@@ -17,7 +17,7 @@ init();
 async function init() {
   settings = await chrome.storage.sync.get(DEFAULTS);
   [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  try { page = await chrome.tabs.sendMessage(tab.id, { type: 'state' }, { frameId: 0 }); } catch (e) { page = null; }
+  page = await chrome.runtime.sendMessage({ type: 'tab-state', tabId: tab.id });
 
   chrome.commands.getAll((cmds) => {
     const c = cmds.find((x) => x.name === 'toggle');
@@ -35,7 +35,7 @@ function paint() {
   if (!page) {
     go.disabled = true;
     go.textContent = 'Can’t translate this page';
-    $('host').textContent = 'Browser pages and the extension store are off limits. Reload the tab if it was open before the extension was installed.';
+    $('host').textContent = 'Browser pages and the extension store are off limits.';
     $('always').disabled = true;
   } else {
     go.textContent = page.active ? 'Show original' : 'Translate this page';
