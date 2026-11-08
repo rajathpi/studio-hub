@@ -23,7 +23,7 @@ jobs:
     environment: { name: github-pages, url: '${{ steps.deployment.outputs.page_url }}' }
     steps:
       - uses: actions/checkout@v4
-      - run: mkdir _site && git ls-files -z -- '*.html' '*.png' '*.gif' 'vendor/*' '_libs/*' | xargs -0 -I{} cp --parents {} _site/
+      - run: mkdir _site && git ls-files -z -- '*.html' '*.png' '*.gif' 'extensions/*.zip' 'vendor/*' '_libs/*' | xargs -0 -I{} cp --parents {} _site/
       - uses: actions/upload-pages-artifact@v3
         with: { path: _site }
       - id: deployment
