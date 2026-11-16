@@ -131,7 +131,7 @@
   #gridbar { left: 16px; }
   .overlaybar button {
     display: grid; place-items: center; width: 32px; height: 32px; padding: 0;
-    border: none; background: transparent; color: var(--h-text); border-radius: 10px;
+    border: none; background: transparent; color: #e5e7eb; border-radius: 10px;
   }
   .overlaybar button:hover { background: rgba(255,255,255,.13); }
   .overlaybar button.active { background: var(--h-accent); color: var(--h-on-accent); }
@@ -140,7 +140,7 @@
     width: auto; min-width: 44px; padding: 0 7px;
     font-size: 11px; color: #9ca3af; font-variant-numeric: tabular-nums;
   }
-  #zoomLevel:hover { color: var(--h-text); }
+  #zoomLevel:hover { color: #ffffff; }
   /* Ten of the twelve themes have a light canvas, so the controls invert. */
   .overlaybar.light {
     background: rgba(255,255,255,.93); border-color: rgba(0,0,0,.10);
@@ -240,6 +240,12 @@
       <option value="forest">forest</option>
     </optgroup>
   </select>
+  <label for="dstyle" style="font-size:12px;color:var(--h-muted)">Style</label>
+  <select id="dstyle" title="Draw the diagram as Mermaid draws it, flat with a build animation, or isometric">
+    <option value="mermaid">Mermaid</option>
+    <option value="flat">Flat &middot; animated</option>
+    <option value="iso">Isometric</option>
+  </select>
   <button id="copyBtn" title="Copy diagram as PNG to clipboard">Copy PNG</button>
   <button id="svgBtn" title="Download as SVG">Save SVG</button>
   <button id="pngBtn" class="primary" title="Download as PNG">Save PNG</button>
@@ -269,6 +275,9 @@
     <div id="error"></div>
     <div id="preview"><div id="canvas"></div></div>
     <div id="gridbar" class="overlaybar">
+      <button id="replayBtn" title="Replay the animation" style="display:none">
+        <svg viewBox="0 0 18 18" width="16" height="16" fill="currentColor"><path d="M5 3.5v11l9.5-5.5z"/></svg>
+      </button>
       <button id="gridBtn" title="Toggle grid">
         <svg viewBox="0 0 18 18" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M7 2v14M11 2v14M2 7h14M2 11h14"/></svg>
       </button>
@@ -4091,8 +4100,10 @@ globalThis["mermaid"] = globalThis.__esbuild_esm_mermaid_nm["mermaid"].default;
     try {
       const { svg } = await mermaid.render(id, code);
       canvasEl.innerHTML = svg;
+      const note = applyStyle();
       applyZoom();
-      errorEl.classList.remove('show');
+      errorEl.textContent = note || '';
+      errorEl.classList.toggle('show', !!note);
     } catch (e) {
       // mermaid leaves a stray element behind on parse errors; clean it up
       const stray = document.getElementById('d' + id) || document.getElementById(id);
@@ -4109,6 +4120,7 @@ globalThis["mermaid"] = globalThis.__esbuild_esm_mermaid_nm["mermaid"].default;
 
   themeEl.addEventListener('change', () => {
     localStorage.setItem('mermaid-live-theme', themeEl.value);
+    animateNext = true;
     initMermaid();
     render();
   });
@@ -4122,6 +4134,274 @@ globalThis["mermaid"] = globalThis.__esbuild_esm_mermaid_nm["mermaid"].default;
       scheduleRender();
       scheduleSave();
     }
+  });
+
+
+  // ======================= diagram styles (Mermaid / Flat / Isometric) =======================
+  // Flat restyles Mermaid's own SVG and animates it; Isometric redraws it from the node and
+  // edge positions Mermaid computed, so the layout is always Mermaid's.
+  const styleEl = document.getElementById('dstyle');
+  const replayBtn = document.getElementById('replayBtn');
+  const SVGNS = 'http://www.w3.org/2000/svg';
+  const storedStyle = localStorage.getItem('mermaid-live-style');
+  styleEl.value = ['mermaid', 'flat', 'iso'].includes(storedStyle) ? storedStyle : 'mermaid';
+  let animateNext = true;
+
+  // Map an element's local point into the root SVG's user units (viewBox space).
+  function toRoot(svg, el) {
+    const m = svg.getScreenCTM().inverse().multiply(el.getScreenCTM());
+    return (x, y) => { const p = new DOMPoint(x, y).matrixTransform(m); return [p.x, p.y]; };
+  }
+  function rootBox(svg, el) {
+    const b = el.getBBox(), f = toRoot(svg, el);
+    const pts = [f(b.x, b.y), f(b.x + b.width, b.y), f(b.x, b.y + b.height), f(b.x + b.width, b.y + b.height)];
+    const xs = pts.map((p) => p[0]), ys = pts.map((p) => p[1]);
+    return { x: Math.min(...xs), y: Math.min(...ys), w: Math.max(...xs) - Math.min(...xs), h: Math.max(...ys) - Math.min(...ys) };
+  }
+  function shade(color, f) {
+    const m = /rgba?\((\d+),\s*(\d+),\s*(\d+)/.exec(color) || [];
+    if (!m.length) return color;
+    return 'rgb(' + [1, 2, 3].map((i) => Math.max(0, Math.min(255, Math.round(m[i] * f)))).join(',') + ')';
+  }
+  function luminance(color) {
+    const m = /rgba?\((\d+),\s*(\d+),\s*(\d+)/.exec(color);
+    return m ? (0.299 * m[1] + 0.587 * m[2] + 0.114 * m[3]) / 255 : 1;
+  }
+  function el(tag, attrs, parent) {
+    const e = document.createElementNS(SVGNS, tag);
+    for (const k in attrs) e.setAttribute(k, attrs[k]);
+    if (parent) parent.appendChild(e);
+    return e;
+  }
+  // Lines of a node/edge label, keeping Mermaid's own line breaks.
+  function labelLines(g) {
+    const t = g.querySelector('text');
+    if (!t) {
+      // Quoted ("...") labels come as HTML inside a foreignObject; innerText keeps the <br> breaks.
+      const fo = g.querySelector('foreignObject');
+      return fo ? ((fo.firstElementChild && fo.firstElementChild.innerText) || fo.textContent || '').split(/\n/).map((s) => s.trim()).filter(Boolean) : [];
+    }
+    const rows = [...t.querySelectorAll(':scope > tspan')].map((s) => s.textContent.trim()).filter(Boolean);
+    return rows.length ? rows : [t.textContent.trim()].filter(Boolean);
+  }
+
+  // ---- Flat: flatter shapes + an order-aware build animation ----
+  const FLAT_CSS = (id) => `
+#${id}.ml-flat .node rect,#${id}.ml-flat .node polygon,#${id}.ml-flat .node circle,#${id}.ml-flat .node ellipse,#${id}.ml-flat .node path,
+#${id}.ml-flat rect.actor,#${id}.ml-flat .note,#${id}.ml-flat .cluster rect{filter:none!important;stroke-width:1.2px!important}
+#${id}.ml-flat .cluster rect{stroke-dasharray:4 4!important}
+#${id}.ml-flat .edgePath .path,#${id}.ml-flat .flowchart-link,#${id}.ml-flat .messageLine0,#${id}.ml-flat .messageLine1,#${id}.ml-flat .transition,#${id}.ml-flat .relation{stroke-width:1.6px!important}
+#${id}.ml-anim .ml-n{animation:mlIn .5s cubic-bezier(.2,.7,.2,1) both;animation-delay:calc(var(--i) * 110ms)}
+#${id}.ml-anim .ml-e{stroke-dasharray:var(--len) var(--len);animation:mlDraw .6s ease-out both;animation-delay:calc(var(--i) * 110ms + 120ms)}
+#${id}.ml-anim .ml-l{animation:mlFade .4s ease both;animation-delay:calc(var(--i) * 110ms + 380ms)}
+@keyframes mlIn{from{opacity:0;translate:0 6px}to{opacity:1;translate:none}}
+@keyframes mlDraw{from{stroke-dashoffset:var(--len)}to{stroke-dashoffset:0}}
+@keyframes mlFade{from{opacity:0}to{opacity:1}}
+@media (prefers-reduced-motion:reduce){#${id}.ml-anim *{animation:none!important}}`;
+
+  // Mix two rgb() colours: f = share of a.
+  function mix(a, b, f) {
+    const p = (c) => (/rgba?\((\d+),\s*(\d+),\s*(\d+)/.exec(c) || [0, 128, 128, 128]).slice(1).map(Number);
+    const A = p(a), B = p(b);
+    return 'rgb(' + A.map((v, i) => Math.round(v * f + B[i] * (1 - f))).join(',') + ')';
+  }
+  function styleFlat(svg) {
+    svg.classList.add('ml-flat');
+    // Flat look: each shape filled with a soft tint of its own line colour, outline dropped.
+    const probe = document.createElement('div');
+    probe.style.color = currentTheme().canvas || '#ffffff';
+    document.body.appendChild(probe);
+    const canvasRgb = getComputedStyle(probe).color;
+    probe.remove();
+    svg.querySelectorAll('.node rect, .node polygon, .node circle, .node ellipse, .node path, rect.actor').forEach((s) => {
+      const cs = getComputedStyle(s);
+      if (cs.fill === 'none' || !/rgb/.test(cs.stroke)) return;
+      const tone = s.tagName === 'polygon' ? 0.26 : 0.16;
+      s.style.setProperty('fill', mix(cs.stroke, canvasRgb, tone), 'important');
+      s.style.setProperty('stroke', mix(cs.stroke, canvasRgb, 0.35), 'important');
+    });
+    svg.querySelectorAll('.cluster rect').forEach((s) => {
+      const cs = getComputedStyle(s);
+      if (/rgb/.test(cs.stroke)) s.style.setProperty('fill', mix(cs.stroke, canvasRgb, 0.05), 'important');
+    });
+    svg.querySelectorAll('.node rect, rect.actor, .note, .cluster rect').forEach((r) => {
+      if (!r.getAttribute('rx') || r.getAttribute('rx') === '0') { r.setAttribute('rx', 6); r.setAttribute('ry', 6); }
+    });
+    // Order of appearance: along the reading direction (top-to-bottom, then left-to-right).
+    const items = [];
+    svg.querySelectorAll('g.node, g.actor, rect.actor, g.note, .note, g.cluster').forEach((g) => {
+      const b = rootBox(svg, g);
+      items.push({ g, key: b.y * 3 + b.x, cls: 'ml-n' });
+    });
+    svg.querySelectorAll('.edgePath .path, path.flowchart-link, path.transition, path.relation, line[class^="messageLine"], path[class^="messageLine"]').forEach((p) => {
+      let len = 0;
+      try { len = p.getTotalLength(); } catch (e) { len = 0; }
+      if (!len) return;
+      p.style.setProperty('--len', Math.ceil(len) + 1);
+      const b = rootBox(svg, p);
+      items.push({ g: p, key: b.y * 3 + b.x + 1, cls: 'ml-e' });
+    });
+    svg.querySelectorAll('g.edgeLabel, .messageText, .edgeLabels > g').forEach((g) => {
+      const b = rootBox(svg, g);
+      items.push({ g, key: b.y * 3 + b.x + 2, cls: 'ml-l' });
+    });
+    items.sort((a, b) => a.key - b.key).forEach((it, i) => {
+      it.g.classList.add(it.cls);
+      it.g.style.setProperty('--i', Math.min(i, 40));
+    });
+    const st = document.createElementNS(SVGNS, 'style');
+    st.textContent = FLAT_CSS(svg.id);
+    svg.insertBefore(st, svg.firstChild);
+  }
+
+  // ---- Isometric: rebuild the diagram as boxes on a floor ----
+  const C30 = Math.cos(Math.PI / 6), S30 = 0.5, DEPTH = 14;
+  const iso = (x, y, z) => [(x - y) * C30, (x + y) * S30 - z];
+  function styleIso(svg) {
+    const nodes = [...svg.querySelectorAll('g.node')];
+    if (!nodes.length) return 'Isometric works for flowcharts and state diagrams; showing the Mermaid style.';
+    const vb = svg.viewBox.baseVal;
+    const lab = svg.querySelector('g.node text') || svg.querySelector('g.node foreignObject span') || svg;
+    const lcs = getComputedStyle(lab);
+    const font = lcs.fontFamily;
+    const fontSize = parseFloat(lcs.fontSize) || 14;
+    const textFill = lab.tagName === 'text' ? lcs.fill : lcs.color;
+    const edgeStroke = (() => { const p = svg.querySelector('.flowchart-link, .edgePath .path, path.transition'); return p ? getComputedStyle(p).stroke : '#888'; })();
+    const canvas = currentTheme().canvas || '#ffffff';
+
+    const data = {
+      clusters: [...svg.querySelectorAll('g.cluster')].map((g) => {
+        const r = g.querySelector('rect') || g;
+        return { b: rootBox(svg, r), fill: getComputedStyle(r).fill, lines: labelLines(g) };
+      }),
+      nodes: nodes.map((g) => {
+        const shape = g.querySelector('rect, polygon, circle, ellipse, path');
+        const cs = shape ? getComputedStyle(shape) : null;
+        return {
+          b: rootBox(svg, shape || g), lines: labelLines(g),
+          fill: cs ? cs.fill : '#eee', stroke: cs ? cs.stroke : '#999',
+          kind: shape && shape.tagName === 'polygon' ? 'decision' : (shape && /circle|ellipse/.test(shape.tagName) ? 'round' : 'box')
+        };
+      }),
+      edges: [...new Set(svg.querySelectorAll('path.flowchart-link, .edgePath .path, .edgePaths path, path.transition'))].map((p) => {
+        const f = toRoot(svg, p), L = p.getTotalLength(), pts = [];
+        const n = Math.max(2, Math.ceil(L / 6));
+        for (let k = 0; k <= n; k++) { const q = p.getPointAtLength((L * k) / n); pts.push(f(q.x, q.y)); }
+        return pts;
+      }),
+      edgeLabels: [...svg.querySelectorAll('g.edgeLabel')].map((g) => ({ b: rootBox(svg, g), lines: labelLines(g) })).filter((l) => l.lines.length && l.b.w > 1)
+    };
+
+    // Shift so the diagram starts at the origin, then project.
+    const ox = vb.x, oy = vb.y;
+    const P = (x, y, z) => iso(x - ox, y - oy, z || 0);
+    const out = document.createElementNS(SVGNS, 'svg');
+    out.setAttribute('xmlns', SVGNS);
+    out.id = svg.id;
+    out.setAttribute('class', 'ml-iso');
+    const root = el('g', {}, out);
+    const poly = (pts, attrs, parent) => el('polygon', Object.assign({ points: pts.map((p) => p.map((v) => v.toFixed(1)).join(',')).join(' ') }, attrs), parent || root);
+    const plane = (x, y, z) => { const [tx, ty] = P(x, y, z); return `matrix(${C30},${S30},${-C30},${S30},${tx.toFixed(2)},${ty.toFixed(2)})`; };
+    const flatText = (lines, cx, cy, z, size, fill, parent, weight) => {
+      // Text drawn in the plane of a face, centred on (cx, cy) in diagram units.
+      const g = el('g', { transform: plane(cx, cy, z) }, parent || root);
+      const lh = size * 1.25, top = -((lines.length - 1) * lh) / 2;
+      lines.forEach((line, i) => {
+        const t = el('text', { x: 0, y: (top + i * lh).toFixed(1), 'text-anchor': 'middle', 'dominant-baseline': 'central', 'font-family': font, 'font-size': size, fill, 'font-weight': weight || 'normal', class: 'ml-iso-label' }, g);
+        t.textContent = line;
+      });
+      return g;
+    };
+
+    // Floor shadow under everything, then clusters as floor plates.
+    data.clusters.forEach((c) => {
+      const { x, y, w, h } = c.b;
+      poly([P(x, y), P(x + w, y), P(x + w, y + h), P(x, y + h)], { fill: c.fill === 'none' ? shade('rgb(128,128,128)', 1) : c.fill, 'fill-opacity': 0.55, stroke: edgeStroke, 'stroke-opacity': 0.35, 'stroke-dasharray': '4 4' });
+      if (c.lines.length) flatText(c.lines, x + w / 2, y + 12, 0, fontSize * 0.9, textFill, root, '600');
+    });
+    // Edges on the floor, with an arrowhead.
+    const defs = el('defs', {}, out);
+    const mk = el('marker', { id: svg.id + '-ah', viewBox: '0 0 10 10', refX: 9, refY: 5, markerWidth: 7, markerHeight: 7, orient: 'auto-start-reverse' }, defs);
+    el('path', { d: 'M0 0L10 5L0 10z', fill: edgeStroke }, mk);
+    data.edges.forEach((pts) => {
+      el('polyline', { points: pts.map(([x, y]) => P(x, y, 0).map((v) => v.toFixed(1)).join(',')).join(' '), fill: 'none', stroke: edgeStroke, 'stroke-width': 1.6, 'marker-end': `url(#${svg.id}-ah)`, class: 'ml-iso-edge' }, root);
+    });
+    // Nodes as extruded boxes, back to front.
+    data.nodes.sort((a, b) => (a.b.x + a.b.w / 2 + a.b.y + a.b.h / 2) - (b.b.x + b.b.w / 2 + b.b.y + b.b.h / 2)).forEach((n, i) => {
+      const { x, y, w, h } = n.b, X = x + w, Y = y + h, z = n.kind === 'decision' ? DEPTH * 1.4 : DEPTH;
+      const g = el('g', { class: 'ml-iso-node', style: `--i:${i}` }, root);
+      const line = { stroke: n.stroke, 'stroke-width': 0.8, 'stroke-linejoin': 'round' };
+      // A diamond seen from this angle reads as a flat sign, so decisions are taller boxes in a stronger tint.
+      if (n.kind === 'decision') n.fill = mix(n.stroke, n.fill, 0.3);
+      poly([P(x + 4, Y + 4), P(X + 4, Y + 4), P(X + 4, y + 4)], { fill: '#000', 'fill-opacity': 0.08 }, g);         // soft shadow
+      poly([P(x, Y, 0), P(X, Y, 0), P(X, Y, z), P(x, Y, z)], Object.assign({ fill: shade(n.fill, 0.82) }, line), g);
+      poly([P(X, y, 0), P(X, Y, 0), P(X, Y, z), P(X, y, z)], Object.assign({ fill: shade(n.fill, 0.7) }, line), g);
+      poly([P(x, y, z), P(X, y, z), P(X, Y, z), P(x, Y, z)], Object.assign({ fill: n.fill }, line), g);
+      // Theme text colour if it reads on this fill, else black or white.
+      const ink = Math.abs(luminance(n.fill) - luminance(textFill)) > 0.4 ? textFill : (luminance(n.fill) > 0.5 ? '#1f2328' : '#ffffff');
+      flatText(n.lines, x + w / 2, y + h / 2, z, fontSize, ink, g);
+    });
+    data.edgeLabels.forEach((l) => {
+      const { x, y, w, h } = l.b;
+      const g = el('g', { class: 'ml-iso-elabel' }, root);
+      poly([P(x - 2, y - 2), P(x + w + 2, y - 2), P(x + w + 2, y + h + 2), P(x - 2, y + h + 2)], { fill: canvas, 'fill-opacity': 0.92 }, g);
+      flatText(l.lines, x + w / 2, y + h / 2, 0, fontSize * 0.9, textFill, g);
+    });
+
+    // Fit the viewBox to what was drawn.
+    const pad = 24;
+    svg.replaceWith(out);
+    // Floor labels can sit under a raised box's label once projected: nudge them clear.
+    const hit = (a, b) => a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
+    const solid = [...out.querySelectorAll('.ml-iso-node')].map((g) => g.getBBox());
+    const placed = [];
+    out.querySelectorAll('.ml-iso-elabel').forEach((g) => {
+      let dy = 0, b = g.getBBox();
+      const clash = (bb) => solid.some((s) => hit(bb, s)) || placed.some((s) => hit(bb, s));
+      for (let k = 0; k < 60 && clash({ x: b.x, y: b.y + dy, width: b.width, height: b.height }); k++) dy += k % 2 ? -(k + 1) * 3 : (k + 1) * 3;
+      if (dy) g.setAttribute('transform', `translate(0 ${dy})`);
+      placed.push({ x: b.x, y: b.y + dy, width: b.width, height: b.height });
+    });
+    const bb = root.getBBox();
+    out.setAttribute('viewBox', `${(bb.x - pad).toFixed(1)} ${(bb.y - pad).toFixed(1)} ${(bb.width + pad * 2).toFixed(1)} ${(bb.height + pad * 2).toFixed(1)}`);
+    out.setAttribute('width', (bb.width + pad * 2).toFixed(0));
+    out.setAttribute('height', (bb.height + pad * 2).toFixed(0));
+    const st = el('style', {}, out);
+    st.textContent = `#${out.id}.ml-anim .ml-iso-node{animation:mlDrop .55s cubic-bezier(.2,.7,.2,1) both;animation-delay:calc(var(--i) * 90ms)}
+#${out.id}.ml-anim .ml-iso-edge,#${out.id}.ml-anim .ml-iso-elabel{animation:mlFade .6s ease both;animation-delay:.25s}
+@keyframes mlDrop{from{opacity:0;translate:0 -14px}to{opacity:1;translate:none}}
+@keyframes mlFade{from{opacity:0}to{opacity:1}}
+@media (prefers-reduced-motion:reduce){#${out.id}.ml-anim *{animation:none!important}}`;
+    out.insertBefore(st, out.firstChild);
+    return null;
+  }
+
+  // Apply the chosen style to the freshly rendered SVG. Returns a note to show, or null.
+  function applyStyle() {
+    const svg = canvasEl.querySelector('svg');
+    if (!svg) return null;
+    const mode = styleEl.value;
+    let note = null;
+    if (mode === 'flat') styleFlat(svg);
+    else if (mode === 'iso') note = styleIso(svg);
+    const now = canvasEl.querySelector('svg');
+    if (mode !== 'mermaid' && animateNext && !note) now.classList.add('ml-anim');
+    animateNext = false;
+    replayBtn.style.display = mode === 'mermaid' || note ? 'none' : '';
+    return note;
+  }
+
+  styleEl.addEventListener('change', () => {
+    localStorage.setItem('mermaid-live-style', styleEl.value);
+    animateNext = true;
+    render();
+  });
+  replayBtn.addEventListener('click', () => {
+    const svg = canvasEl.querySelector('svg');
+    if (!svg) return;
+    svg.classList.remove('ml-anim');
+    void svg.getBoundingClientRect(); // restart the CSS animations
+    svg.classList.add('ml-anim');
   });
 
   // ======================= export =======================
@@ -4140,8 +4420,10 @@ globalThis["mermaid"] = globalThis.__esbuild_esm_mermaid_nm["mermaid"].default;
     return svg;
   }
 
-  function svgText(svg) {
+  function svgText(svg, animated) {
     const clone = svg.cloneNode(true);
+    clone.classList.remove('ml-anim');
+    if (animated && styleEl.value !== 'mermaid') clone.classList.add('ml-anim');
     const vb = svg.viewBox.baseVal;
     const w = vb && vb.width ? vb.width : svg.getBoundingClientRect().width;
     const h = vb && vb.height ? vb.height : svg.getBoundingClientRect().height;
@@ -4189,7 +4471,7 @@ globalThis["mermaid"] = globalThis.__esbuild_esm_mermaid_nm["mermaid"].default;
   document.getElementById('svgBtn').addEventListener('click', () => {
     const svg = getSvgEl();
     if (!svg) return;
-    const { text } = svgText(svg);
+    const { text } = svgText(svg, true);
     download(new Blob([text], { type: 'image/svg+xml' }), exportName() + '.svg');
   });
   document.getElementById('copyBtn').addEventListener('click', () => {
@@ -4431,6 +4713,7 @@ globalThis["mermaid"] = globalThis.__esbuild_esm_mermaid_nm["mermaid"].default;
     codeEl.value = content;
     updateFileLabel();
     localStorage.setItem('mermaid-live-lastfile', path);
+    animateNext = true;
     render();
     renderTree();
   }
