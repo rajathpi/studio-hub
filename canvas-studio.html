@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Canvas Studio</title>
+<meta name="description" content="An endless canvas: draw, pan and zoom as far as you like. Saved in your browser, downloads as SVG.">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: var(--h-font);
+    background: var(--h-bg); color: var(--h-text);
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+  header {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    padding: 10px 14px; background: var(--h-panel); border-bottom: 1px solid var(--h-border);
+  }
+  header h1 { font-size: 15px; font-weight: 600; margin-right: 6px; }
+  .group { display: flex; align-items: center; gap: 4px; }
+  .sep { width: 1px; height: 22px; background: var(--h-border); margin: 0 4px; }
+  .spacer { flex: 1; }
+  button {
+    font: inherit; font-size: 13px; padding: 6px 12px; border-radius: 6px;
+    border: 1px solid var(--h-btn-border); background: var(--h-btn); color: var(--h-text); cursor: pointer;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  button:hover { background: var(--h-btn-hover); }
+  button:disabled { opacity: .4; cursor: default; }
+  button.on, button.primary { background: var(--h-accent); border-color: var(--h-accent); color: var(--h-on-accent); }
+  button svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  kbd { font: inherit; font-size: 11px; opacity: .6; }
+  .swatch { width: 26px; height: 26px; padding: 0; border-radius: 50%; justify-content: center; }
+  .swatch i { width: 14px; height: 14px; border-radius: 50%; background: var(--c); }
+  .swatch.on { background: var(--h-btn); border-color: var(--h-text); box-shadow: 0 0 0 1px var(--h-text); }
+  .size { width: 30px; padding: 0; height: 28px; justify-content: center; }
+  .size i { border-radius: 50%; background: currentColor; }
+  #zoom { min-width: 64px; justify-content: center; font-variant-numeric: tabular-nums; }
+  #status { font-size: 12px; color: var(--h-muted); }
+  #status.bad { color: var(--h-red); }
+  main { flex: 1; position: relative; min-height: 0; }
+  #cv { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: crosshair; }
+  #cv.hand { cursor: grab; } #cv.grabbing { cursor: grabbing; }
+  #cv.eraser { cursor: cell; }
+  #hint { position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%); font-size: 12px; color: var(--h-muted);
+    background: var(--h-panel); border: 1px solid var(--h-border); border-radius: 999px; padding: 6px 14px; pointer-events: none; white-space: nowrap; }
+  @media (max-width: 700px) { kbd, #hint { display: none; } }
+</style>
+<!-- studio-hub theme kit v1: fonts, light/dark tokens, title shadow, theme slider. Source: _theme/kit.html, inlined by _theme/apply.py -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource-variable/mona-sans@5.3.0/wdth.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource-variable/hubot-sans@5.3.0/wdth.css">
+<script>(function(){var t=null;try{t=new URLSearchParams(location.search).get("theme")||localStorage.getItem("hubTheme")}catch(e){}document.documentElement.dataset.theme=t==="dark"?"dark":"light"})()</script>
+<style id="hub-kit">
+  :root {
+    color-scheme: light;
+    --h-font: "Mona Sans Variable", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --h-head: "Hubot Sans Variable", var(--h-font);
+    --h-bg: #f1efe9; --h-panel: #faf9f5; --h-panel2: #f4f2ec; --h-deep: #ebe8e1; --h-deep2: #e7e4dc;
+    --h-border: #dedad0; --h-border2: #d3cec2; --h-btn: #ffffff; --h-btn-border: #cfcabe; --h-btn-hover: #f1eee6;
+    --h-text: #18181b; --h-text2: #3f3f46; --h-muted: #6b675f; --h-muted2: #8f8a7f; --h-faint: #aaa59a; --h-code: #27272a;
+    --h-accent: #18181b; --h-accent-h: #3f3f46; --h-accent2: #8f8a7f; --h-accent-bg: #e4e0d6; --h-on-accent: #ffffff; --h-strong: #09090b;
+    --h-yellow: #8a5a00; --h-blue: #0b5cad; --h-blue2: #2f5597; --h-purple: #6b3fa0; --h-green2: #2e7d4f; --h-ok: #1a7f37;
+    --h-green: #1a7f37; --h-red: #cf222e; --h-amber: #9a6700; --h-err-bg: #fde2e4; --h-err-bg2: #f5b8be; --h-err-text: #8b1a2b;
+    --h-title-shadow: 0 2px 3px rgba(24, 24, 27, .16), 0 8px 22px rgba(24, 24, 27, .18);
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --h-bg: #1e1f24; --h-panel: #26272e; --h-panel2: #2e2f37; --h-deep: #1b1c21; --h-deep2: #22232a;
+    --h-border: #3a3b44; --h-border2: #3a3b46; --h-btn: #33343d; --h-btn-border: #4a4b55; --h-btn-hover: #41424d;
+    --h-text: #e6e6e6; --h-text2: #b9bac2; --h-muted: #8a8b94; --h-muted2: #6f7078; --h-faint: #565761; --h-code: #d8dee9;
+    --h-accent: #e6e6e6; --h-accent-h: #ffffff; --h-accent2: #8a8b94; --h-accent-bg: #3a3b44; --h-on-accent: #18181b; --h-strong: #ffffff;
+    --h-yellow: #e8d3a8; --h-blue: #9ecbff; --h-blue2: #9db3d8; --h-purple: #c4a7e7; --h-green2: #a8d5b5; --h-ok: #8fd19e;
+    --h-green: #3fb950; --h-red: #f85149; --h-amber: #e3b341; --h-err-bg: #5c1f2b; --h-err-bg2: #7a2938; --h-err-text: #ffb3c0;
+    --h-title-shadow: 0 2px 3px rgba(0, 0, 0, .45), 0 8px 22px rgba(0, 0, 0, .5);
+  }
+  h1 { font-family: var(--h-head); font-weight: 800; font-stretch: 125%; letter-spacing: -.02em; text-shadow: var(--h-title-shadow); }
+  h1 span, h1 em { text-shadow: inherit; color: var(--h-muted); }
+
+  /* the theme slider: fixed top-right, no labels */
+  .hub-theme { position: fixed; top: 14px; right: 16px; z-index: 9999; }
+  .hub-theme button { all: unset; box-sizing: border-box; position: relative; display: block; width: 52px; height: 22px; border-radius: 999px; cursor: pointer;
+    background: linear-gradient(90deg, #f1efe9, #c9c4b7 38%, #3f3f46 62%, #09090b); border: 1px solid var(--h-border2); touch-action: none; }
+  .hub-theme button:focus-visible { outline: 2px solid var(--h-text); outline-offset: 3px; }
+  .hub-theme i { position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff;
+    box-shadow: 0 1px 2px rgba(0,0,0,.35), 0 0 0 1px rgba(0,0,0,.08); transition: left .4s cubic-bezier(.65, 0, .35, 1); }
+  :root[data-theme="dark"] .hub-theme i { left: 32px; }
+  .hub-theme.dragging i { transition: none; }
+  .hub-theme.docked { position: static; flex: none; display: flex; align-items: center; margin-left: 6px; }
+  [data-hub-theme-slot] { display: contents; }
+  @media (prefers-reduced-motion: reduce) { .hub-theme i { transition: none; } }
+  @media print { .hub-theme { display: none; } }
+</style>
+<!-- /studio-hub theme kit -->
+</head>
+<body>
+<header>
+  <h1>Canvas Studio</h1>
+  <div class="group" id="tools">
+    <button class="tool" data-tool="hand" title="Hand (H), or hold Space and drag"><svg viewBox="0 0 24 24"><path d="M8 13V5.5a1.5 1.5 0 013 0V11M11 10V4.5a1.5 1.5 0 013 0V11M14 10.5V6a1.5 1.5 0 013 0v7c0 4-2.5 7-6 7-2.5 0-4-1-5.5-3L3.8 13.6a1.4 1.4 0 012.2-1.7L8 14"/></svg>Hand <kbd>H</kbd></button>
+    <button class="tool on" data-tool="pen" title="Pen (P)"><svg viewBox="0 0 24 24"><path d="M4 20l1-4L16 5l3 3L8 19z"/><path d="M14 7l3 3"/></svg>Pen <kbd>P</kbd></button>
+    <button class="tool" data-tool="eraser" title="Eraser (E): rub over a line to remove it"><svg viewBox="0 0 24 24"><path d="M8 20h12"/><path d="M4.5 14.5l9-9a2 2 0 012.8 0l3.2 3.2a2 2 0 010 2.8L13 18H8z"/><path d="M9 10l5 5"/></svg>Eraser <kbd>E</kbd></button>
+  </div>
+  <div class="sep"></div>
+  <div class="group" id="colors"></div>
+  <div class="sep"></div>
+  <div class="group" id="sizes"></div>
+  <div class="sep"></div>
+  <div class="group">
+    <button id="undo" title="Undo (Ctrl Z)" disabled><svg viewBox="0 0 24 24"><path d="M9 7L4 12l5 5"/><path d="M4 12h11a5 5 0 010 10h-2"/></svg></button>
+    <button id="redo" title="Redo (Ctrl Shift Z)" disabled><svg viewBox="0 0 24 24"><path d="M15 7l5 5-5 5"/><path d="M20 12H9a5 5 0 000 10h2"/></svg></button>
+    <button id="clear" title="Remove everything (undo brings it back)" disabled>Clear</button>
+  </div>
+  <div class="sep"></div>
+  <button id="zoom" title="Zoom to fit everything (0)">100%</button>
+  <div class="spacer"></div>
+  <span id="status">Saved in this browser</span>
+  <button id="open" title="Open an SVG saved from here">Open…</button>
+  <button id="save" class="primary" title="Download as SVG: vector, so every zoom level keeps its detail, and it opens back here">Download SVG</button>
+  <span data-hub-theme-slot></span>
+</header>
+<main>
+  <canvas id="cv"></canvas>
+  <div id="hint">Draw anywhere · two-finger scroll to pan · pinch or Ctrl + scroll to zoom, as deep as you like</div>
+</main>
+<input type="file" id="file" accept=".svg,image/svg+xml" hidden>
+
+<script>
+const cv = document.getElementById("cv"), ctx = cv.getContext("2d"), $ = (id) => document.getElementById(id);
+const KEY = "canvasStudio.v1";
+const COLORS = ["ink", "#cf222e", "#0b5cad", "#1a7f37", "#9a6700", "#6b3fa0"];
+const SIZES = [2, 5, 14]; // on-screen px at the zoom you draw at; stored in world units so lines shrink as you zoom out
+// shortcut: doubles keep sub-pixel detail across ~20 decades; past this a deeper zoom needs relative coordinates
+const ZMIN = 1e-10, ZMAX = 1e10;
+
+let strokes = [], undo = [], redo = [], view = { x: 0, y: 0, z: 1 };
+let tool = "pen", color = "ink", size = 5, cur = null, erasedFrom = null, space = false;
+
+// ---- data ----
+const valid = (s) => s && typeof s.c === "string" && /^(ink|#[0-9a-f]{6})$/i.test(s.c) && Number.isFinite(s.w) && s.w > 0 &&
+  Array.isArray(s.p) && s.p.length >= 2 && s.p.length % 2 === 0 && s.p.every(Number.isFinite);
+function bounds(s) {
+  let a = Infinity, b = Infinity, c = -Infinity, d = -Infinity;
+  for (let i = 0; i < s.p.length; i += 2) { a = Math.min(a, s.p[i]); c = Math.max(c, s.p[i]); b = Math.min(b, s.p[i + 1]); d = Math.max(d, s.p[i + 1]); }
+  s.b = [a - s.w, b - s.w, c + s.w, d + s.w];
+  return s;
+}
+function fromData(d) {
+  if (!d || !Array.isArray(d.strokes) || !d.strokes.every(valid)) throw new Error("not a Canvas Studio drawing");
+  return d.strokes.map(({ c, w, p }) => bounds({ c, w, p }));
+}
+const toData = () => ({ strokes: strokes.map(({ c, w, p }) => ({ c, w, p })) });
+
+let saveT = 0;
+function save() {
+  clearTimeout(saveT);
+  saveT = setTimeout(() => {
+    try {
+      localStorage.setItem(KEY, JSON.stringify({ ...toData(), view }));
+      status("Saved in this browser");
+    } catch (e) {
+      status("Not saved: browser storage is full. Download SVG to keep this.", true);
+    }
+  }, 250);
+}
+function status(t, bad) { $("status").textContent = t; $("status").classList.toggle("bad", !!bad); }
+
+function commit(next) {
+  undo.push(strokes); if (undo.length > 300) undo.shift();
+  redo = []; strokes = next; changed();
+}
+function changed() { save(); paint(); ui(); }
+
+// ---- view ----
+const W = () => cv.clientWidth, H = () => cv.clientHeight;
+const toWorld = (sx, sy) => [sx / view.z + view.x, sy / view.z + view.y];
+function zoomAt(sx, sy, f) {
+  const [wx, wy] = toWorld(sx, sy), z = Math.min(ZMAX, Math.max(ZMIN, view.z * f));
+  view = { x: wx - sx / z, y: wy - sy / z, z };
+  paint(); save();
+}
+function fit() {
+  if (!W() || !H()) return; // hidden tab: no size to fit into
+  if (!strokes.length) { view = { x: -W() / 2, y: -H() / 2, z: 1 }; paint(); save(); return; }
+  let a = Infinity, b = Infinity, c = -Infinity, d = -Infinity;
+  for (const s of strokes) { a = Math.min(a, s.b[0]); b = Math.min(b, s.b[1]); c = Math.max(c, s.b[2]); d = Math.max(d, s.b[3]); }
+  const z = Math.min(ZMAX, Math.max(ZMIN, 0.85 * Math.min(W() / (c - a || 1), H() / (d - b || 1))));
+  view = { x: (a + c) / 2 - W() / 2 / z, y: (b + d) / 2 - H() / 2 / z, z };
+  paint(); save();
+}
+
+// ---- drawing ----
+let raf = 0;
+const paint = () => raf || (raf = requestAnimationFrame(draw));
+const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+
+function draw() {
+  raf = 0;
+  const dpr = devicePixelRatio || 1, w = W(), h = H();
+  if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) { cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); }
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.fillStyle = css("--h-bg"); ctx.fillRect(0, 0, w, h);
+  grid(w, h);
+  const ink = css("--h-text"), x1 = view.x + w / view.z, y1 = view.y + h / view.z;
+  ctx.lineCap = ctx.lineJoin = "round";
+  for (const s of cur ? [...strokes, cur] : strokes) {
+    const b = s.b;
+    if (b[2] < view.x || b[0] > x1 || b[3] < view.y || b[1] > y1) continue;
+    if (Math.max(b[2] - b[0], b[3] - b[1]) * view.z < 0.4) continue; // smaller than a pixel
+    ctx.strokeStyle = s.c === "ink" ? ink : s.c;
+    ctx.lineWidth = Math.max(0.6, s.w * view.z);
+    ctx.beginPath(); trace(s.p, (x) => (x - view.x) * view.z, (y) => (y - view.y) * view.z, ctx); ctx.stroke();
+  }
+  const z = view.z;
+  $("zoom").textContent = z >= 0.01 && z < 1e4 ? Math.round(z * 100) + "%" : z.toExponential(1).replace("e+", "e") + "×";
+}
+
+// Smooth line through the points: quadratic curves between midpoints. Writes to a canvas path or an SVG path builder.
+function trace(p, X, Y, out) {
+  const n = p.length;
+  out.moveTo(X(p[0]), Y(p[1]));
+  if (n === 2) { out.lineTo(X(p[0]) + 0.01, Y(p[1])); return; }
+  for (let i = 2; i < n - 2; i += 2) {
+    const qx = X(p[i]), qy = Y(p[i + 1]);
+    out.quadraticCurveTo(qx, qy, (qx + X(p[i + 2])) / 2, (qy + Y(p[i + 3])) / 2);
+  }
+  out.lineTo(X(p[n - 2]), Y(p[n - 1]));
+}
+
+// Dots on a power-of-ten grid that fades between decades, so zooming always shows where you are.
+function grid(w, h) {
+  const z = view.z, k = Math.ceil(Math.log10(24 / z)), step = 10 ** k;
+  const fade = Math.min(1, (step * z - 24) / 120);
+  ctx.fillStyle = css("--h-muted2");
+  for (const [st, a] of [[step, 0.35 * fade], [step * 10, 0.35]]) {
+    if (a <= 0.01) continue;
+    ctx.globalAlpha = a;
+    const gx = Math.floor(view.x / st), gy = Math.floor(view.y / st), cols = Math.ceil(w / (st * z)) + 1, rows = Math.ceil(h / (st * z)) + 1;
+    for (let i = 0; i <= cols; i++) {
+      const sx = ((gx + i) * st - view.x) * z;
+      for (let j = 0; j <= rows; j++) ctx.fillRect(sx - 1, ((gy + j) * st - view.y) * z - 1, 2, 2);
+    }
+  }
+  ctx.globalAlpha = 1;
+}
+
+// ---- eraser ----
+function hits(s, wx, wy, r) {
+  const b = s.b, p = s.p, rr = r + s.w / 2;
+  if (wx < b[0] - r || wx > b[2] + r || wy < b[1] - r || wy > b[3] + r) return false;
+  if (p.length === 2) return Math.hypot(wx - p[0], wy - p[1]) < rr;
+  for (let i = 0; i < p.length - 2; i += 2) {
+    const ax = p[i], ay = p[i + 1], dx = p[i + 2] - ax, dy = p[i + 3] - ay, l = dx * dx + dy * dy;
+    const t = l ? Math.max(0, Math.min(1, ((wx - ax) * dx + (wy - ay) * dy) / l)) : 0;
+    if (Math.hypot(wx - ax - t * dx, wy - ay - t * dy) < rr) return true;
+  }
+  return false;
+}
+function erase(sx, sy) {
+  const [wx, wy] = toWorld(sx, sy), r = 8 / view.z;
+  const keep = strokes.filter((s) => !hits(s, wx, wy, r));
+  if (keep.length !== strokes.length) { strokes = keep; paint(); }
+}
+
+// ---- pointer input ----
+const ptrs = new Map();
+let mode = null, pinch = null;
+const pos = (e) => { const r = cv.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
+
+cv.addEventListener("pointerdown", (e) => {
+  cv.setPointerCapture(e.pointerId);
+  ptrs.set(e.pointerId, pos(e));
+  $("hint")?.remove();
+  if (ptrs.size === 2) { // second finger: drop the half-drawn line and pinch instead
+    cur = null; if (erasedFrom) { strokes = erasedFrom; erasedFrom = null; }
+    mode = "pinch"; pinch = pinchState(); paint(); return;
+  }
+  if (ptrs.size > 2) return;
+  const [sx, sy] = pos(e);
+  if (e.button === 1 || tool === "hand" || space) { mode = "pan"; cv.classList.add("grabbing"); return; }
+  if (e.button !== 0) return;
+  if (tool === "pen") {
+    const [wx, wy] = toWorld(sx, sy);
+    mode = "pen"; cur = bounds({ c: color, w: size / view.z, p: [wx, wy] });
+  } else { mode = "erase"; erasedFrom = strokes; erase(sx, sy); }
+  paint();
+});
+
+cv.addEventListener("pointermove", (e) => {
+  if (!ptrs.has(e.pointerId)) return;
+  const [px, py] = ptrs.get(e.pointerId), [sx, sy] = pos(e);
+  ptrs.set(e.pointerId, [sx, sy]);
+  if (mode === "pinch") {
+    const p = pinchState();
+    zoomAt(p.cx, p.cy, p.d / pinch.d);
+    view.x -= (p.cx - pinch.cx) / view.z; view.y -= (p.cy - pinch.cy) / view.z;
+    pinch = p; paint();
+  } else if (mode === "pan") {
+    view.x -= (sx - px) / view.z; view.y -= (sy - py) / view.z; paint();
+  } else if (mode === "pen") {
+    const r = cv.getBoundingClientRect();
+    const evs = e.getCoalescedEvents?.();
+    for (const ev of evs?.length ? evs : [e]) {
+      const qx = ev.clientX - r.left, qy = ev.clientY - r.top, p = cur.p;
+      if (Math.hypot((p[p.length - 2] - view.x) * view.z - qx, (p[p.length - 1] - view.y) * view.z - qy) < 1.5) continue;
+      const [wx, wy] = toWorld(qx, qy);
+      p.push(wx, wy);
+      cur.b = [Math.min(cur.b[0], wx - cur.w), Math.min(cur.b[1], wy - cur.w), Math.max(cur.b[2], wx + cur.w), Math.max(cur.b[3], wy + cur.w)];
+    }
+    paint();
+  } else if (mode === "erase") erase(sx, sy);
+});
+
+function end(e) {
+  if (!ptrs.delete(e.pointerId)) return;
+  if (mode === "pinch") { if (ptrs.size === 0) { mode = null; save(); } return; }
+  if (mode === "pen" && cur) { const s = cur; cur = null; commit([...strokes, s]); }
+  else if (mode === "erase" && erasedFrom) {
+    if (strokes !== erasedFrom) { const after = strokes; strokes = erasedFrom; commit(after); }
+    erasedFrom = null;
+  } else if (mode === "pan") save();
+  mode = null; cv.classList.remove("grabbing");
+}
+cv.addEventListener("pointerup", end);
+cv.addEventListener("pointercancel", end);
+
+function pinchState() {
+  const [[ax, ay], [bx, by]] = [...ptrs.values()];
+  return { cx: (ax + bx) / 2, cy: (ay + by) / 2, d: Math.hypot(ax - bx, ay - by) || 1 };
+}
+
+cv.addEventListener("wheel", (e) => {
+  e.preventDefault();
+  const k = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? H() : 1, [sx, sy] = pos(e);
+  if (e.ctrlKey || e.metaKey) zoomAt(sx, sy, Math.exp(-e.deltaY * k * 0.01)); // trackpad pinch arrives as ctrl + wheel
+  else { view.x += (e.shiftKey && !e.deltaX ? e.deltaY : e.deltaX) * k / view.z; if (!e.shiftKey) view.y += e.deltaY * k / view.z; paint(); save(); }
+}, { passive: false });
+
+// ---- toolbar ----
+function setTool(t) {
+  tool = t;
+  document.querySelectorAll(".tool").forEach((b) => b.classList.toggle("on", b.dataset.tool === t));
+  cv.className = t === "pen" ? "" : t;
+}
+document.querySelectorAll(".tool").forEach((b) => (b.onclick = () => setTool(b.dataset.tool)));
+
+$("colors").innerHTML = COLORS.map((c) =>
+  `<button class="swatch${c === color ? " on" : ""}" data-c="${c}" title="${c === "ink" ? "Ink (follows light / dark)" : c}" style="--c:${c === "ink" ? "var(--h-text)" : c}"><i></i></button>`).join("");
+$("colors").onclick = (e) => {
+  const b = e.target.closest(".swatch"); if (!b) return;
+  color = b.dataset.c; if (tool !== "pen") setTool("pen");
+  document.querySelectorAll(".swatch").forEach((x) => x.classList.toggle("on", x === b));
+};
+$("sizes").innerHTML = SIZES.map((s) =>
+  `<button class="size${s === size ? " on" : ""}" data-s="${s}" title="${s} px"><i style="width:${Math.min(s, 12) + 2}px;height:${Math.min(s, 12) + 2}px"></i></button>`).join("");
+$("sizes").onclick = (e) => {
+  const b = e.target.closest(".size"); if (!b) return;
+  size = +b.dataset.s; if (tool !== "pen") setTool("pen");
+  document.querySelectorAll(".size").forEach((x) => x.classList.toggle("on", x === b));
+};
+
+function ui() { $("undo").disabled = !undo.length; $("redo").disabled = !redo.length; $("clear").disabled = !strokes.length; }
+$("undo").onclick = () => { if (!undo.length) return; redo.push(strokes); strokes = undo.pop(); changed(); };
+$("redo").onclick = () => { if (!redo.length) return; undo.push(strokes); strokes = redo.pop(); changed(); };
+$("clear").onclick = () => strokes.length && commit([]);
+$("zoom").onclick = fit;
+
+addEventListener("keydown", (e) => {
+  if (e.target.closest?.("input, textarea")) return;
+  const mod = e.ctrlKey || e.metaKey, k = e.key.toLowerCase();
+  if (mod && k === "z") { e.preventDefault(); (e.shiftKey ? $("redo") : $("undo")).click(); }
+  else if (mod && k === "y") { e.preventDefault(); $("redo").click(); }
+  else if (mod && k === "s") { e.preventDefault(); $("save").click(); }
+  else if (mod) return;
+  else if (k === " ") { e.preventDefault(); if (!space) { space = true; cv.classList.add("hand"); } }
+  else if (k === "p" || k === "e" || k === "h") setTool({ p: "pen", e: "eraser", h: "hand" }[k]);
+  else if (k === "0") fit();
+  else if (k === "+" || k === "=") zoomAt(W() / 2, H() / 2, 1.5);
+  else if (k === "-") zoomAt(W() / 2, H() / 2, 1 / 1.5);
+});
+addEventListener("keyup", (e) => { if (e.key === " ") { space = false; cv.classList.toggle("hand", tool === "hand"); } });
+
+// ---- download / open ----
+// The SVG carries the drawing's own data in <metadata>, so the same file opens back here with nothing lost.
+function toSVG() {
+  let a = Infinity, b = Infinity, c = -Infinity, d = -Infinity;
+  for (const s of strokes) { a = Math.min(a, s.b[0]); b = Math.min(b, s.b[1]); c = Math.max(c, s.b[2]); d = Math.max(d, s.b[3]); }
+  const w = c - a, h = d - b, scale = 1200 / Math.max(w, h);
+  const paths = strokes.map((s) => {
+    let dstr = "";
+    trace(s.p, (x) => x, (y) => y, {
+      moveTo: (x, y) => (dstr += `M${x} ${y}`), lineTo: (x, y) => (dstr += `L${x} ${y}`),
+      quadraticCurveTo: (qx, qy, x, y) => (dstr += `Q${qx} ${qy} ${x} ${y}`),
+    });
+    return `<path d="${dstr}" stroke="${s.c === "ink" ? "#18181b" : s.c}" stroke-width="${s.w}"/>`;
+  }).join("\n");
+  const meta = JSON.stringify(toData()).replace(/&/g, "&amp;").replace(/</g, "&lt;");
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${a} ${b} ${w} ${h}" width="${Math.round(w * scale)}" height="${Math.round(h * scale)}">
+<metadata id="canvas-studio">${meta}</metadata>
+<g fill="none" stroke-linecap="round" stroke-linejoin="round">
+${paths}
+</g>
+</svg>
+`;
+}
+$("save").onclick = () => {
+  if (!strokes.length) return status("Nothing to download yet");
+  const url = URL.createObjectURL(new Blob([toSVG()], { type: "image/svg+xml" }));
+  const link = Object.assign(document.createElement("a"), { href: url, download: `canvas-${new Date().toISOString().slice(0, 10)}.svg` });
+  link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+};
+
+async function openFile(f) {
+  try {
+    const doc = new DOMParser().parseFromString(await f.text(), "image/svg+xml");
+    const meta = doc.querySelector("metadata#canvas-studio");
+    if (!meta) throw new Error("no drawing data in it");
+    commit(fromData(JSON.parse(meta.textContent)));
+    fit();
+    status(`Opened ${f.name}`);
+  } catch (err) {
+    status(`Could not open ${f.name}: only SVGs downloaded from Canvas Studio open here`, true);
+  }
+}
+$("open").onclick = () => $("file").click();
+$("file").onchange = () => { if ($("file").files[0]) openFile($("file").files[0]); $("file").value = ""; };
+addEventListener("dragover", (e) => e.preventDefault());
+addEventListener("drop", (e) => { e.preventDefault(); if (e.dataTransfer.files[0]) openFile(e.dataTransfer.files[0]); });
+
+// ---- start ----
+let had = false;
+try {
+  const d = JSON.parse(localStorage.getItem(KEY));
+  if (d) {
+    had = true;
+    strokes = fromData(d);
+    if (d.view && [d.view.x, d.view.y, d.view.z].every(Number.isFinite) && d.view.z > 0) view = d.view;
+    if (strokes.length) $("hint").remove();
+  }
+} catch (e) { status("Could not read the saved drawing", true); }
+if (!had) view = { x: -W() / 2, y: -H() / 2, z: 1 };
+new ResizeObserver(paint).observe(cv);
+new MutationObserver(paint).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+ui(); paint();
+</script>
+<!-- studio-hub theme slider -->
+<div class="hub-theme" title="Light / dark"><button type="button" role="switch" aria-label="Dark theme" aria-checked="false"><i></i></button></div>
+<script>
+(() => {
+  const root = document.documentElement, wrap = document.querySelector(".hub-theme"), btn = wrap.querySelector("button"), knob = btn.querySelector("i");
+  const slot = document.querySelector("[data-hub-theme-slot]");
+  if (slot) { slot.append(wrap); wrap.classList.add("docked"); }  // app pages: sit at the end of the toolbar
+  const sync = () => btn.setAttribute("aria-checked", String(root.dataset.theme === "dark"));
+  const set = (t) => {
+    root.dataset.theme = t; knob.style.left = ""; sync();
+    try { localStorage.setItem("hubTheme", t); } catch (e) {}
+    window.dispatchEvent(new CustomEvent("hubthemechange", { detail: t }));
+  };
+  // Click toggles; a drag snaps to whichever end it is released nearer.
+  let drag = null, skipClick = false;
+  const frac = (e) => { const r = btn.getBoundingClientRect(); return Math.min(1, Math.max(0, (e.clientX - r.left - 10) / (r.width - 20))); };
+  btn.addEventListener("pointerdown", (e) => { drag = { x: e.clientX, moved: false }; btn.setPointerCapture(e.pointerId); });
+  btn.addEventListener("pointermove", (e) => {
+    if (!drag) return;
+    if (Math.abs(e.clientX - drag.x) > 3) { drag.moved = true; wrap.classList.add("dragging"); }
+    if (drag.moved) knob.style.left = 2 + frac(e) * 30 + "px";
+  });
+  btn.addEventListener("pointerup", (e) => {
+    wrap.classList.remove("dragging");
+    if (drag && drag.moved) { set(frac(e) > 0.5 ? "dark" : "light"); skipClick = true; }
+    drag = null;
+  });
+  btn.addEventListener("click", () => { if (skipClick) { skipClick = false; return; } set(root.dataset.theme === "dark" ? "light" : "dark"); });
+  btn.addEventListener("keydown", (e) => { if (e.key === "ArrowLeft") set("light"); if (e.key === "ArrowRight") set("dark"); });
+  // Another tab changed it: follow along.
+  window.addEventListener("storage", (e) => { if (e.key === "hubTheme") { root.dataset.theme = e.newValue === "dark" ? "dark" : "light"; sync(); } });
+  sync();
+})();
+</script>
+<!-- /studio-hub theme slider -->
+</body>
+</html>
