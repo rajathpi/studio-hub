@@ -14,7 +14,7 @@
     display: flex; flex-direction: column; overflow: hidden;
   }
   header {
-    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
     padding: 10px 14px; background: var(--h-panel); border-bottom: 1px solid var(--h-border);
   }
   header h1 { font-size: 15px; font-weight: 600; margin-right: 6px; }
@@ -37,7 +37,7 @@
   .size { width: 30px; padding: 0; height: 28px; justify-content: center; }
   .size i { border-radius: 50%; background: currentColor; }
   #zoom { min-width: 64px; justify-content: center; font-variant-numeric: tabular-nums; }
-  #status { font-size: 12px; color: var(--h-muted); }
+  #status { position: absolute; left: 14px; bottom: 12px; font-size: 12px; color: var(--h-muted); pointer-events: none; }
   #status.bad { color: var(--h-red); }
   main { flex: 1; position: relative; min-height: 0; }
   #cv { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: crosshair; }
@@ -45,7 +45,8 @@
   #cv.eraser { cursor: cell; }
   #hint { position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%); font-size: 12px; color: var(--h-muted);
     background: var(--h-panel); border: 1px solid var(--h-border); border-radius: 999px; padding: 6px 14px; pointer-events: none; white-space: nowrap; }
-  @media (max-width: 700px) { kbd, #hint { display: none; } }
+  @media (max-width: 1300px) { kbd, .lbl { display: none; } }
+  @media (max-width: 700px) { #hint { display: none; } }
 </style>
 <!-- studio-hub theme kit v1: fonts, light/dark tokens, title shadow, theme slider. Source: _theme/kit.html, inlined by _theme/apply.py -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource-variable/mona-sans@5.3.0/wdth.css">
@@ -97,9 +98,9 @@
 <header>
   <h1>Canvas Studio</h1>
   <div class="group" id="tools">
-    <button class="tool" data-tool="hand" title="Hand (H), or hold Space and drag"><svg viewBox="0 0 24 24"><path d="M8 13V5.5a1.5 1.5 0 013 0V11M11 10V4.5a1.5 1.5 0 013 0V11M14 10.5V6a1.5 1.5 0 013 0v7c0 4-2.5 7-6 7-2.5 0-4-1-5.5-3L3.8 13.6a1.4 1.4 0 012.2-1.7L8 14"/></svg>Hand <kbd>H</kbd></button>
-    <button class="tool on" data-tool="pen" title="Pen (P)"><svg viewBox="0 0 24 24"><path d="M4 20l1-4L16 5l3 3L8 19z"/><path d="M14 7l3 3"/></svg>Pen <kbd>P</kbd></button>
-    <button class="tool" data-tool="eraser" title="Eraser (E): rub over a line to remove it"><svg viewBox="0 0 24 24"><path d="M8 20h12"/><path d="M4.5 14.5l9-9a2 2 0 012.8 0l3.2 3.2a2 2 0 010 2.8L13 18H8z"/><path d="M9 10l5 5"/></svg>Eraser <kbd>E</kbd></button>
+    <button class="tool" data-tool="hand" title="Hand (H), or hold Space and drag"><svg viewBox="0 0 24 24"><path d="M8 13V5.5a1.5 1.5 0 013 0V11M11 10V4.5a1.5 1.5 0 013 0V11M14 10.5V6a1.5 1.5 0 013 0v7c0 4-2.5 7-6 7-2.5 0-4-1-5.5-3L3.8 13.6a1.4 1.4 0 012.2-1.7L8 14"/></svg><span class="lbl">Hand</span> <kbd>H</kbd></button>
+    <button class="tool on" data-tool="pen" title="Pen (P)"><svg viewBox="0 0 24 24"><path d="M4 20l1-4L16 5l3 3L8 19z"/><path d="M14 7l3 3"/></svg><span class="lbl">Pen</span> <kbd>P</kbd></button>
+    <button class="tool" data-tool="eraser" title="Eraser (E): rub over a line to remove it"><svg viewBox="0 0 24 24"><path d="M8 20h12"/><path d="M4.5 14.5l9-9a2 2 0 012.8 0l3.2 3.2a2 2 0 010 2.8L13 18H8z"/><path d="M9 10l5 5"/></svg><span class="lbl">Eraser</span> <kbd>E</kbd></button>
   </div>
   <div class="sep"></div>
   <div class="group" id="colors"></div>
@@ -114,13 +115,13 @@
   <div class="sep"></div>
   <button id="zoom" title="Zoom to fit everything (0)">100%</button>
   <div class="spacer"></div>
-  <span id="status">Saved in this browser</span>
   <button id="open" title="Open an SVG saved from here">Open…</button>
   <button id="save" class="primary" title="Download as SVG: vector, so every zoom level keeps its detail, and it opens back here">Download SVG</button>
   <span data-hub-theme-slot></span>
 </header>
 <main>
   <canvas id="cv"></canvas>
+  <span id="status">Saved in this browser</span>
   <div id="hint">Draw anywhere · two-finger scroll to pan · pinch or Ctrl + scroll to zoom, as deep as you like</div>
 </main>
 <input type="file" id="file" accept=".svg,image/svg+xml" hidden>
