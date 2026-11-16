@@ -35,6 +35,8 @@ window.TOOLS = [
     glyph: '<circle cx="7" cy="7" r="2.5"/><circle cx="17" cy="7" r="2.5"/><circle cx="7" cy="17" r="2.5"/><circle cx="17" cy="17" r="2.5"/><circle cx="12" cy="12" r="2.5"/>' },
   { id: "wallpaper", name: "Wallpaper", page: "wallpaper-studio.html", group: "Make things", blurb: "One picture across all your screens", used: 2,
     glyph: '<rect x="2.5" y="6" width="8" height="12" rx="1"/><rect x="13.5" y="4" width="8" height="12" rx="1"/><path d="M4 15l2.5-3 2 2 2-3M15 12l2-2.5 2 2 2-3"/>' },
+  { id: "canvas", name: "Canvas", page: "canvas-studio.html", group: "Make things", blurb: "An endless canvas: draw, pan, zoom forever", used: 2,
+    glyph: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 15c2-5 4-5 5-2s3 3 5-3"/><path d="M15 3v3M21 9h-3M9 21v-3M3 15h3"/>' },
   { id: "blob", name: "Blob", page: "blob-studio.html", group: "Make things", blurb: "An avatar for any name", used: 1,
     glyph: '<path d="M12 4c4 0 8 3 8 7s-3 9-8 9-8-4-8-8 4-8 8-8z"/><circle cx="9.5" cy="11" r=".9"/><circle cx="14.5" cy="11" r=".9"/><path d="M10 15q2 1.5 4 0"/>' },
   { id: "outfit", name: "Outfit", page: "outfit-studio.html", group: "Make things", blurb: "Wada colour combinations on real people", used: 2,

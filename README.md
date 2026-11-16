@@ -1,6 +1,6 @@
 # Studio Hub
 
-**Small tools that run in your browser.** Screenshots, OCR, colours, QR codes, PDFs, markdown, diagrams, diffs, regex, mail merge, time zones, unit conversion, generative art, wallpapers, avatars and a dressed 3D figure, each one a single file: no install, no accounts, no server, and nothing you open ever leaves your machine.
+**Small tools that run in your browser.** Screenshots, OCR, colours, QR codes, PDFs, markdown, diagrams, diffs, regex, mail merge, time zones, unit conversion, generative art, an endless drawing canvas, wallpapers, avatars and a dressed 3D figure, each one a single file: no install, no accounts, no server, and nothing you open ever leaves your machine.
 
 ### → [Open Studio Hub](https://rajathpi.github.io/studio-hub/)
 
@@ -157,6 +157,12 @@ Type any string — a username, an email, a repo — and get a deterministic blo
 ![Blob Studio](docs/blob-studio.png)
 
 The generator is [blobatar](https://github.com/Alain00/blobatar) 2.7.0 by Alain (MIT), bundled inline unmodified with its license notice, so the page still works offline.
+
+### Canvas Studio — [`canvas-studio.html`](canvas-studio.html)
+
+An endless canvas to draw on. Pan with two fingers or the hand tool, and pinch or Ctrl + scroll to zoom, about ten billion times in or out, so you can zoom into a line and keep drawing inside it. Pen, eraser, six colours, three sizes, undo and redo. The drawing saves itself in your browser; **Download SVG** gives a vector file that keeps every level of detail and opens back here with **Open…**.
+
+![Canvas Studio](docs/canvas-studio.png)
 
 ### Code Studio — [`code-studio.py`](code-studio.py) + [`code-studio.html`](code-studio.html)
 
