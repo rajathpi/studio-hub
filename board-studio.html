@@ -190,7 +190,7 @@ function save() { try { localStorage.setItem(KEY, JSON.stringify(store)); } catc
 // ================= undo =================
 let undo = [], redo = [];
 function snap() { undo.push(JSON.stringify(B)); if (undo.length > 200) undo.shift(); redo = []; }
-function restore(json) { const b = JSON.parse(json); store.boards[store.current] = B = b; sel = { nodes: new Set(), edge: null, group: null }; render(); save(); }
+function restore(json) { const b = JSON.parse(json); store.boards[store.current] = B = b; sel = { nodes: new Set(), edge: null, group: null }; arrowMode = false; render(); save(); status(); }
 
 // ================= geometry =================
 const ctx = document.createElement("canvas").getContext("2d");
@@ -378,9 +378,9 @@ function addNext(dir, connectIt = true) {
 // Keep a block on screen by scrolling only as far as needed (plus a little room to see what's
 // next), clear of the toolbar and the hint bar, gliding there instead of jumping.
 let goal = null, gliding = 0;
-function keepVisible(n) {
-  if (!n) return;
-  const g = goal || view, r = rectOf(n);
+function keepVisible(n) { if (n) keepRect(rectOf(n)); }
+function keepRect(r) {
+  const g = goal || view;
   const x0 = r.x * view.k + g.x, y0 = r.y * view.k + g.y, x1 = x0 + r.w * view.k, y1 = y0 + r.h * view.k;
   const present = document.body.classList.contains("present");
   const top = present ? 20 : 80, bottom = innerHeight - (present ? 20 : 56), left = 24, right = innerWidth - 24, room = 40;
@@ -447,6 +447,7 @@ function onDouble(ev, hit) {
 }
 svg.addEventListener("pointerdown", (ev) => {
   if (editing) commitEdit(false);
+  if (arrowMode) { arrowMode = false; status(); }
   const hit = hitTarget(ev), [wx, wy] = toWorld(ev.clientX, ev.clientY);
   const now = performance.now(), dbl = now - lastDown.t < 350 && Math.hypot(ev.clientX - lastDown.x, ev.clientY - lastDown.y) < 6;
   lastDown = dbl ? { t: 0, x: 0, y: 0 } : { t: now, x: ev.clientX, y: ev.clientY };
@@ -510,8 +511,8 @@ const SHORTCUTS = [
   ]],
   ["Connect & group", [
     ["C", "Connect: pick the other block with arrows, Enter"],
-    ["E  Shift E", "Step through the selected block's arrows"],
-    ["D  B  R", "Selected arrow: dashed, two-way, reverse"],
+    ["A", "Arrow mode: ←↑→↓ jump between arrows, Esc back"],
+    ["D  B  R", "Arrow: dashed, two-way, reverse"],
     ["G", "Frame the selected blocks"],
     ["Shift G", "Select the frame around this block"],
     ["Delete", "Remove what's selected (a frame keeps its blocks)"],
@@ -613,7 +614,7 @@ function runChain(text) {
 // ================= keyboard navigation =================
 let cursor = null;          // the block the arrow keys move from
 let connectFrom = null;     // set while choosing the other end of a new arrow
-let edgeAnchor = null;      // block whose arrows E steps through
+let arrowMode = false;      // A: the arrow keys move between arrows instead of blocks
 const DIRS = { ArrowRight: [1, 0], ArrowLeft: [-1, 0], ArrowDown: [0, 1], ArrowUp: [0, -1] };
 function nearest(from, [dx, dy]) {
   let best = null, bestScore = Infinity;
@@ -636,19 +637,47 @@ function moveTo(dirKey, extend) {
   if (!next) return;
   if (extend && sel.nodes.size) { sel.edge = sel.group = null; sel.nodes.add(next.id); }
   else sel = { nodes: new Set([next.id]), edge: null, group: null };
-  cursor = next.id; edgeAnchor = null;
+  cursor = next.id;
   render(); keepVisible(next);
 }
-function stepEdge(back) {
-  const anchor = byId(edgeAnchor) || one() || byId(cursor);
-  if (!anchor) return;
-  const list = B.edges.filter((e) => e.a === anchor.id || e.b === anchor.id);
-  if (!list.length) return;
-  const i = list.findIndex((e) => e.id === sel.edge);
-  const next = list[(i + (back ? -1 : 1) + list.length) % list.length];
-  edgeAnchor = anchor.id;
-  sel = { nodes: new Set(), edge: next.id, group: null };
-  render();
+const edgeMid = (e) => { const g = edgeGeom(e); return g ? [(g.p1[0] + g.p2[0]) / 2, (g.p1[1] + g.p2[1]) / 2] : null; };
+function nearestEdge(p, list) {
+  let best = null, bd = Infinity;
+  list.forEach((e) => { const m = edgeMid(e); if (!m) return; const d = Math.hypot(m[0] - p[0], m[1] - p[1]); if (d < bd) { bd = d; best = e; } });
+  return best;
+}
+function selectEdge(e) {
+  sel = { nodes: new Set(), edge: e.id, group: null };
+  render(); const m = edgeMid(e); keepRect({ x: m[0] - 50, y: m[1] - 20, w: 100, h: 40 }); status();
+}
+// A: start on an arrow of the selected block (or the one nearest the middle of the screen).
+function enterArrowMode() {
+  if (!B.edges.length) return;
+  const from = one() || byId(cursor);
+  const p = from ? [from.x, from.y] : toWorld(innerWidth / 2, innerHeight / 2);
+  const own = from ? B.edges.filter((e) => e.a === from.id || e.b === from.id) : [];
+  arrowMode = true;
+  selectEdge(nearestEdge(p, own.length ? own : B.edges));
+}
+function moveArrow(dirKey) {
+  const cur = B.edges.find((q) => q.id === sel.edge); if (!cur) return;
+  const [dx, dy] = DIRS[dirKey], c = edgeMid(cur);
+  let best = null, bs = Infinity;
+  B.edges.forEach((e) => {
+    if (e === cur) return;
+    const m = edgeMid(e); if (!m) return;
+    const vx = m[0] - c[0], vy = m[1] - c[1], along = vx * dx + vy * dy, across = Math.abs(vx * dy - vy * dx);
+    if (along <= 5) return;
+    const s = along + across * 2.5;
+    if (s < bs) { bs = s; best = e; }
+  });
+  if (best) selectEdge(best);
+}
+function exitArrowMode(toStart) {
+  const e = B.edges.find((q) => q.id === sel.edge);
+  arrowMode = false;
+  if (toStart && e) { sel = { nodes: new Set([e.a]), edge: null, group: null }; cursor = e.a; keepVisible(byId(e.a)); }
+  render(); status();
 }
 function zoomBy(f) {
   const k = Math.min(3, Math.max(0.2, view.k * f)), cx = innerWidth / 2, cy = innerHeight / 2;
@@ -701,6 +730,7 @@ function status() {
   const m = document.getElementById("mode");
   let t = "";
   if (connectFrom) t = `Connecting from “${esc(byId(connectFrom)?.title || "")}”: arrow keys to pick the other block, <kbd>Enter</kbd> to connect, <kbd>Esc</kbd> to cancel`;
+  if (!t && arrowMode) t = `Arrow mode · <kbd>←↑→↓</kbd> next arrow · <kbd>D</kbd> dashed · <kbd>B</kbd> two-way · <kbd>R</kbd> reverse · <kbd>Enter</kbd> label · <kbd>Delete</kbd> remove · <kbd>Esc</kbd> back to blocks`;
   m.innerHTML = t; m.style.display = t ? "block" : "none";
 }
 
@@ -743,6 +773,21 @@ document.addEventListener("keydown", (ev) => {
   if (alt) return;
   if (k === "Escape" && document.body.classList.contains("present")) { stop(); togglePresent(); return; }
 
+  if (arrowMode) {
+    const cur = B.edges.find((q) => q.id === sel.edge);
+    if (!cur) { arrowMode = false; status(); }
+    else if (DIRS[k]) { stop(); moveArrow(k); return; }
+    else if (k === "Escape") { stop(); exitArrowMode(true); return; }
+    else if (k === "Delete" || k === "Backspace") {
+      stop(); const m = edgeMid(cur); snap();
+      B.edges = B.edges.filter((q) => q !== cur); save();
+      const next = nearestEdge(m, B.edges);
+      if (next) selectEdge(next); else exitArrowMode(false);
+      return;
+    }
+    else if (low === "a") { stop(); return; }
+    else if (!["d", "b", "r", "Enter"].includes(low)) { arrowMode = false; status(); } // any other key: back to blocks
+  }
   const e = sel.edge && B.edges.find((q) => q.id === sel.edge);
   if (DIRS[k]) { stop(); moveTo(k, ev.shiftKey); status(); return; }
   if (connectFrom) {
@@ -753,8 +798,7 @@ document.addEventListener("keydown", (ev) => {
   else if (k === "Enter") { stop(); if (one()) startEdit("node", one().id); else if (e) startEdit("edge", e.id); else if (sel.group) startEdit("group", sel.group); }
   else if (k === "Delete" || k === "Backspace") { stop(); removeSelection(); }
   else if (k === "Escape") {
-    if (sel.edge && edgeAnchor) { sel = { nodes: new Set([edgeAnchor]), edge: null, group: null }; cursor = edgeAnchor; edgeAnchor = null; }
-    else if (sel.group) { const g = B.groups.find((q) => q.id === sel.group); sel = { nodes: new Set(g && cursor && g.members.includes(cursor) ? [cursor] : []), edge: null, group: null }; }
+    if (sel.group) { const g = B.groups.find((q) => q.id === sel.group); sel = { nodes: new Set(g && cursor && g.members.includes(cursor) ? [cursor] : []), edge: null, group: null }; }
     else sel = { nodes: new Set(), edge: null, group: null };
     render();
   }
@@ -766,7 +810,7 @@ document.addEventListener("keydown", (ev) => {
   else if (k === "-" || k === "_") zoomBy(1 / 1.2);
   else if (low === "n") { stop(); if (one()) addNext("down", false); else { const [x, y] = toWorld(innerWidth / 2, innerHeight / 2); addNode(x, y); } }
   else if (low === "c") { stop(); if (one()) { connectFrom = one().id; cursor = connectFrom; } status(); }
-  else if (low === "e") { stop(); stepEdge(ev.shiftKey); }
+  else if (low === "a") { stop(); enterArrowMode(); }
   else if (low === "d" && e) { snap(); e.dashed = !e.dashed; render(); save(); }
   else if (low === "b" && e) { snap(); e.two = !e.two; render(); save(); }
   else if (low === "r" && e) { snap(); [e.a, e.b] = [e.b, e.a]; render(); save(); }
@@ -843,7 +887,7 @@ document.getElementById("openBtn").onclick = () => {
 const upd = new Date("2026-11-17T00:00:00"), days = Math.floor((Date.now() - upd) / 864e5);
 document.getElementById("stamp").textContent = "Updated 17 Nov 2026 · " + (days <= 0 ? "today" : days === 1 ? "1 day ago" : days + " days ago");
 addEventListener("resize", render);
-window.__board = { get state() { return B; }, fit, view: () => view, examples: EXAMPLES, select: (ids) => { sel = { nodes: new Set(ids), edge: null, group: null }; cursor = ids[0]; render(); } };
+window.__board = { get state() { return B; }, fit, view: () => view, examples: EXAMPLES, select: (ids) => { sel = { nodes: new Set(ids), edge: null, group: null }; cursor = ids[0]; render(); }, selection: () => sel, arrowMode: () => arrowMode };
 fillBoards();
 document.getElementById("helpBody").innerHTML = shortcutsHTML();
 document.getElementById("cheatBody").innerHTML = shortcutsHTML();
