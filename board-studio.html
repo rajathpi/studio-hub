@@ -304,7 +304,7 @@ function render() {
 // ================= editing =================
 const ed = document.getElementById("edit");
 let editing = null; // {kind, id}
-function startEdit(kind, id) {
+function startEdit(kind, id, isNew) {
   let text = "", sx, sy, w, h;
   if (kind === "node") {
     const n = byId(id), r = rectOf(n); text = n.title + (n.sub ? "\n" + n.sub : "");
@@ -319,13 +319,20 @@ function startEdit(kind, id) {
     [sx, sy] = toScreen(r.x, r.y); w = 220; h = 40;
   }
   ed.placeholder = kind === "cmd" ? "User -> API ->|charge| Payments --> Email   (one chain per line · --> dashed · <-> two-way)" : "";
-  editing = { kind, id, before: JSON.stringify(B) };
+  editing = { kind, id, before: JSON.stringify(B), isNew: !!isNew };
   Object.assign(ed.style, { display: "block", left: sx + "px", top: sy + "px", width: w + "px", height: h + "px" });
   ed.value = text; ed.focus(); ed.select();
 }
 function commitEdit(cancel) {
   if (!editing) return;
-  const { kind, id, before } = editing; editing = null; ed.blur(); ed.style.display = "none";
+  const { kind, id, before, isNew } = editing; editing = null; ed.blur(); ed.style.display = "none";
+  // Esc on a block that was just added takes it back out, rather than leaving it nameless.
+  if (cancel && isNew && kind === "node") {
+    const prev = B.edges.find((e) => e.b === id)?.a;
+    if (undo.length) restore(undo.pop());
+    if (prev && byId(prev)) { sel = { nodes: new Set([prev]), edge: null, group: null }; cursor = prev; render(); }
+    return;
+  }
   if (!cancel) {
     const v = ed.value.replace(/\r/g, "");
     undo.push(before); redo = [];
@@ -354,7 +361,7 @@ function addNode(x, y, type, edit = true) {
   // a new block dropped inside a frame joins it
   B.groups.forEach((g) => { const r = groupRect(g); if (r && x > r.x && x < r.x + r.w && y > r.y && y < r.y + r.h) g.members.push(n.id); });
   render(); save();
-  if (edit) startEdit("node", n.id);
+  if (edit) startEdit("node", n.id, true);
   return n;
 }
 function addNext(dir, connectIt = true) {
@@ -366,11 +373,33 @@ function addNext(dir, connectIt = true) {
   const n = addNode(x, y, a.type, false);
   if (connectIt) B.edges.push({ id: uid("e"), a: a.id, b: n.id });
   B.groups.forEach((g) => { if (g.members.includes(a.id) && !g.members.includes(n.id)) g.members.push(n.id); });
-  render(); save(); keepVisible(n); startEdit("node", n.id);
+  render(); save(); keepVisible(n); startEdit("node", n.id, true);
 }
+// Keep a block on screen by scrolling only as far as needed (plus a little room to see what's
+// next), clear of the toolbar and the hint bar, gliding there instead of jumping.
+let goal = null, gliding = 0;
 function keepVisible(n) {
-  const [sx, sy] = toScreen(n.x, n.y);
-  if (sx < 120 || sx > innerWidth - 160 || sy < 110 || sy > innerHeight - 80) { view.x += innerWidth / 2 - sx; view.y += innerHeight / 2 - sy; render(); }
+  if (!n) return;
+  const g = goal || view, r = rectOf(n);
+  const x0 = r.x * view.k + g.x, y0 = r.y * view.k + g.y, x1 = x0 + r.w * view.k, y1 = y0 + r.h * view.k;
+  const present = document.body.classList.contains("present");
+  const top = present ? 20 : 80, bottom = innerHeight - (present ? 20 : 56), left = 24, right = innerWidth - 24, room = 40;
+  let dx = 0, dy = 0;
+  if (x0 < left) dx = left - x0 + room; else if (x1 > right) dx = right - x1 - room;
+  if (y0 < top) dy = top - y0 + room; else if (y1 > bottom) dy = bottom - y1 - room;
+  if (!dx && !dy) return;
+  glideTo(g.x + dx, g.y + dy);
+}
+function glideTo(x, y) {
+  goal = { x, y };
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) { view.x = x; view.y = y; goal = null; render(); return; }
+  if (gliding) return;
+  const step = () => {
+    view.x += (goal.x - view.x) * 0.3; view.y += (goal.y - view.y) * 0.3;
+    if (Math.abs(goal.x - view.x) < 0.5 && Math.abs(goal.y - view.y) < 0.5) { view.x = goal.x; view.y = goal.y; goal = null; gliding = 0; render(); return; }
+    render(); gliding = requestAnimationFrame(step);
+  };
+  gliding = requestAnimationFrame(step);
 }
 function connect(a, b) {
   if (a === b || B.edges.some((e) => (e.a === a && e.b === b) || (e.a === b && e.b === a))) return;
@@ -466,7 +495,7 @@ const SHORTCUTS = [
     ["Tab", "Next block to the right, already connected"],
     ["Shift Tab", "Next block below, already connected"],
     ["N", "New block, not connected"],
-    ["/", "Type a chain: User -> API -> Orders DB"],
+    ["/  K", "Type a chain: User -> API -> Orders DB : label"],
     ["Enter", "Edit the selected block, arrow or frame"],
     ["Shift Enter", "While typing: second line (small subtitle)"],
     ["1…0", "Block type (the name usually picks it for you)"],
@@ -486,17 +515,19 @@ const SHORTCUTS = [
     ["G", "Frame the selected blocks"],
     ["Shift G", "Select the frame around this block"],
     ["Delete", "Remove what's selected (a frame keeps its blocks)"],
+    ["Ctrl C  Ctrl V", "Copy, paste (also into another board)"],
+    ["Ctrl X", "Cut"],
     ["Ctrl D", "Duplicate the selected blocks"],
   ]],
   ["Boards & files", [
     ["Ctrl Z  Ctrl Y", "Undo, redo"],
-    ["[  ]", "Previous / next board"],
+    ["[  ]  PgUp  PgDn", "Previous / next board"],
     ["Alt N", "New board"],
     ["Alt R", "Rename board"],
     ["Ctrl S  Ctrl O", "Save to a file, open a file"],
     ["Ctrl E", "Export PNG (Shift: SVG)"],
     ["F", "Presenter mode: hide the toolbars"],
-    ["?", "Show this list"],
+    ["?  F1", "Show this list"],
   ]],
 ];
 const MAC = /[?&]mac\b/.test(location.search) || (!/[?&]win\b/.test(location.search) && /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent));
@@ -540,9 +571,14 @@ function runChain(text) {
   const c = contentBox();
   let row = c ? c.y + c.h + 90 : 0, last = null;
   lines.forEach((line) => {
+    // "Orders -> Payments : charge" labels the line's last arrow (no AltGr needed for |label|)
+    let tail = null;
+    const m = /^(.*(?:->|<->|-->).*?\S)\s+:\s*(.+)$/.exec(line);
+    if (m) { line = m[1]; tail = m[2].trim(); }
     const parts = line.split(new RegExp(ARROW.source));
     const names = [], links = [];
     for (let i = 0; i < parts.length; i += 3) { names.push((parts[i] || "").trim()); if (i + 1 < parts.length) links.push([parts[i + 1], (parts[i + 2] || "").trim()]); }
+    if (tail && links.length && !links[links.length - 1][1]) links[links.length - 1][1] = tail;
     let x = c ? c.x : 0, placedInRow = false, prev = null;
     names.forEach((name, i) => {
       if (!name) return;
@@ -629,6 +665,37 @@ function duplicate() {
 }
 
 
+// ================= copy, cut, paste =================
+// Kept in localStorage, so a copy can be pasted into another board or another tab.
+const CLIP = "board-studio-clipboard";
+let pasteRound = 0;
+function copySelection() {
+  if (!sel.nodes.size) return false;
+  const ids = new Set(sel.nodes);
+  const data = {
+    nodes: B.nodes.filter((n) => ids.has(n.id)),
+    edges: B.edges.filter((e) => ids.has(e.a) && ids.has(e.b)),
+    groups: B.groups.filter((g) => g.members.length && g.members.every((m) => ids.has(m))),
+  };
+  try { localStorage.setItem(CLIP, JSON.stringify(data)); } catch (e) { return false; }
+  pasteRound = 0;
+  return true;
+}
+function pasteClipboard() {
+  let data;
+  try { data = JSON.parse(localStorage.getItem(CLIP)); } catch (e) { data = null; }
+  if (!data || !data.nodes || !data.nodes.length) return false;
+  snap();
+  pasteRound++;
+  const map = {}, off = 40 * pasteRound;
+  data.nodes.forEach((n) => { const c = Object.assign({}, n, { id: uid("n"), x: n.x + off, y: n.y + off }); map[n.id] = c.id; B.nodes.push(c); });
+  data.edges.forEach((e) => B.edges.push(Object.assign({}, e, { id: uid("e"), a: map[e.a], b: map[e.b] })));
+  (data.groups || []).forEach((g) => B.groups.push({ id: uid("g"), label: g.label, members: g.members.map((m) => map[m]) }));
+  sel = { nodes: new Set(Object.values(map)), edge: null, group: null }; cursor = Object.values(map)[0];
+  render(); save(); keepVisible(byId(cursor));
+  return true;
+}
+
 // ================= status line =================
 function status() {
   const m = document.getElementById("mode");
@@ -642,9 +709,18 @@ function togglePresent() { document.body.classList.toggle("present"); fit(); }
 document.addEventListener("keydown", (ev) => {
   if (editing || ev.target.tagName === "SELECT" || ev.target.tagName === "INPUT") return;
   const help = document.getElementById("help");
-  if (help.classList.contains("show")) { if (ev.key === "Escape" || ev.key === "?") help.classList.remove("show"); return; }
-  const k = ev.key, ctl = ev.ctrlKey || ev.metaKey, low = k.length === 1 ? k.toLowerCase() : k;
+  if (help.classList.contains("show")) { if (ev.key === "Escape" || ev.key === "?" || ev.key === "F1") { ev.preventDefault(); help.classList.remove("show"); } return; }
+  const k = ev.key, low = k.length === 1 ? k.toLowerCase() : k;
   const stop = () => ev.preventDefault();
+  // Board names: Alt+N / Alt+R (Option on a Mac), matched by the physical key because
+  // Option+letter types a symbol on a Mac. AltGr (Ctrl+Alt on Windows) is not Alt here.
+  if (ev.altKey && !ev.ctrlKey && !ev.metaKey && ev.code === "KeyN") { stop(); document.getElementById("newBtn").onclick(); return; }
+  if (ev.altKey && !ev.ctrlKey && !ev.metaKey && ev.code === "KeyR") { stop(); document.getElementById("renBtn").onclick(); return; }
+  // On Swedish (and most non-US) keyboards [ ] | \ come from AltGr (Windows reports Ctrl+Alt) or
+  // Option (Mac). When a modifier produced a symbol, treat it as that symbol, not as a shortcut.
+  const symbol = k.length === 1 && !/[\p{L}\p{N}]/u.test(k);
+  const viaAltGr = symbol && ev.altKey;
+  const ctl = (ev.ctrlKey || ev.metaKey) && !viaAltGr, alt = ev.altKey && !viaAltGr;
 
   // undo / files / boards
   if (ctl && low === "z") { stop(); if (ev.shiftKey) { if (redo.length) { undo.push(JSON.stringify(B)); restore(redo.pop()); } } else if (undo.length) { redo.push(JSON.stringify(B)); restore(undo.pop()); } return; }
@@ -654,16 +730,17 @@ document.addEventListener("keydown", (ev) => {
   if (ctl && low === "e") { stop(); document.getElementById(ev.shiftKey ? "svgBtn" : "pngBtn").onclick(); return; }
   if (ctl && low === "a") { stop(); sel = { nodes: new Set(B.nodes.map((n) => n.id)), edge: null, group: null }; render(); return; }
   if (ctl && low === "d") { stop(); duplicate(); return; }
+  if (ctl && low === "c") { if (copySelection()) stop(); return; }
+  if (ctl && low === "x") { if (copySelection()) { stop(); removeSelection(); } return; }
+  if (ctl && low === "v") { if (pasteClipboard()) stop(); return; }
   if (ctl && k === "0") { stop(); fit(); return; }
   if (ctl) return;
-  if (ev.altKey && ev.code === "KeyN") { stop(); document.getElementById("newBtn").onclick(); return; }
-  if (ev.altKey && ev.code === "KeyR") { stop(); document.getElementById("renBtn").onclick(); return; }
-  if (ev.altKey && DIRS[k]) {
+  if (alt && DIRS[k]) {
     stop(); if (!sel.nodes.size) return; snap();
     const d = ev.shiftKey ? 50 : SNAP, [dx, dy] = DIRS[k];
     sel.nodes.forEach((id) => { const n = byId(id); n.x += dx * d; n.y += dy * d; }); render(); save(); return;
   }
-  if (ev.altKey) return;
+  if (alt) return;
   if (k === "Escape" && document.body.classList.contains("present")) { stop(); togglePresent(); return; }
 
   const e = sel.edge && B.edges.find((q) => q.id === sel.edge);
@@ -681,7 +758,7 @@ document.addEventListener("keydown", (ev) => {
     else sel = { nodes: new Set(), edge: null, group: null };
     render();
   }
-  else if (k === "/") { stop(); startEdit("cmd"); }
+  else if (k === "/" || low === "k") { stop(); startEdit("cmd"); }
   else if (/^[0-9]$/.test(k) && sel.nodes.size) setType(TYPES[(+k + 9) % 10][0]);
   else if (k === "0") fit();
   else if (/^[1-9]$/.test(k)) setType(TYPES[+k - 1][0]);
@@ -696,8 +773,8 @@ document.addEventListener("keydown", (ev) => {
   else if (low === "g" && ev.shiftKey) { stop(); const n = one() || byId(cursor); const g = n && B.groups.find((q) => q.members.includes(n.id)); if (g) { sel = { nodes: new Set(), edge: null, group: g.id }; render(); } }
   else if (low === "g") { stop(); makeGroup(); } // stop the "g" landing in the new label
   else if (low === "f") { stop(); togglePresent(); }
-  else if (k === "[" || k === "]") { stop(); const names = Object.keys(store.boards), i = names.indexOf(store.current); switchTo(names[(i + (k === "]" ? 1 : -1) + names.length) % names.length]); }
-  else if (k === "?") help.classList.add("show");
+  else if (k === "[" || k === "]" || k === "PageUp" || k === "PageDown") { stop(); const names = Object.keys(store.boards), i = names.indexOf(store.current); switchTo(names[(i + (k === "]" || k === "PageDown" ? 1 : -1) + names.length) % names.length]); }
+  else if (k === "?" || k === "F1") { stop(); help.classList.add("show"); }
   status();
 });
 
@@ -766,7 +843,7 @@ document.getElementById("openBtn").onclick = () => {
 const upd = new Date("2026-11-17T00:00:00"), days = Math.floor((Date.now() - upd) / 864e5);
 document.getElementById("stamp").textContent = "Updated 17 Nov 2026 · " + (days <= 0 ? "today" : days === 1 ? "1 day ago" : days + " days ago");
 addEventListener("resize", render);
-window.__board = { get state() { return B; }, fit, view: () => view, examples: EXAMPLES };
+window.__board = { get state() { return B; }, fit, view: () => view, examples: EXAMPLES, select: (ids) => { sel = { nodes: new Set(ids), edge: null, group: null }; cursor = ids[0]; render(); } };
 fillBoards();
 document.getElementById("helpBody").innerHTML = shortcutsHTML();
 document.getElementById("cheatBody").innerHTML = shortcutsHTML();
