@@ -34,6 +34,8 @@
   .tile:hover { transform: translateY(-3px); border-color: var(--text); background: var(--panel-h); --hairline-plate: var(--panel-h); }
   .tile:focus-visible, .small a:focus-visible { outline: 2px solid var(--text); outline-offset: 3px; }
   .tile .fig { display: block; margin: -16px -18px -18px; }
+  .tile .fig.plain { aspect-ratio: 400 / 320; display: grid; place-items: center; }
+  .tile .fig.plain svg { width: 30%; fill: none; stroke: var(--hairline-hi); stroke-width: .38; stroke-linecap: round; stroke-linejoin: round; }
   .fig svg :is(path, ellipse, polygon) { transition: stroke 260ms cubic-bezier(.5, 0, .1, 1), fill .15s ease; }
   .txt b { display: block; font-family: var(--h-head); font-stretch: 112%; font-weight: 700; font-size: 18px; }
   .txt b em { font-style: normal; font-weight: 600; color: var(--muted); }
@@ -104,11 +106,7 @@
 <body>
 <div class="wrap">
   <div class="head"><h1>Studio <span>Hub</span></h1><p class="sub">Small tools that run in your browser. Nothing leaves your machine.</p></div>
-  <nav class="big" aria-label="Most used tools">
-    <a class="tile" href="./snap-studio.html"><span class="fig" data-fig="snap"></span><span class="txt"><b>Snap <em>Studio</em></b><small>Paste a screenshot, draw on it, copy it back</small></span></a>
-    <a class="tile" href="./pdf-studio.html"><span class="fig" data-fig="pdf"></span><span class="txt"><b>PDF <em>Studio</em></b><small>Merge, split and convert PDFs</small></span></a>
-    <a class="tile" href="./time-studio.html"><span class="fig" data-fig="time"></span><span class="txt"><b>Time <em>Studio</em></b><small>Gothenburg, Mangalore and the US on one board</small></span></a>
-  </nav>
+  <nav class="big" id="big" aria-label="Your most used tools"></nav>
   <nav class="small" id="small" aria-label="All tools"></nav>
   <footer>Every tool is one file &middot; works offline &middot; <a href="https://github.com/rajathpi/studio-hub">GitHub</a></footer>
 </div>
@@ -164,10 +162,32 @@ window.GROUPS = ["Screenshots and images", "Documents", "Text and code", "Everyd
 </script>
 <!-- /studio-hub tools -->
 <script>
+  // The three big cards are the tools you open most from this page, counted in this browser only.
+  // Each open's weight halves every 30 days, so a tool you stop using drops back to the small grid.
+  // Until there is enough history the empty places go to Snap, PDF and Transcribe.
+  const DEFAULT_BIG = ["snap", "pdf", "transcribe"];
+  const FIGURES = ["snap", "pdf", "time"]; // tools with a line figure on this page; the rest show their icon, large
+  const USE_KEY = "hubUses", HALF_LIFE = 30 * 864e5;
+  const uses = (() => { try { return JSON.parse(localStorage.getItem(USE_KEY)) || {}; } catch (e) { return {}; } })();
+  const score = (id) => (uses[id] || []).reduce((s, at) => s + Math.pow(0.5, (Date.now() - at) / HALF_LIFE), 0);
+  const ranked = TOOLS.filter((t) => !t.dim && score(t.id) > 0).sort((a, b) => score(b.id) - score(a.id)).map((t) => t.id);
+  const FEATURED = [...new Set([...ranked, ...DEFAULT_BIG])].slice(0, 3);
+  document.getElementById("big").innerHTML = FEATURED.map((id) => TOOLS.find((t) => t.id === id)).map((t) =>
+    `<a class="tile" href="${t.page}" data-id="${t.id}">` +
+    (FIGURES.includes(t.id) ? `<span class="fig" data-fig="${t.id}"></span>` : `<span class="fig plain"><svg viewBox="0 0 24 24" aria-hidden="true">${t.glyph}</svg></span>`) +
+    `<span class="txt"><b>${t.name} <em>Studio</em></b><small>${t.blurb}</small></span></a>`).join("");
   // the rest of the tools, from the one shared list
-  const FEATURED = ["snap", "pdf", "time"];
   document.getElementById("small").innerHTML = TOOLS.filter((t) => !FEATURED.includes(t.id)).map((t) =>
-    `<a href="${t.page}" class="${t.dim ? "dim" : ""}"${t.dim ? ' title="Needs a local Python runner: clone the repo and run code-studio.command"' : ""}><svg viewBox="0 0 24 24" aria-hidden="true">${t.glyph}</svg><span><b>${t.name}</b><small>${t.blurb}</small></span></a>`).join("");
+    `<a href="${t.page}" data-id="${t.id}" class="${t.dim ? "dim" : ""}"${t.dim ? ' title="Needs a local Python runner: clone the repo and run code-studio.command"' : ""}><svg viewBox="0 0 24 24" aria-hidden="true">${t.glyph}</svg><span><b>${t.name}</b><small>${t.blurb}</small></span></a>`).join("");
+  // Count every open from here (left, middle or Ctrl-click). Last 50 opens per tool are kept.
+  const record = (e) => {
+    const a = e.target.closest("a[data-id]");
+    if (!a || (e.type === "auxclick" && e.button !== 1)) return;
+    uses[a.dataset.id] = [...(uses[a.dataset.id] || []), Date.now()].slice(-50);
+    try { localStorage.setItem(USE_KEY, JSON.stringify(uses)); } catch (err) {}
+  };
+  document.addEventListener("click", record);
+  document.addEventListener("auxclick", record);
 </script>
 <!-- line figures: the Hairline kernel (unchanged, @lucasmarkes/hairline), one module per tool, then the mount -->
 <script id="hl-kernel">
