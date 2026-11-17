@@ -138,13 +138,13 @@ for (const [w, h] of [[1440, 900], [1024, 640]]) {
       s = await st();
       const ids = Object.fromEntries(s.nodes.map((n) => [n.title, n.id]));
       check(s.edges.some((e) => e.a === ids['Orders DB'] && e.b === ids['Kafka topic']), 'C … Enter connects');
-      // arrows of a block: E, D, Esc
-      await goTo('Orders service'); await key('e');
-      let selEdge = await p.evaluate(() => !!document.querySelector('#world [data-edge] line[stroke="#2f6fde"]'));
-      check(selEdge, 'E selects one of the block\'s arrows');
-      const before = (await st()).edges.filter((e) => e.dashed).length; await key('d');
-      check((await st()).edges.filter((e) => e.dashed).length === before + 1, 'D makes it dashed');
-      await key('Escape'); check((await selTitle()) === 'Orders service', 'Esc goes back to the block');
+      // arrow mode: A, D, Esc
+      await goTo('Orders service'); await key('a');
+      const picked = await p.evaluate(() => { const B = (window as any).__board.state, id = (window as any).__board.selection().edge, e = B.edges.find((q) => q.id === id); return e ? { id, start: B.nodes.find((n) => n.id === e.a).title, dashed: !!e.dashed } : null; });
+      check(!!picked, "A selects one of the block's arrows");
+      await key('d');
+      check(!!(await st()).edges.find((e) => e.id === picked.id).dashed !== picked.dashed, 'D toggles dashed');
+      await key('Escape'); check((await selTitle()) === picked.start, "Esc goes back to the arrow's start block");
       // multi-select + frame
       await goTo('Kafka topic'); await key('Shift+ArrowRight');
       await key('g'); await p.keyboard.type('Async'); await key('Enter');
