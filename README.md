@@ -1,6 +1,6 @@
 # Studio Hub
 
-**Small tools that run in your browser.** Screenshots, OCR, colours, QR codes, PDFs, markdown, diagrams, diffs, regex, mail merge, time zones, unit conversion, generative art, an endless drawing canvas, wallpapers, avatars and a dressed 3D figure, each one a single file: no install, no accounts, no server, and nothing you open ever leaves your machine.
+**Small tools that run in your browser.** Screenshots, OCR, colours, QR codes, PDFs, markdown, diagrams, a keyboard-only diagram board, diffs, regex, mail merge, time zones, unit conversion, generative art, an endless drawing canvas, wallpapers, avatars and a dressed 3D figure, each one a single file: no install, no accounts, no server, and nothing you open ever leaves your machine.
 
 ### → [Open Studio Hub](https://rajathpi.github.io/studio-hub/)
 
@@ -89,6 +89,12 @@ Built on [marked](https://github.com/markedjs/marked) (MIT), [DOMPurify](https:/
 Live Mermaid diagram editor with 8 hand-tuned themes, high-resolution PNG/SVG/clipboard export, and a file explorer that saves real `.mmd` files to a folder on disk. The diagram sits on a pan-and-zoom canvas: scroll to zoom around the pointer, drag to move, double-click (or **Fit**) to frame the whole thing, and go fullscreen for presenting. Zoom re-renders the vector, so it stays sharp at any magnification and exports are unaffected. Editor and preview are split by draggable seams, so you can give either side the room it needs. Also maintained standalone at [rajathpi/mermaid-studio](https://github.com/rajathpi/mermaid-studio).
 
 ![Mermaid Studio](docs/mermaid-studio.png)
+
+### Board Studio — [`board-studio.html`](board-studio.html)
+
+A diagram board for explaining a system live, for example in an interview with your screen shared. Flat blocks, tidy arrows and frames, and every action has a key, so you never need the mouse: **Tab** adds the next block already connected, arrow keys jump between blocks, **C** connects, **G** frames the selection, and **/** types a whole chain (`User -> API ->|charge| Payments --> Email`). The block type follows the name you type ("Orders DB" is a database, "Kafka topic" a queue). Saves itself in the browser, keeps several boards, and exports PNG, SVG or a board file. Press **?** for every key; on a Mac the keys show as ⌘ and ⌥.
+
+![Board Studio](docs/board-studio.png)
 
 ### Diff Studio — [`diff-studio.html`](diff-studio.html)
 
