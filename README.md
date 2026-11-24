@@ -166,7 +166,7 @@ The generator is [blobatar](https://github.com/Alain00/blobatar) 2.7.0 by Alain 
 
 ### Canvas Studio — [`canvas-studio.html`](canvas-studio.html)
 
-An endless canvas to draw on. Pan with two fingers or the hand tool, and pinch or Ctrl + scroll to zoom, about ten billion times in or out, so you can zoom into a line and keep drawing inside it. Pen, eraser, six colours, three sizes, undo and redo. The drawing saves itself in your browser; **Download SVG** gives a vector file that keeps every level of detail and opens back here with **Open…**.
+An endless canvas to draw on. Pan with two fingers or the hand tool, and pinch or Ctrl + scroll to zoom, about ten billion times in or out, so you can zoom into a line and keep drawing inside it. Pen, eraser, six colours, three sizes, undo and redo. The drawing saves itself in your browser; **Show all** zooms out to find your whole drawing. **Download SVG** saves exactly what is on screen as a vector image, and the file still opens back here, whole, with **Open…**.
 
 ![Canvas Studio](docs/canvas-studio.png)
 

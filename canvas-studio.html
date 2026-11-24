@@ -36,7 +36,8 @@
   .swatch.on { background: var(--h-btn); border-color: var(--h-text); box-shadow: 0 0 0 1px var(--h-text); }
   .size { width: 30px; padding: 0; height: 28px; justify-content: center; }
   .size i { border-radius: 50%; background: currentColor; }
-  #zoom { min-width: 64px; justify-content: center; font-variant-numeric: tabular-nums; }
+  #zoom { justify-content: center; }
+  #zl { min-width: 40px; color: var(--h-muted); font-size: 12px; font-variant-numeric: tabular-nums; }
   #status { position: absolute; left: 14px; bottom: 12px; font-size: 12px; color: var(--h-muted); pointer-events: none; }
   #status.bad { color: var(--h-red); }
   main { flex: 1; position: relative; min-height: 0; }
@@ -113,10 +114,10 @@
     <button id="clear" title="Remove everything (undo brings it back)" disabled>Clear</button>
   </div>
   <div class="sep"></div>
-  <button id="zoom" title="Zoom to fit everything (0)">100%</button>
+  <button id="zoom" title="Show all: zoom to fit your whole drawing (0). The number is the current zoom.">Show all <span id="zl">100%</span></button>
   <div class="spacer"></div>
   <button id="open" title="Open an SVG saved from here">Open…</button>
-  <button id="save" class="primary" title="Download as SVG: vector, so every zoom level keeps its detail, and it opens back here">Download SVG</button>
+  <button id="save" class="primary" title="Download what you see on screen as an SVG. The whole drawing rides along inside it, so it opens back here with nothing lost">Download SVG</button>
   <span data-hub-theme-slot></span>
 </header>
 <main>
@@ -202,18 +203,23 @@ function draw() {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.fillStyle = css("--h-bg"); ctx.fillRect(0, 0, w, h);
   grid(w, h);
-  const ink = css("--h-text"), x1 = view.x + w / view.z, y1 = view.y + h / view.z;
+  const ink = css("--h-text");
   ctx.lineCap = ctx.lineJoin = "round";
   for (const s of cur ? [...strokes, cur] : strokes) {
-    const b = s.b;
-    if (b[2] < view.x || b[0] > x1 || b[3] < view.y || b[1] > y1) continue;
-    if (Math.max(b[2] - b[0], b[3] - b[1]) * view.z < 0.4) continue; // smaller than a pixel
+    if (!inView(s)) continue;
     ctx.strokeStyle = s.c === "ink" ? ink : s.c;
     ctx.lineWidth = Math.max(0.6, s.w * view.z);
     ctx.beginPath(); trace(s.p, (x) => (x - view.x) * view.z, (y) => (y - view.y) * view.z, ctx); ctx.stroke();
   }
   const z = view.z;
-  $("zoom").textContent = z >= 0.01 && z < 1e4 ? Math.round(z * 100) + "%" : z.toExponential(1).replace("e+", "e") + "×";
+  $("zl").textContent = z >= 0.01 && z < 1e4 ? Math.round(z * 100) + "%" : z >= 1e4 ? compact(z) + "×" : "1/" + compact(1 / z);
+}
+const compact = (n) => Intl.NumberFormat("en", { notation: "compact", maximumFractionDigits: 1 }).format(n);
+// On screen and at least a pixel big: what draw() paints and the SVG download keeps.
+function inView(s) {
+  const b = s.b;
+  return b[2] >= view.x && b[0] <= view.x + W() / view.z && b[3] >= view.y && b[1] <= view.y + H() / view.z &&
+    Math.max(b[2] - b[0], b[3] - b[1]) * view.z >= 0.4;
 }
 
 // Smooth line through the points: quadratic curves between midpoints. Writes to a canvas path or an SVG path builder.
@@ -382,24 +388,23 @@ addEventListener("keydown", (e) => {
 addEventListener("keyup", (e) => { if (e.key === " ") { space = false; cv.classList.toggle("hand", tool === "hand"); } });
 
 // ---- download / open ----
-// The SVG carries the drawing's own data in <metadata>, so the same file opens back here with nothing lost.
-function toSVG() {
-  let a = Infinity, b = Infinity, c = -Infinity, d = -Infinity;
-  for (const s of strokes) { a = Math.min(a, s.b[0]); b = Math.min(b, s.b[1]); c = Math.max(c, s.b[2]); d = Math.max(d, s.b[3]); }
-  const w = c - a, h = d - b, scale = 1200 / Math.max(w, h), pw = Math.round(w * scale), ph = Math.round(h * scale);
-  // Viewers draw SVG in single precision, so a drawing made deep in a zoom (tiny, far from 0) renders empty: export it moved to 0 and scaled to pixels.
-  const X = (x) => +((x - a) * scale).toFixed(2), Y = (y) => +((y - b) * scale).toFixed(2);
-  const paths = strokes.map((s) => {
+// The SVG is the view on screen, in screen pixels (viewers draw SVG in single precision, so raw deep-zoom coordinates render empty).
+// It also carries the whole drawing's data in <metadata>, so the same file opens back here with nothing lost.
+function toSVG(shown) {
+  const w = W(), h = H(), z = view.z, ink = css("--h-text");
+  const X = (x) => +((x - view.x) * z).toFixed(2), Y = (y) => +((y - view.y) * z).toFixed(2);
+  const paths = shown.map((s) => {
     let dstr = "";
     trace(s.p, X, Y, {
       moveTo: (x, y) => (dstr += `M${x} ${y}`), lineTo: (x, y) => (dstr += `L${x} ${y}`),
       quadraticCurveTo: (qx, qy, x, y) => (dstr += `Q${qx} ${qy} ${x} ${y}`),
     });
-    return `<path d="${dstr}" stroke="${s.c === "ink" ? "#18181b" : s.c}" stroke-width="${+(s.w * scale).toPrecision(4)}"/>`;
+    return `<path d="${dstr}" stroke="${s.c === "ink" ? ink : s.c}" stroke-width="${+Math.max(0.6, s.w * z).toPrecision(4)}"/>`;
   }).join("\n");
   const meta = JSON.stringify(toData()).replace(/&/g, "&amp;").replace(/</g, "&lt;");
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${pw} ${ph}" width="${pw}" height="${ph}">
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}">
 <metadata id="canvas-studio">${meta}</metadata>
+<rect width="100%" height="100%" fill="${css("--h-bg")}"/>
 <g fill="none" stroke-linecap="round" stroke-linejoin="round">
 ${paths}
 </g>
@@ -408,7 +413,9 @@ ${paths}
 }
 $("save").onclick = () => {
   if (!strokes.length) return status("Nothing to download yet");
-  const url = URL.createObjectURL(new Blob([toSVG()], { type: "image/svg+xml" }));
+  const shown = strokes.filter(inView);
+  if (!shown.length) return status("Nothing on screen to download: press Show all to find your drawing", true);
+  const url = URL.createObjectURL(new Blob([toSVG(shown)], { type: "image/svg+xml" }));
   const link = Object.assign(document.createElement("a"), { href: url, download: `canvas-${new Date().toISOString().slice(0, 10)}.svg` });
   link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
 };
