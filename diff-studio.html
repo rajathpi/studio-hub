@@ -21,6 +21,13 @@
   #stats { font-size: 12px; margin-right: auto; margin-left: 4px; }
   #stats .add { color: var(--h-green); font-weight: 600; }
   #stats .del { color: var(--h-red); font-weight: 600; }
+  #stats .same, #stats .near { font-weight: 600; padding: 3px 9px; border-radius: 999px; color: #fff; }
+  #stats .same { background: var(--h-green); }
+  #stats .near { background: var(--h-amber); }
+  .verdict { padding: 10px 14px; font-size: 13px; border-bottom: 1px solid var(--h-border); }
+  .verdict.same { color: var(--h-green); background: color-mix(in srgb, var(--h-green) 10%, var(--h-bg)); }
+  .verdict.near { color: var(--h-amber); background: color-mix(in srgb, var(--h-amber) 12%, var(--h-bg)); }
+  .verdict .fp { display: block; margin-top: 3px; color: var(--h-muted); font: 11px ui-monospace, Menlo, monospace; word-break: break-all; }
   label.opt { font-size: 12px; color: var(--h-text2); display: flex; align-items: center; gap: 5px; cursor: pointer; }
   select, button {
     font-size: 13px; padding: 6px 12px; border-radius: 6px;
@@ -437,14 +444,35 @@
       else if (r.type === 'del') dels++;
       else if (r.type === 'ins') inss++;
     }
-    statsEl.innerHTML = dels + inss
-      ? '<span class="add">+' + inss + '</span> &nbsp;<span class="del">&minus;' + dels + '</span>'
-      : 'identical (' + aLines.length + ' lines)';
+    let verdict = '';
+    if (dels + inss) {
+      statsEl.innerHTML = '<span class="add">+' + inss + '</span> &nbsp;<span class="del">&minus;' + dels + '</span>';
+    } else if (ta.value === tb.value) {
+      // compared on the raw text, so nothing the ignore options hide can sneak through (textareas already turn CRLF into LF)
+      statsEl.innerHTML = '<span class="same">&#10003; Exactly the same</span>';
+      verdict = '<div class="verdict same">&#10003; <b>Exactly the same, character for character.</b> ' +
+        plural(aLines.length, 'line') + ', ' + plural([...ta.value].length, 'character') +
+        '.<span class="fp" id="fp"></span></div>';
+    } else {
+      const ignored = [optWs.checked && 'whitespace', optCase.checked && 'upper/lower case'].filter(Boolean), many = ignored.length > 1;
+      statsEl.innerHTML = '<span class="near">&asymp; Same, not exact</span>';
+      verdict = '<div class="verdict near">&asymp; <b>Not exactly the same.</b> The lines only match because ' + ignored.join(' and ') +
+        (many ? ' are ignored. Untick them' : ' is ignored. Untick it') + ' to see the difference.</div>';
+    }
     const visible = collapse(rows);
-    result.innerHTML = viewSel.value === 'split'
+    result.innerHTML = verdict + (viewSel.value === 'split'
       ? renderSplit(visible, aLines, bLines)
-      : renderUnified(visible, aLines, bLines);
+      : renderUnified(visible, aLines, bLines));
+    if (verdict.includes('id="fp"') && crypto.subtle) {
+      const text = ta.value;
+      crypto.subtle.digest('SHA-256', new TextEncoder().encode(text)).then((h) => {
+        const fp = document.getElementById('fp');
+        if (!fp || ta.value !== text) return;
+        fp.textContent = ' SHA-256 of both sides: ' + [...new Uint8Array(h)].map((x) => x.toString(16).padStart(2, '0')).join('');
+      });
+    }
   }
+  const plural = (n, w) => n.toLocaleString() + ' ' + w + (n === 1 ? '' : 's');
 
   function schedule() { clearTimeout(timer); timer = setTimeout(compute, 250); }
 
