@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Canvas Studio</title>
-<meta name="description" content="An endless canvas: draw, pan and zoom as far as you like. Saved in your browser, downloads as SVG.">
+<meta name="description" content="An endless canvas: draw, pan and zoom as far as you like. Saved in your browser, downloads as SVG, PNG or JPG.">
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { height: 100%; }
@@ -27,6 +27,7 @@
     display: inline-flex; align-items: center; gap: 6px;
   }
   button:hover { background: var(--h-btn-hover); }
+  select { font: inherit; font-size: 13px; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--h-btn-border); background: var(--h-btn); color: var(--h-text); cursor: pointer; }
   button:disabled { opacity: .4; cursor: default; }
   button.on, button.primary { background: var(--h-accent); border-color: var(--h-accent); color: var(--h-on-accent); }
   button svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
@@ -117,7 +118,12 @@
   <button id="zoom" title="Show all: zoom to fit your whole drawing (0). The number is the current zoom.">Show all <span id="zl">100%</span></button>
   <div class="spacer"></div>
   <button id="open" title="Open an SVG saved from here">Open…</button>
-  <button id="save" class="primary" title="Download what you see on screen as an SVG. The whole drawing rides along inside it, so it opens back here with nothing lost">Download SVG</button>
+  <select id="fmt" title="File type. SVG is a vector image and opens back here with Open…; PNG and JPG are pictures for sharing">
+    <option value="svg">SVG</option>
+    <option value="png">PNG</option>
+    <option value="jpg">JPG</option>
+  </select>
+  <button id="save" class="primary" title="Download what you see on screen (Ctrl S)">Download</button>
   <span data-hub-theme-slot></span>
 </header>
 <main>
@@ -161,7 +167,7 @@ function save() {
       localStorage.setItem(KEY, JSON.stringify({ ...toData(), view }));
       status("Saved in this browser");
     } catch (e) {
-      status("Not saved: browser storage is full. Download SVG to keep this.", true);
+      status("Not saved: browser storage is full. Download an SVG to keep this.", true);
     }
   }, 250);
 }
@@ -411,14 +417,33 @@ ${paths}
 </svg>
 `;
 }
-$("save").onclick = () => {
+function download(blob, name) {
+  const url = URL.createObjectURL(blob);
+  Object.assign(document.createElement("a"), { href: url, download: name }).click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+$("save").onclick = async () => {
   if (!strokes.length) return status("Nothing to download yet");
   const shown = strokes.filter(inView);
   if (!shown.length) return status("Nothing on screen to download: press Show all to find your drawing", true);
-  const url = URL.createObjectURL(new Blob([toSVG(shown)], { type: "image/svg+xml" }));
-  const link = Object.assign(document.createElement("a"), { href: url, download: `canvas-${new Date().toISOString().slice(0, 10)}.svg` });
-  link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+  const fmt = $("fmt").value, name = `canvas-${new Date().toISOString().slice(0, 10)}.${fmt}`;
+  const svg = new Blob([toSVG(shown)], { type: "image/svg+xml" });
+  if (fmt === "svg") return download(svg, name);
+  // PNG / JPG: paint the same SVG at twice the screen size (at least) so it stays crisp.
+  try {
+    const img = new Image(), src = (img.src = URL.createObjectURL(svg));
+    await img.decode(); URL.revokeObjectURL(src);
+    const k = Math.max(2, devicePixelRatio || 1), c = Object.assign(document.createElement("canvas"), { width: Math.round(W() * k), height: Math.round(H() * k) });
+    c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+    const blob = await new Promise((ok) => c.toBlob(ok, fmt === "png" ? "image/png" : "image/jpeg", 0.92));
+    if (!blob) throw new Error("no image");
+    download(blob, name);
+  } catch (e) {
+    status(`Could not make the ${fmt.toUpperCase()} in this browser: download SVG instead`, true);
+  }
 };
+try { $("fmt").value = localStorage.getItem("canvasStudio.fmt") || "svg"; } catch (e) {}
+$("fmt").onchange = () => { try { localStorage.setItem("canvasStudio.fmt", $("fmt").value); } catch (e) {} };
 
 async function openFile(f) {
   try {
