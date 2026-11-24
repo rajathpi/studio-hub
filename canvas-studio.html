@@ -386,17 +386,19 @@ addEventListener("keyup", (e) => { if (e.key === " ") { space = false; cv.classL
 function toSVG() {
   let a = Infinity, b = Infinity, c = -Infinity, d = -Infinity;
   for (const s of strokes) { a = Math.min(a, s.b[0]); b = Math.min(b, s.b[1]); c = Math.max(c, s.b[2]); d = Math.max(d, s.b[3]); }
-  const w = c - a, h = d - b, scale = 1200 / Math.max(w, h);
+  const w = c - a, h = d - b, scale = 1200 / Math.max(w, h), pw = Math.round(w * scale), ph = Math.round(h * scale);
+  // Viewers draw SVG in single precision, so a drawing made deep in a zoom (tiny, far from 0) renders empty: export it moved to 0 and scaled to pixels.
+  const X = (x) => +((x - a) * scale).toFixed(2), Y = (y) => +((y - b) * scale).toFixed(2);
   const paths = strokes.map((s) => {
     let dstr = "";
-    trace(s.p, (x) => x, (y) => y, {
+    trace(s.p, X, Y, {
       moveTo: (x, y) => (dstr += `M${x} ${y}`), lineTo: (x, y) => (dstr += `L${x} ${y}`),
       quadraticCurveTo: (qx, qy, x, y) => (dstr += `Q${qx} ${qy} ${x} ${y}`),
     });
-    return `<path d="${dstr}" stroke="${s.c === "ink" ? "#18181b" : s.c}" stroke-width="${s.w}"/>`;
+    return `<path d="${dstr}" stroke="${s.c === "ink" ? "#18181b" : s.c}" stroke-width="${+(s.w * scale).toPrecision(4)}"/>`;
   }).join("\n");
   const meta = JSON.stringify(toData()).replace(/&/g, "&amp;").replace(/</g, "&lt;");
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${a} ${b} ${w} ${h}" width="${Math.round(w * scale)}" height="${Math.round(h * scale)}">
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${pw} ${ph}" width="${pw}" height="${ph}">
 <metadata id="canvas-studio">${meta}</metadata>
 <g fill="none" stroke-linecap="round" stroke-linejoin="round">
 ${paths}
