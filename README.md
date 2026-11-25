@@ -8,7 +8,7 @@ Every browser-only tool runs straight from that link, with no clone and no build
 
 ![Studio Hub](docs/hub.png)
 
-The hub shows the three tools reached for most as big cards with their line figures and the rest as a quiet grid; every tool is one line in [`_theme/tools.js`](_theme/tools.js).
+The hub puts every tool on a shelf for its group, with its full description, and a **Your usual** row on top that follows what you open most. Type in the search box (or press `/`) to narrow the shelves; Enter opens the first match. Every tool is one line in [`_theme/tools.js`](_theme/tools.js).
 
 > **Tip:** Merge, PDF, Mermaid and Regex Studio have a **?** button (bottom left) that starts a short guided tour. It is also offered once on your first visit.
 
